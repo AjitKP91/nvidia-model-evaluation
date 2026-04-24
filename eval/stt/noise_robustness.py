@@ -20,8 +20,8 @@ N_UTTERANCES = 100
 
 
 def _inject_gaussian_noise(audio: np.ndarray, sr: int, snr_db: float) -> np.ndarray:
-    from audiomentations import AddGaussianNoise
-    aug = AddGaussianNoise(min_snr_in_db=snr_db, max_snr_in_db=snr_db, p=1.0)
+    from audiomentations import AddGaussianSNR
+    aug = AddGaussianSNR(min_snr_db=snr_db, max_snr_db=snr_db, p=1.0)
     return aug(audio, sample_rate=sr)
 
 
@@ -31,8 +31,8 @@ def _inject_background_noise(
     from audiomentations import AddBackgroundNoise
     aug = AddBackgroundNoise(
         sounds_path=noise_dir,
-        min_snr_in_db=snr_db,
-        max_snr_in_db=snr_db,
+        min_snr_db=snr_db,
+        max_snr_db=snr_db,
         p=1.0,
     )
     return aug(audio, sample_rate=sr)

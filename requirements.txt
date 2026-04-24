@@ -10,6 +10,7 @@ jiwer>=3.0
 audiomentations
 spacy
 scikit-learn
+pyarrow>=14.0
 datasets
 soundfile
 pydub

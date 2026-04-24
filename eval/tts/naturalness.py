@@ -58,22 +58,29 @@ def _get_utmos_scorer():
     if _utmos_scorer is not None:
         return _utmos_scorer
 
-    # Strategy 1: PyPI utmos package (exposes UTMOSScore)
+    # Strategy 1: PyPI utmos package
     try:
         from utmos import UTMOSScore
         _utmos_scorer = ("pypi", UTMOSScore())
         _utmos_available = True
         logger.info("UTMOS scorer initialised (utmos package)")
         return _utmos_scorer
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("UTMOS PyPI strategy failed: %s", e)
 
     # Strategy 2: Official UTMOS22 via torch.hub
     try:
         import torch
+        from pathlib import Path as _Path
+
+        hub_dir = _Path(torch.hub.get_dir()) / "sarulab-speech_UTMOS22_master"
+        force = not (hub_dir / "hubconf.py").exists()
+        if force:
+            logger.info("UTMOS hubconf.py missing — forcing re-download")
+
         predictor = torch.hub.load(
             "sarulab-speech/UTMOS22", "strong",
-            trust_repo=True, verbose=False,
+            trust_repo=True, verbose=False, force_reload=force,
         )
         _utmos_scorer = ("hub", predictor)
         _utmos_available = True

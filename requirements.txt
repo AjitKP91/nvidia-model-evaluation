@@ -26,6 +26,7 @@ pydub
 # TTS evaluation
 utmos
 nisqa
+speechmetrics
 pesq
 pystoi
 pyworld

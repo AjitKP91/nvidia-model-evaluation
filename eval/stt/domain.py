@@ -76,8 +76,8 @@ def run(config: Config) -> dict:
     logger.info("=== Test 1.8: Domain-Specific Vocabulary ===")
 
     datasets_to_test = [
-        {"name": "spgispeech", "hf": ("esb/datasets", "spgispeech"), "label": "SPGISpeech (financial)"},
-        {"name": "earnings22", "hf": ("esb/datasets", "earnings22"), "label": "Earnings-22 (business)"},
+        {"name": "spgispeech", "hf": ("kensho/spgispeech", None), "label": "SPGISpeech (financial)", "split": "val"},
+        {"name": "earnings22", "hf": ("revdotcom/earnings22", None), "label": "Earnings-22 (business)", "split": "test"},
     ]
 
     summary_rows = []
@@ -86,9 +86,7 @@ def run(config: Config) -> dict:
         logger.info("Processing %s", ds_info["label"])
         try:
             path, name = ds_info["hf"]
-            kwargs = {"path": path, "split": "test", "token": True}
-            if not path.startswith("esb/"):
-                kwargs["trust_remote_code"] = True
+            kwargs = {"path": path, "split": ds_info.get("split", "test"), "token": True, "trust_remote_code": True}
             if name:
                 kwargs["name"] = name
             ds = load_dataset(**kwargs)
@@ -105,7 +103,7 @@ def run(config: Config) -> dict:
         for i, ex in enumerate(tqdm(subset, desc=ds_info["name"])):
             audio = np.array(ex["audio"]["array"], dtype=np.float32)
             sr = ex["audio"]["sampling_rate"]
-            ref = ex.get("norm_text") or ex.get("text", "")
+            ref = ex.get("norm_text") or ex.get("text") or ex.get("transcript") or ex.get("sentence", "")
             audio_bytes = (audio * 32768).astype(np.int16).tobytes()
 
             try:

@@ -9,46 +9,46 @@ from datasets import load_dataset
 logger = logging.getLogger("eval.data")
 
 DATASETS = {
-    # ---- STT datasets (via ESB / HuggingFace) ----
+    # ---- STT datasets (HuggingFace) ----
     "librispeech_clean": {
-        "hf_path": "esb/datasets",
-        "hf_name": "librispeech",
-        "split": "test",
+        "hf_path": "librispeech_asr",
+        "hf_name": "clean",
+        "split": "test.clean",
         "description": "LibriSpeech test-clean (5.4 h narrated audiobooks)",
     },
     "librispeech_other": {
         "hf_path": "librispeech_asr",
-        "hf_name": None,
+        "hf_name": "other",
         "split": "test.other",
         "description": "LibriSpeech test-other (5.4 h challenging narration)",
     },
     "tedlium": {
-        "hf_path": "esb/datasets",
-        "hf_name": "tedlium",
+        "hf_path": "LIUM/tedlium",
+        "hf_name": "release3",
         "split": "test",
         "description": "TED-LIUM v3 test (3 h prepared oratory)",
     },
     "gigaspeech": {
-        "hf_path": "esb/datasets",
-        "hf_name": "gigaspeech",
+        "hf_path": "speechcolab/gigaspeech",
+        "hf_name": "xs",
         "split": "test",
-        "description": "GigaSpeech test (mixed broadcast/web)",
+        "description": "GigaSpeech test xs (mixed broadcast/web)",
     },
     "spgispeech": {
-        "hf_path": "esb/datasets",
-        "hf_name": "spgispeech",
-        "split": "test",
-        "description": "SPGISpeech test (financial calls)",
+        "hf_path": "kensho/spgispeech",
+        "hf_name": None,
+        "split": "val",
+        "description": "SPGISpeech val (financial calls)",
     },
     "earnings22": {
-        "hf_path": "esb/datasets",
-        "hf_name": "earnings22",
+        "hf_path": "revdotcom/earnings22",
+        "hf_name": None,
         "split": "test",
         "description": "Earnings-22 test (spontaneous business)",
     },
     "ami": {
-        "hf_path": "esb/datasets",
-        "hf_name": "ami",
+        "hf_path": "edinburghcst/ami",
+        "hf_name": "ihm",
         "split": "test",
         "description": "AMI IHM test (meeting conversations)",
     },

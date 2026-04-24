@@ -25,13 +25,13 @@ from eval.utils import (
 logger = logging.getLogger("eval.stt.accuracy")
 
 DATASETS = [
-    {"name": "librispeech_clean", "hf": ("esb/datasets", "librispeech"), "split": "test", "label": "LibriSpeech clean"},
-    {"name": "librispeech_other", "hf": ("librispeech_asr", None), "split": "test.other", "label": "LibriSpeech other"},
-    {"name": "tedlium", "hf": ("esb/datasets", "tedlium"), "split": "test", "label": "TED-LIUM v3"},
-    {"name": "gigaspeech", "hf": ("esb/datasets", "gigaspeech"), "split": "test", "label": "GigaSpeech"},
-    {"name": "spgispeech", "hf": ("esb/datasets", "spgispeech"), "split": "test", "label": "SPGISpeech"},
-    {"name": "earnings22", "hf": ("esb/datasets", "earnings22"), "split": "test", "label": "Earnings-22"},
-    {"name": "ami", "hf": ("esb/datasets", "ami"), "split": "test", "label": "AMI IHM"},
+    {"name": "librispeech_clean", "hf": ("librispeech_asr", "clean"), "split": "test.clean", "label": "LibriSpeech clean"},
+    {"name": "librispeech_other", "hf": ("librispeech_asr", "other"), "split": "test.other", "label": "LibriSpeech other"},
+    {"name": "tedlium", "hf": ("LIUM/tedlium", "release3"), "split": "test", "label": "TED-LIUM v3"},
+    {"name": "gigaspeech", "hf": ("speechcolab/gigaspeech", "xs"), "split": "test", "label": "GigaSpeech"},
+    {"name": "spgispeech", "hf": ("kensho/spgispeech", None), "split": "val", "label": "SPGISpeech"},
+    {"name": "earnings22", "hf": ("revdotcom/earnings22", None), "split": "test", "label": "Earnings-22"},
+    {"name": "ami", "hf": ("edinburghcst/ami", "ihm"), "split": "test", "label": "AMI IHM"},
 ]
 
 THRESHOLDS = {
@@ -47,9 +47,7 @@ THRESHOLDS = {
 
 def _load_dataset(ds_info: dict) -> object:
     path, name = ds_info["hf"]
-    kwargs = {"path": path, "split": ds_info["split"], "token": True}
-    if not path.startswith("esb/"):
-        kwargs["trust_remote_code"] = True
+    kwargs = {"path": path, "split": ds_info["split"], "token": True, "trust_remote_code": True}
     if name:
         kwargs["name"] = name
     return load_dataset(**kwargs)
@@ -59,7 +57,7 @@ def _get_audio_and_ref(example: dict) -> tuple[np.ndarray, int, str]:
     audio = example["audio"]
     array = np.array(audio["array"], dtype=np.float32)
     sr = audio["sampling_rate"]
-    ref = example.get("norm_text") or example.get("text") or example.get("sentence", "")
+    ref = example.get("norm_text") or example.get("text") or example.get("transcript") or example.get("sentence", "")
     return array, sr, ref
 
 

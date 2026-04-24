@@ -121,8 +121,8 @@ def run(config: Config) -> dict:
 
     # Use punctuated/cased datasets
     datasets_to_test = [
-        ("spgispeech", ("esb/datasets", "spgispeech"), "SPGISpeech"),
-        ("earnings22", ("esb/datasets", "earnings22"), "Earnings-22"),
+        ("spgispeech", ("kensho/spgispeech", None), "SPGISpeech", "val"),
+        ("earnings22", ("revdotcom/earnings22", None), "Earnings-22", "test"),
     ]
 
     all_punct_results: dict[str, list[dict]] = {m: [] for m in PUNCT_MARKS}
@@ -131,12 +131,10 @@ def run(config: Config) -> dict:
     summary_rows = []
     completed = get_completed_ids(jsonl_path)
 
-    for ds_name, (hf_path, hf_name), label in datasets_to_test:
+    for ds_name, (hf_path, hf_name), label, split in datasets_to_test:
         logger.info("Processing %s", label)
         try:
-            _kwargs = {"split": "test", "token": True}
-            if not hf_path.startswith("esb/"):
-                _kwargs["trust_remote_code"] = True
+            _kwargs = {"split": split, "token": True, "trust_remote_code": True}
             ds = load_dataset(hf_path, hf_name, **_kwargs)
         except Exception as e:
             logger.error("Failed to load %s: %s", ds_name, e)
@@ -150,7 +148,7 @@ def run(config: Config) -> dict:
                 continue
             audio = np.array(ex["audio"]["array"], dtype=np.float32)
             sr = ex["audio"]["sampling_rate"]
-            ref = ex.get("text") or ex.get("norm_text", "")
+            ref = ex.get("text") or ex.get("norm_text") or ex.get("transcript") or ex.get("sentence", "")
             audio_bytes = (audio * 32768).astype(np.int16).tobytes()
 
             try:

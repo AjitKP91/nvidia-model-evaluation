@@ -8,7 +8,23 @@ Running locally adds 10–40 ms of network jitter to every single API call, whic
 
 ---
 
-## 1. Where to Run What
+## 1. Prerequisites (do these before VM setup)
+
+### 1.1 HuggingFace dataset access
+
+Several STT tests load datasets via the gated **esb/datasets** collection (LibriSpeech, TED-LIUM, GigaSpeech, SPGISpeech, Earnings-22, AMI, Common Voice). Without access, those datasets are silently skipped.
+
+1. Create a free account at https://huggingface.co if you don't have one
+2. Go to https://huggingface.co/datasets/esb/datasets and click **Agree and access repository**
+3. Generate an access token at https://huggingface.co/settings/tokens (read permission is enough)
+4. On the VM, log in (run this inside tmux):
+   ```bash
+   huggingface-cli login   # paste your token when prompted
+   ```
+
+---
+
+## 2. Where to Run What
 
 | Task | Where | Why |
 |------|-------|-----|
@@ -20,18 +36,18 @@ Running locally adds 10–40 ms of network jitter to every single API call, whic
 
 ---
 
-## 2. One-Time VM Setup
+## 3. One-Time VM Setup
 
 SSH into your Azure VM, then run the following once.
 
-### 2.1 System packages
+### 3.1 System packages
 
 ```bash
 sudo apt-get update && sudo apt-get install -y \
     python3 python3-pip python3-venv git ffmpeg libsndfile1
 ```
 
-### 2.2 Clone the repo
+### 3.2 Clone the repo
 
 ```bash
 git clone <your-repo-url> nvidia-model-evaluation
@@ -47,7 +63,7 @@ rsync -avz --exclude results/ --exclude __pycache__ \
     <vm-user>@<vm-ip>:~/nvidia-model-evaluation/
 ```
 
-### 2.3 Redirect caches to the data disk
+### 3.3 Redirect caches to the data disk
 
 The OS disk fills quickly. Before installing anything, point all caches to `/mnt` (the larger data disk):
 
@@ -71,7 +87,7 @@ EOF
 source ~/.bashrc
 ```
 
-### 2.4 Create a Python virtual environment
+### 3.4 Create a Python virtual environment
 
 ```bash
 cd ~/nvidia-model-evaluation
@@ -79,7 +95,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### 2.5 Install dependencies
+### 3.5 Install dependencies
 
 `fairseq` (pulled in by `utmos`) ships an old `omegaconf 2.0.6` with an invalid requirement format that pip 24+ rejects. Unpin it first, then install everything:
 
@@ -111,7 +127,7 @@ python -m spacy download en_core_web_sm
 
 ---
 
-## 3. Configure Endpoints
+## 4. Configure Endpoints
 
 Edit `eval/config.yaml` with your actual AI Core values. Note that each service has its own `grpc_uri`:
 
@@ -163,7 +179,7 @@ This runs all Phase 0 discovery checks (gRPC ping, REST ping, schema discovery, 
 
 ---
 
-## 4. Running the Evaluation
+## 5. Running the Evaluation
 
 All commands are run from the repo root with the venv active.
 
@@ -226,7 +242,7 @@ Prints resolved endpoints and exits. Useful for verifying config before a long r
 
 ---
 
-## 5. Resuming After Interruption
+## 6. Resuming After Interruption
 
 Every API call result is written to a `.jsonl` file immediately. If a test is interrupted, re-running the same command will **skip already-completed items** automatically — no data is lost and no duplicate API calls are made.
 
@@ -237,7 +253,7 @@ python -m eval.run stt --test accuracy
 
 ---
 
-## 6. Outputs
+## 7. Outputs
 
 ```
 results/
@@ -269,7 +285,7 @@ scp <vm-user>@<vm-ip>:~/nvidia-model-evaluation/results/report.html ~/Desktop/
 
 ---
 
-## 7. Keeping the VM Run Alive
+## 8. Keeping the VM Run Alive
 
 SSH sessions that disconnect will kill the process. Use `tmux` or `nohup`:
 
@@ -302,7 +318,7 @@ tail -f results/run.log
 
 ---
 
-## 8. Log Level & Debugging
+## 9. Log Level & Debugging
 
 ```bash
 # Verbose output:
@@ -314,7 +330,7 @@ python -m eval.run tts --log-level WARNING
 
 ---
 
-## 9. Test Runtime Estimates (A100 VM, Frankfurt → AI Core)
+## 10. Test Runtime Estimates (A100 VM, Frankfurt → AI Core)
 
 | Test | Calls | Estimated Time |
 |------|-------|----------------|
@@ -342,7 +358,7 @@ python -m eval.run tts --log-level WARNING
 
 ---
 
-## 10. Troubleshooting
+## 11. Troubleshooting
 
 ### `$AICORE_BEARER_TOKEN not set`
 ```bash

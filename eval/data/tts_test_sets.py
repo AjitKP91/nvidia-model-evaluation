@@ -132,8 +132,7 @@ def get_text_length_buckets() -> dict[str, list[str]]:
                 "And yet, I have never been more optimistic about our collective capacity to address these challenges. The tools available to us today, from artificial intelligence "
                 "and advanced robotics to gene editing technologies and renewable energy systems, represent a remarkable arsenal of solutions waiting to be deployed at scale. "
                 "What we need now, more than ever, is the wisdom to use these tools responsibly, the courage to challenge outdated assumptions and entrenched interests, "
-                "and the collaborative spirit to work across borders, disciplines, and generations to build a future worthy of the best that humanity has to offer. "
-                "I believe that gathering such as this one, where diverse perspectives converge and new connections are forged, are exactly the kind of catalysts we need."
+                "and the collaborative spirit to work across borders, disciplines, and generations to build a future worthy of the best that humanity has to offer."
             ),
         ],
     }

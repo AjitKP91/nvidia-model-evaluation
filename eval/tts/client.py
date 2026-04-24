@@ -19,6 +19,12 @@ from eval.utils import retry_with_backoff
 logger = logging.getLogger("eval.tts.client")
 
 
+def _is_permanent_tts_error(exc: Exception) -> bool:
+    """Return True for errors that will never succeed on retry."""
+    msg = str(exc)
+    return "longer than maximum sequence length" in msg or "Input sentence is longer" in msg
+
+
 class TTSClient:
     def __init__(self, config: Config):
         self.config = config
@@ -39,7 +45,7 @@ class TTSClient:
     # gRPC batch
     # ------------------------------------------------------------------
 
-    @retry_with_backoff()
+    @retry_with_backoff(reraise_if=_is_permanent_tts_error)
     def synthesize_batch(self, text: str) -> dict[str, Any]:
         start = time.perf_counter()
         response = self.tts_service.synthesize(
@@ -66,7 +72,7 @@ class TTSClient:
     # REST batch
     # ------------------------------------------------------------------
 
-    @retry_with_backoff()
+    @retry_with_backoff(reraise_if=_is_permanent_tts_error)
     def synthesize_batch_rest(self, text: str) -> dict[str, Any]:
         headers = {
             self.tts_cfg.auth_header: f"Bearer {self.riva_cfg.auth_token}",
@@ -105,7 +111,7 @@ class TTSClient:
     # gRPC streaming
     # ------------------------------------------------------------------
 
-    @retry_with_backoff()
+    @retry_with_backoff(reraise_if=_is_permanent_tts_error)
     def synthesize_stream(self, text: str) -> dict[str, Any]:
         start = time.perf_counter()
         first_chunk_time = None
@@ -150,7 +156,7 @@ class TTSClient:
     # REST streaming
     # ------------------------------------------------------------------
 
-    @retry_with_backoff()
+    @retry_with_backoff(reraise_if=_is_permanent_tts_error)
     def synthesize_stream_rest(self, text: str) -> dict[str, Any]:
         headers = {
             self.tts_cfg.auth_header: f"Bearer {self.riva_cfg.auth_token}",

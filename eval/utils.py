@@ -131,8 +131,14 @@ def bootstrap_ci(
 # ---------------------------------------------------------------------------
 
 def retry_with_backoff(
-    max_retries: int = 5, base_delay: float = 1.0, max_delay: float = 30.0
+    max_retries: int = 5, base_delay: float = 1.0, max_delay: float = 30.0,
+    reraise_if=None,
 ):
+    """Exponential-backoff retry decorator.
+
+    reraise_if: optional callable(exc) -> bool; if it returns True the
+    exception is re-raised immediately without retrying (permanent failures).
+    """
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -140,6 +146,8 @@ def retry_with_backoff(
                 try:
                     return func(*args, **kwargs)
                 except Exception as e:
+                    if reraise_if is not None and reraise_if(e):
+                        raise
                     if attempt == max_retries:
                         raise
                     delay = min(base_delay * (2**attempt), max_delay)

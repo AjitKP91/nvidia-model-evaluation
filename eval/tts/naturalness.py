@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import ctypes
+import gc
 import logging
 import os
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -194,5 +196,25 @@ def run(config: Config) -> dict:
         logger.info("UTMOS: mean=%.2f std=%.2f", np.mean(utmos_scores), np.std(utmos_scores))
     if dnsmos_ovrl_scores:
         logger.info("DNSMOS OVRL: mean=%.2f", np.mean(dnsmos_ovrl_scores))
+
+    # Release UTMOS model and delete its torch.hub cache.
+    global _utmos_scorer, _utmos_available
+    if _utmos_scorer is not None:
+        kind, model = _utmos_scorer
+        del model
+        _utmos_scorer = None
+        _utmos_available = None
+        gc.collect()
+        if kind == "hub":
+            try:
+                import torch
+                torch.cuda.empty_cache()
+                hub_dir = Path(torch.hub.get_dir())
+                for entry in hub_dir.iterdir():
+                    if "utmos" in entry.name.lower() or "sarulab" in entry.name.lower():
+                        shutil.rmtree(entry, ignore_errors=True)
+                        logger.info("Deleted UTMOS hub cache: %s", entry)
+            except Exception as e:
+                logger.warning("UTMOS cache cleanup failed: %s", e)
 
     return {"test": "2.1", "name": "naturalness", "results": summary}

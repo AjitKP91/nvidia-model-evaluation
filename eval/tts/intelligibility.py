@@ -1,7 +1,9 @@
 """Test 2.2 — Intelligibility: ASR Round-Trip WER."""
 from __future__ import annotations
 
+import gc
 import logging
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -102,4 +104,22 @@ def run(config: Config) -> dict:
             logger.info("  %s: WER=%.2f%% CER=%.2f%%", category, agg_wer * 100, agg_cer * 100)
 
     save_summary_csv(results_dir / "summary.csv", summary_rows)
+
+    # Delete Whisper model cache — large (~3 GB) and not needed after this test.
+    logger.info("Releasing Whisper model and cleaning cache...")
+    del whisper_model
+    gc.collect()
+    try:
+        import torch
+        torch.cuda.empty_cache()
+    except Exception:
+        pass
+    whisper_cache = Path.home() / ".cache" / "whisper"
+    for f in sorted(whisper_cache.glob("large-v3*")):
+        try:
+            f.unlink()
+            logger.info("Deleted Whisper cache file: %s", f)
+        except Exception:
+            pass
+
     return {"test": "2.2", "name": "intelligibility", "results": summary_rows}

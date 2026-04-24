@@ -155,6 +155,17 @@ def setup_logging(level: str = "INFO") -> None:
         format="%(asctime)s %(name)s %(levelname)s %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
+    # Silence noisy third-party loggers
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+    logging.getLogger("filelock").setLevel(logging.WARNING)
+    logging.getLogger("datasets").setLevel(logging.WARNING)
+    try:
+        import datasets as _ds
+        _ds.disable_progress_bars()
+        _ds.logging.set_verbosity_error()
+    except Exception:
+        pass
 
 
 # ---------------------------------------------------------------------------

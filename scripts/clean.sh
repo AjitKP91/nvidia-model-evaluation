@@ -41,9 +41,11 @@ rm -rf "$REPO_DIR/results"
 mkdir -p "$REPO_DIR/results"
 rm -f "$REPO_DIR/scripts/_tmux_launcher.sh"
 
-# HuggingFace cache (datasets and model weights)
-echo "Clearing HuggingFace cache (~/hf_home)..."
-rm -rf "$HOME/hf_home"
+# HuggingFace cache (datasets and model weights — token file is preserved)
+echo "Clearing HuggingFace dataset and model cache (~/hf_home/datasets, ~/hf_home/hub)..."
+rm -rf "$HOME/hf_home/datasets"
+rm -rf "$HOME/hf_home/hub"
+rm -rf "$HOME/hf_home/modules"
 
 # PyTorch hub cache
 echo "Clearing PyTorch hub cache (~/torch_home)..."

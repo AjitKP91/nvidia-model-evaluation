@@ -43,6 +43,7 @@ def _preload_cuda_runtime() -> None:
 _preload_cuda_runtime()
 
 # Module-level scorer cache — initialise once, reuse across all sentences.
+# _utmos_scorer is a tuple of (kind, model) where kind is "pypi" or "hub".
 _utmos_scorer = None
 _utmos_available = None
 _dnsmos_available = None
@@ -52,24 +53,55 @@ def _get_utmos_scorer():
     global _utmos_scorer, _utmos_available
     if _utmos_available is False:
         return None
-    if _utmos_scorer is None:
-        try:
-            from utmos import UTMOSScore
-            _utmos_scorer = UTMOSScore()
-            _utmos_available = True
-            logger.info("UTMOS scorer initialised")
-        except Exception as e:
-            logger.warning("UTMOS not available: %s", e)
-            _utmos_available = False
-    return _utmos_scorer
+    if _utmos_scorer is not None:
+        return _utmos_scorer
+
+    # Strategy 1: PyPI utmos package (exposes UTMOSScore)
+    try:
+        from utmos import UTMOSScore
+        _utmos_scorer = ("pypi", UTMOSScore())
+        _utmos_available = True
+        logger.info("UTMOS scorer initialised (utmos package)")
+        return _utmos_scorer
+    except Exception:
+        pass
+
+    # Strategy 2: Official UTMOS22 via torch.hub
+    try:
+        import torch
+        predictor = torch.hub.load(
+            "sarulab-speech/UTMOS22", "strong",
+            trust_repo=True, verbose=False,
+        )
+        _utmos_scorer = ("hub", predictor)
+        _utmos_available = True
+        logger.info("UTMOS scorer initialised (torch.hub UTMOS22)")
+        return _utmos_scorer
+    except Exception as e:
+        logger.warning("UTMOS not available: %s", e)
+        _utmos_available = False
+        return None
 
 
 def _score_utmos(audio_path: str) -> float | None:
-    scorer = _get_utmos_scorer()
-    if scorer is None:
+    result = _get_utmos_scorer()
+    if result is None:
         return None
+    kind, model = result
     try:
-        return float(scorer.score(audio_path))
+        if kind == "pypi":
+            return float(model.score(audio_path))
+        else:
+            # torch.hub UTMOS22: expects a 1-D float32 tensor at 16 kHz
+            import torch
+            wav, sr = sf.read(audio_path, dtype="float32")
+            if wav.ndim > 1:
+                wav = wav.mean(axis=1)
+            if sr != 16000:
+                import librosa
+                wav = librosa.resample(wav, orig_sr=sr, target_sr=16000)
+            wav_t = torch.tensor(wav).unsqueeze(0)
+            return float(model(wav_t, 16000).item())
     except Exception as e:
         logger.warning("UTMOS scoring failed: %s", e)
         return None

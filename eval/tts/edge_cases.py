@@ -45,16 +45,42 @@ def _score_utmos_single(audio_path: str) -> float | None:
     if _utmos_available is False:
         return None
     if _utmos_scorer is None:
+        # Strategy 1: PyPI utmos package
         try:
             from utmos import UTMOSScore
-            _utmos_scorer = UTMOSScore()
+            _utmos_scorer = ("pypi", UTMOSScore())
             _utmos_available = True
-        except Exception as e:
-            logger.warning("UTMOS not available: %s", e)
-            _utmos_available = False
-            return None
+        except Exception:
+            pass
+        # Strategy 2: torch.hub UTMOS22
+        if _utmos_scorer is None:
+            try:
+                import torch
+                predictor = torch.hub.load(
+                    "sarulab-speech/UTMOS22", "strong",
+                    trust_repo=True, verbose=False,
+                )
+                _utmos_scorer = ("hub", predictor)
+                _utmos_available = True
+            except Exception as e:
+                logger.warning("UTMOS not available: %s", e)
+                _utmos_available = False
+                return None
+    kind, model = _utmos_scorer
     try:
-        return float(_utmos_scorer.score(audio_path))
+        if kind == "pypi":
+            return float(model.score(audio_path))
+        else:
+            import soundfile as sf
+            import torch
+            wav, sr = sf.read(audio_path, dtype="float32")
+            if wav.ndim > 1:
+                wav = wav.mean(axis=1)
+            if sr != 16000:
+                import librosa
+                wav = librosa.resample(wav, orig_sr=sr, target_sr=16000)
+            wav_t = torch.tensor(wav).unsqueeze(0)
+            return float(model(wav_t, 16000).item())
     except Exception:
         return None
 

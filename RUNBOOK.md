@@ -70,7 +70,7 @@ This script does everything in order:
 4. Pre-installs `omegaconf>=2.1` to work around a pip 24+ incompatibility
 5. Installs all Python dependencies via `uv pip install -r requirements.txt`
 6. Sets `LD_LIBRARY_PATH` to PyTorch's bundled CUDA libs (needed by UTMOS)
-7. Runs `huggingface-cli login` — paste your HF token when prompted
+7. Runs `hf login` — paste your HF token when prompted
 
 > **Note:** Setup takes 10–20 minutes on first run (downloading PyTorch, SpeechBrain, etc.)
 
@@ -368,7 +368,7 @@ sudo ln -sf /usr/lib/x86_64-linux-gnu/libopenh264.so.6 \
 `setup.sh` handles this automatically.
 
 ### `Unauthorized` / 403 on HuggingFace datasets
-1. Make sure you are logged in: `huggingface-cli login`
+1. Make sure you are logged in: `hf login`
 2. For GigaSpeech and SPGISpeech, accept terms at:
    - https://huggingface.co/datasets/speechcolab/gigaspeech
    - https://huggingface.co/datasets/kensho/spgispeech

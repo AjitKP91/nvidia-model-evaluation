@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # Clean script for NVIDIA Eval harness.
 #
+# All dataset loading uses streaming=True, so HuggingFace dataset cache never
+# accumulates between runs and is always safe to delete.
+#
 # Usage:
-#   bash scripts/clean.sh          — remove results, model weights, temp files
-#                                    (datasets are preserved — no re-download needed)
-#   bash scripts/clean.sh --full   — also remove datasets and .venv (full reset)
+#   bash scripts/clean.sh          — remove results, model weights, dataset
+#                                    cache, and temp files; keeps .venv intact
+#   bash scripts/clean.sh --full   — also remove .venv (run setup.sh after)
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -17,7 +20,7 @@ done
 
 echo "=========================================="
 echo "  NVIDIA Eval — Clean"
-echo "  Full reset (incl. datasets) : $FULL"
+echo "  Wipe .venv (--full) : $FULL"
 echo "=========================================="
 
 echo ""
@@ -48,20 +51,22 @@ rm -rf "$REPO_DIR/results"
 mkdir -p "$REPO_DIR/results"
 rm -f "$REPO_DIR/scripts/_tmux_launcher.sh"
 
-# ── Model weights (small models are deleted in-program after use;            ──
-#    this clears anything left over from interrupted runs)                    ──
+# ── Model weights ────────────────────────────────────────────────────────────
 echo "Clearing cached model weights (~/hf_home/hub, ~/torch_home)..."
 rm -rf "$HOME/hf_home/hub"
 rm -rf "$HOME/torch_home"
+
+# ── HuggingFace dataset cache ─────────────────────────────────────────────────
+# All loads use streaming=True so nothing here is needed between runs.
+echo "Clearing HuggingFace dataset cache (~/hf_home/datasets)..."
+rm -rf "$HOME/hf_home/datasets"
 
 # ── Pip wheel cache ──────────────────────────────────────────────────────────
 echo "Clearing pip wheel cache..."
 rm -rf "$HOME/pip_cache"/* 2>/dev/null || true
 
-# ── Full: also remove datasets and .venv ─────────────────────────────────────
+# ── Full: also remove .venv ───────────────────────────────────────────────────
 if [ "$FULL" = true ]; then
-    echo "Full reset: removing HuggingFace dataset cache..."
-    rm -rf "$HOME/hf_home/datasets"
     echo "Full reset: removing .venv..."
     rm -rf "$REPO_DIR/.venv"
     echo "  Run 'bash scripts/setup.sh' to reinstall dependencies."
@@ -81,9 +86,9 @@ echo "=========================================="
 echo "  Clean done."
 echo ""
 if [ "$FULL" = false ]; then
-    echo "  Datasets kept — run 'bash scripts/start_eval.sh' to restart."
+    echo "  .venv kept — run 'bash scripts/start_eval.sh' to restart."
     echo ""
-    echo "  To wipe EVERYTHING (including datasets + venv):"
+    echo "  To also remove .venv (forces full reinstall):"
     echo "    bash scripts/clean.sh --full"
 else
     echo "  Run 'bash scripts/setup.sh' then 'bash scripts/start_eval.sh'."

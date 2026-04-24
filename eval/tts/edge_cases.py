@@ -1,7 +1,9 @@
 """Test 2.7 — Edge Cases & Input Robustness."""
 from __future__ import annotations
 
+import ctypes
 import logging
+import os
 from pathlib import Path
 
 import jiwer
@@ -15,11 +17,44 @@ from eval.utils import NORMALIZE_FOR_WER, get_completed_ids, save_summary_csv, w
 logger = logging.getLogger("eval.tts.edge_cases")
 
 
-def _score_utmos_single(audio_path: str) -> float | None:
+def _preload_cuda_runtime() -> None:
     try:
-        from utmos import UTMOSScore
-        scorer = UTMOSScore()
-        return float(scorer.score(audio_path))
+        import torch
+        torch_lib = os.path.join(os.path.dirname(torch.__file__), "lib")
+        current_path = os.environ.get("LD_LIBRARY_PATH", "")
+        if torch_lib not in current_path:
+            os.environ["LD_LIBRARY_PATH"] = f"{torch_lib}:{current_path}"
+        for name in sorted(os.listdir(torch_lib)):
+            if name.startswith("libcudart"):
+                try:
+                    ctypes.CDLL(os.path.join(torch_lib, name))
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+
+_preload_cuda_runtime()
+
+_utmos_scorer = None
+_utmos_available = None
+
+
+def _score_utmos_single(audio_path: str) -> float | None:
+    global _utmos_scorer, _utmos_available
+    if _utmos_available is False:
+        return None
+    if _utmos_scorer is None:
+        try:
+            from utmos import UTMOSScore
+            _utmos_scorer = UTMOSScore()
+            _utmos_available = True
+        except Exception as e:
+            logger.warning("UTMOS not available: %s", e)
+            _utmos_available = False
+            return None
+    try:
+        return float(_utmos_scorer.score(audio_path))
     except Exception:
         return None
 

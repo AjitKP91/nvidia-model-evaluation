@@ -1,8 +1,9 @@
 """Test 2.1 — Automated Naturalness (UTMOS / DNSMOS / NISQA)."""
 from __future__ import annotations
 
+import ctypes
 import logging
-import tempfile
+import os
 from pathlib import Path
 
 import numpy as np
@@ -17,10 +18,57 @@ from eval.utils import compute_percentiles, get_completed_ids, save_summary_csv,
 logger = logging.getLogger("eval.tts.naturalness")
 
 
-def _score_utmos(audio_path: str) -> float | None:
+def _preload_cuda_runtime() -> None:
+    """Preload PyTorch's bundled CUDA runtime so UTMOS can find libcudart.
+
+    Sets LD_LIBRARY_PATH and force-loads all libcudart variants present in
+    PyTorch's lib directory. Must run before 'import utmos'.
+    """
     try:
-        from utmos import UTMOSScore
-        scorer = UTMOSScore()
+        import torch
+        torch_lib = os.path.join(os.path.dirname(torch.__file__), "lib")
+        current_path = os.environ.get("LD_LIBRARY_PATH", "")
+        if torch_lib not in current_path:
+            os.environ["LD_LIBRARY_PATH"] = f"{torch_lib}:{current_path}"
+        for name in sorted(os.listdir(torch_lib)):
+            if name.startswith("libcudart"):
+                try:
+                    ctypes.CDLL(os.path.join(torch_lib, name))
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+
+_preload_cuda_runtime()
+
+# Module-level scorer cache — initialise once, reuse across all sentences.
+_utmos_scorer = None
+_utmos_available = None
+_dnsmos_available = None
+
+
+def _get_utmos_scorer():
+    global _utmos_scorer, _utmos_available
+    if _utmos_available is False:
+        return None
+    if _utmos_scorer is None:
+        try:
+            from utmos import UTMOSScore
+            _utmos_scorer = UTMOSScore()
+            _utmos_available = True
+            logger.info("UTMOS scorer initialised")
+        except Exception as e:
+            logger.warning("UTMOS not available: %s", e)
+            _utmos_available = False
+    return _utmos_scorer
+
+
+def _score_utmos(audio_path: str) -> float | None:
+    scorer = _get_utmos_scorer()
+    if scorer is None:
+        return None
+    try:
         return float(scorer.score(audio_path))
     except Exception as e:
         logger.warning("UTMOS scoring failed: %s", e)
@@ -28,20 +76,23 @@ def _score_utmos(audio_path: str) -> float | None:
 
 
 def _score_dnsmos(audio_path: str) -> dict | None:
+    global _dnsmos_available
+    if _dnsmos_available is False:
+        return None
     try:
-        import onnxruntime
-        # DNSMOS requires the Microsoft model files
-        # Fallback: use speechmetrics if available
         from speechmetrics import relative as sm
         metrics = sm.load("dnsmos")
         result = metrics(audio_path)
+        _dnsmos_available = True
         return {
             "ovrl": float(result.get("dnsmos", {}).get("ovrl", 0)),
             "sig": float(result.get("dnsmos", {}).get("sig", 0)),
             "bak": float(result.get("dnsmos", {}).get("bak", 0)),
         }
-    except Exception:
-        logger.warning("DNSMOS not available, skipping")
+    except Exception as e:
+        if _dnsmos_available is None:
+            logger.warning("DNSMOS not available (%s), skipping for all sentences", e)
+            _dnsmos_available = False
         return None
 
 

@@ -31,6 +31,8 @@ openai-whisper
 # Forced alignment (install separately: conda/pip + model download)
 # montreal-forced-aligner
 
+setuptools
+
 # Audio / reporting
 numpy
 scipy

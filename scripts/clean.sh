@@ -29,6 +29,12 @@ mkdir -p "$REPO_DIR/results"
 # ── Remove tmux launcher ─────────────────────────────────────────────────────
 rm -f "$REPO_DIR/scripts/_tmux_launcher.sh"
 
+# ── Clear partial/failed HF dataset downloads ────────────────────────────────
+if [ -d "/mnt/hf_home/datasets" ]; then
+    echo "Clearing HuggingFace dataset cache (/mnt/hf_home/datasets)..."
+    rm -rf /mnt/hf_home/datasets
+fi
+
 # ── Full clean: remove venv ──────────────────────────────────────────────────
 if [ "$FULL" = true ]; then
     echo "Removing .venv (full clean)..."

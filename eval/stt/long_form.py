@@ -78,13 +78,13 @@ def run(config: Config) -> dict:
 
     logger.info("=== Test 1.7: Long-Form Audio ===")
 
-    # Load TED-LIUM full talks
+    # Load VoxPopuli EN as long-ish utterances (replaces LIUM/tedlium — not on HF Hub)
     try:
-        ds = load_dataset("LIUM/tedlium", "release3", split="test", token=True)
+        ds = load_dataset("facebook/voxpopuli", "en", split="test", token=True)
         items = list(ds.select(range(min(50, len(ds)))))
     except Exception:
         items = []
-        logger.warning("TED-LIUM not available")
+        logger.warning("VoxPopuli not available")
 
     # Also create concatenated LibriSpeech files
     try:
@@ -102,7 +102,7 @@ def run(config: Config) -> dict:
     for i, example in enumerate(tqdm(items, desc="Long-form")):
         audio = np.array(example["audio"]["array"], dtype=np.float32)
         sr = example["audio"]["sampling_rate"]
-        ref = example.get("norm_text") or example.get("text", "")
+        ref = example.get("normalized_text") or example.get("norm_text") or example.get("text", "")
         duration_s = len(audio) / sr
 
         audio_bytes = (audio * 32768).astype(np.int16).tobytes()

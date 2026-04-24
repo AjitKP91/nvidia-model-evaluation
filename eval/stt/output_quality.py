@@ -122,7 +122,7 @@ def run(config: Config) -> dict:
     # Use punctuated/cased datasets
     datasets_to_test = [
         ("spgispeech", ("kensho/spgispeech", None), "SPGISpeech", "val"),
-        ("earnings22", ("revdotcom/earnings22", None), "Earnings-22", "test"),
+        # revdotcom/earnings22 removed — builder downloads from dead third-party URLs
     ]
 
     all_punct_results: dict[str, list[dict]] = {m: [] for m in PUNCT_MARKS}

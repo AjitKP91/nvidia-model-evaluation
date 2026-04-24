@@ -27,21 +27,19 @@ logger = logging.getLogger("eval.stt.accuracy")
 DATASETS = [
     {"name": "librispeech_clean", "hf": ("librispeech_asr", "clean"), "split": "test.clean", "label": "LibriSpeech clean"},
     {"name": "librispeech_other", "hf": ("librispeech_asr", "other"), "split": "test.other", "label": "LibriSpeech other"},
-    {"name": "tedlium", "hf": ("LIUM/tedlium", "release3"), "split": "test", "label": "TED-LIUM v3"},
+    # VoxPopuli EN replaces TED-LIUM v3 (LIUM/tedlium not on HF Hub)
+    {"name": "voxpopuli_en", "hf": ("facebook/voxpopuli", "en"), "split": "test", "label": "VoxPopuli EN"},
     {"name": "gigaspeech", "hf": ("speechcolab/gigaspeech", "xs"), "split": "test", "label": "GigaSpeech"},
     {"name": "spgispeech", "hf": ("kensho/spgispeech", None), "split": "val", "label": "SPGISpeech"},
-    {"name": "earnings22", "hf": ("revdotcom/earnings22", None), "split": "test", "label": "Earnings-22"},
-    {"name": "ami", "hf": ("edinburghcst/ami", "ihm"), "split": "test", "label": "AMI IHM"},
+    # edinburghcst/ami and revdotcom/earnings22 removed (unavailable on HF Hub)
 ]
 
 THRESHOLDS = {
     "librispeech_clean": {"pass": 0.05, "good": 0.07, "acceptable": 0.10},
     "librispeech_other": {"pass": 0.10, "good": 0.15, "acceptable": 0.20},
-    "tedlium": {"pass": 0.08, "good": 0.12, "acceptable": 0.18},
+    "voxpopuli_en": {"pass": 0.08, "good": 0.12, "acceptable": 0.18},
     "gigaspeech": {"pass": 0.12, "good": 0.16, "acceptable": 0.22},
     "spgispeech": {"pass": 0.08, "good": 0.12, "acceptable": 0.18},
-    "earnings22": {"pass": 0.15, "good": 0.22, "acceptable": 0.30},
-    "ami": {"pass": 0.18, "good": 0.25, "acceptable": 0.35},
 }
 
 
@@ -64,7 +62,11 @@ def _get_audio_and_ref(example: dict) -> tuple[np.ndarray, int, str]:
     audio = example["audio"]
     array = np.array(audio["array"], dtype=np.float32)
     sr = audio["sampling_rate"]
-    ref = example.get("norm_text") or example.get("text") or example.get("transcript") or example.get("sentence", "")
+    ref = (example.get("normalized_text") or
+           example.get("norm_text") or
+           example.get("text") or
+           example.get("transcript") or
+           example.get("sentence", ""))
     return array, sr, ref
 
 

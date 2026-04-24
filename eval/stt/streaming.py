@@ -70,14 +70,14 @@ def run(config: Config) -> dict:
     ls_subset = list(ls_ds.select(range(min(200, len(ls_ds)))))
 
     try:
-        ted_ds = load_dataset("LIUM/tedlium", "release3", split="test", token=True)
-        ted_subset = list(ted_ds.select(range(min(100, len(ted_ds)))))
+        vp_ds = load_dataset("facebook/voxpopuli", "en", split="test", token=True)
+        vp_subset = list(vp_ds.select(range(min(100, len(vp_ds)))))
     except Exception:
-        ted_subset = []
-        logger.warning("TED-LIUM not available; using LibriSpeech only")
+        vp_subset = []
+        logger.warning("VoxPopuli not available; using LibriSpeech only")
 
     all_items = [(f"ls_{i}", ex) for i, ex in enumerate(ls_subset)]
-    all_items += [(f"ted_{i}", ex) for i, ex in enumerate(ted_subset)]
+    all_items += [(f"vp_{i}", ex) for i, ex in enumerate(vp_subset)]
 
     ttwf_values = []
     final_lat_values = []
@@ -92,7 +92,9 @@ def run(config: Config) -> dict:
         audio = example["audio"]
         audio_array = np.array(audio["array"], dtype=np.float32)
         sr = audio["sampling_rate"]
-        ref_text = example.get("norm_text") or example.get("text", "")
+        ref_text = (example.get("normalized_text") or
+                    example.get("norm_text") or
+                    example.get("text", ""))
 
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
             sf.write(tmp.name, audio_array, sr)

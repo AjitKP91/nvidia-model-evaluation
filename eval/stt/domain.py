@@ -77,7 +77,7 @@ def run(config: Config) -> dict:
 
     datasets_to_test = [
         {"name": "spgispeech", "hf": ("kensho/spgispeech", None), "label": "SPGISpeech (financial)", "split": "val"},
-        {"name": "earnings22", "hf": ("revdotcom/earnings22", None), "label": "Earnings-22 (business)", "split": "test"},
+        # revdotcom/earnings22 removed — builder downloads from dead third-party URLs
     ]
 
     summary_rows = []

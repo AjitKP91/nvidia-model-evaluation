@@ -23,10 +23,10 @@ DATASETS = {
         "description": "LibriSpeech test-other (5.4 h challenging narration)",
     },
     "tedlium": {
-        "hf_path": "LIUM/tedlium",
-        "hf_name": "release3",
+        "hf_path": "facebook/voxpopuli",
+        "hf_name": "en",
         "split": "test",
-        "description": "TED-LIUM v3 test (3 h prepared oratory)",
+        "description": "VoxPopuli EN test (European Parliament prepared speech — replaces LIUM/tedlium)",
     },
     "gigaspeech": {
         "hf_path": "speechcolab/gigaspeech",
@@ -40,18 +40,8 @@ DATASETS = {
         "split": "val",
         "description": "SPGISpeech val (financial calls)",
     },
-    "earnings22": {
-        "hf_path": "revdotcom/earnings22",
-        "hf_name": None,
-        "split": "test",
-        "description": "Earnings-22 test (spontaneous business)",
-    },
-    "ami": {
-        "hf_path": "edinburghcst/ami",
-        "hf_name": "ihm",
-        "split": "test",
-        "description": "AMI IHM test (meeting conversations)",
-    },
+    # revdotcom/earnings22 removed — builder downloads from dead third-party URLs
+    # edinburghcst/ami removed — dataset not on HF Hub
     "common_voice_en": {
         "hf_path": "mozilla-foundation/common_voice_17_0",
         "hf_name": "en",

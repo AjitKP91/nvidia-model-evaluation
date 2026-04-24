@@ -99,12 +99,22 @@ class STTClient:
         content_type: str = "audio/wav",
     ) -> dict[str, Any]:
         import io
+        import wave
+
+        # audio_bytes is raw PCM int16 — wrap it in a WAV container
+        wav_buf = io.BytesIO()
+        with wave.open(wav_buf, "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)  # int16
+            wf.setframerate(sample_rate)
+            wf.writeframes(audio_bytes)
+        wav_buf.seek(0)
 
         headers = {
             self.stt_cfg.auth_header: f"Bearer {self.riva_cfg.auth_token}",
         }
         files = {
-            "file": ("audio.wav", io.BytesIO(audio_bytes), "audio/wav"),
+            "file": ("audio.wav", wav_buf, "audio/wav"),
         }
         data = {
             "model": self.stt_cfg.model_name,

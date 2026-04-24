@@ -50,6 +50,9 @@ export HF_HOME=/mnt/hf_home
 export TORCH_HOME=/mnt/torch_home
 export PIP_CACHE_DIR=/mnt/pip_cache
 export AICORE_BEARER_TOKEN="$AICORE_TOKEN"
+# Make PyTorch bundled CUDA visible (fixes UTMOS libcudart error)
+TORCH_LIB="\$(python -c 'import torch, os; print(os.path.dirname(torch.__file__))')/lib"
+export LD_LIBRARY_PATH="\$TORCH_LIB:\${LD_LIBRARY_PATH:-}"
 mkdir -p results
 echo "Starting: python -m eval.run $COMMAND"
 echo "Log: results/run.log"

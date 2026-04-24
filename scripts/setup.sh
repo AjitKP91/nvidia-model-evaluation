@@ -67,6 +67,15 @@ python -m spacy download en_core_web_sm -q
 
 echo "  Dependencies installed."
 
+# ── Set LD_LIBRARY_PATH for PyTorch bundled CUDA (fixes UTMOS libcudart error) ──
+TORCH_LIB="$(python -c 'import torch, os; print(os.path.dirname(torch.__file__))' 2>/dev/null)/lib"
+if [ -d "$TORCH_LIB" ]; then
+    LINE="export LD_LIBRARY_PATH=\"$TORCH_LIB:\$LD_LIBRARY_PATH\""
+    grep -qxF "$LINE" ~/.bashrc || echo "$LINE" >> ~/.bashrc
+    export LD_LIBRARY_PATH="$TORCH_LIB:${LD_LIBRARY_PATH:-}"
+    echo "  CUDA runtime path set: $TORCH_LIB"
+fi
+
 # ── 5. HuggingFace login ─────────────────────────────────────────────────────
 echo ""
 echo "[5/6] HuggingFace login"

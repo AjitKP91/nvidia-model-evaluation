@@ -10,17 +10,18 @@ Running locally adds 10–40 ms of network jitter to every single API call, whic
 
 ## 1. Prerequisites (do these before VM setup)
 
-### 1.1 HuggingFace dataset access
+### 1.1 HuggingFace account and dataset access
 
-Several STT tests load datasets via the gated **esb/datasets** collection (LibriSpeech, TED-LIUM, GigaSpeech, SPGISpeech, Earnings-22, AMI, Common Voice). Without access, those datasets are silently skipped.
+STT tests load datasets directly from HuggingFace. Several are gated and require you to accept terms before they can be downloaded.
 
 1. Create a free account at https://huggingface.co if you don't have one
-2. Go to https://huggingface.co/datasets/esb/datasets and click **Agree and access repository**
-3. Generate an access token at https://huggingface.co/settings/tokens (read permission is enough)
-4. On the VM, log in (run this inside tmux):
-   ```bash
-   huggingface-cli login   # paste your token when prompted
-   ```
+2. Generate a read-access token at https://huggingface.co/settings/tokens
+3. Accept terms for each gated dataset (click **Agree and access repository**):
+   - https://huggingface.co/datasets/speechcolab/gigaspeech
+   - https://huggingface.co/datasets/kensho/spgispeech
+4. `librispeech_asr`, `LIUM/tedlium`, `revdotcom/earnings22`, `edinburghcst/ami`, and `mozilla-foundation/common_voice_17_0` are public — no approval needed.
+
+> Tests skip gracefully if a dataset is unavailable — it is not a fatal error.
 
 ---
 
@@ -38,23 +39,16 @@ Several STT tests load datasets via the gated **esb/datasets** collection (Libri
 
 ## 3. One-Time VM Setup
 
-SSH into your Azure VM, then run the following once.
+SSH into your Azure VM, then run the setup script once. It handles everything automatically.
 
-### 3.1 System packages
-
-```bash
-sudo apt-get update && sudo apt-get install -y \
-    python3 python3-pip python3-venv git ffmpeg libsndfile1
-```
-
-### 3.2 Clone the repo
+### 3.1 Clone the repo
 
 ```bash
 git clone <your-repo-url> nvidia-model-evaluation
 cd nvidia-model-evaluation
 ```
 
-Or if you've been editing locally, rsync your working directory:
+Or sync from your laptop:
 
 ```bash
 # Run from your laptop:
@@ -63,73 +57,48 @@ rsync -avz --exclude results/ --exclude __pycache__ \
     <vm-user>@<vm-ip>:~/nvidia-model-evaluation/
 ```
 
-### 3.3 Redirect caches to the data disk
-
-The OS disk fills quickly. Before installing anything, point all caches to `/mnt` (the larger data disk):
+### 3.2 Run setup
 
 ```bash
-sudo mkdir -p /mnt/hf_home /mnt/torch_home /mnt/pip_cache
-sudo chown -R $USER /mnt/hf_home /mnt/torch_home /mnt/pip_cache
-
-export HF_HOME=/mnt/hf_home
-export TORCH_HOME=/mnt/torch_home
-export PIP_CACHE_DIR=/mnt/pip_cache
+bash scripts/setup.sh
 ```
 
-Add these exports to `~/.bashrc` so they survive reboots and new tmux sessions:
+This script does everything in order:
+1. Installs system packages (`ffmpeg`, `libsndfile1`, `libopenh264`, etc.)
+2. Creates cache directories in `~/hf_home`, `~/torch_home`, `~/pip_cache` (on the 512 GB persistent OS disk) and persists them in `~/.bashrc`
+3. Creates `.venv` and installs `uv` (faster pip resolver)
+4. Pre-installs `omegaconf>=2.1` to work around a pip 24+ incompatibility
+5. Installs all Python dependencies via `uv pip install -r requirements.txt`
+6. Sets `LD_LIBRARY_PATH` to PyTorch's bundled CUDA libs (needed by UTMOS)
+7. Runs `huggingface-cli login` — paste your HF token when prompted
+
+> **Note:** Setup takes 10–20 minutes on first run (downloading PyTorch, SpeechBrain, etc.)
+
+### 3.3 Pre-download datasets (recommended)
+
+Download all evaluation datasets into the local cache **once**, before the first eval run. This means the eval never re-downloads datasets — even after cleaning results.
 
 ```bash
-cat >> ~/.bashrc <<'EOF'
-export HF_HOME=/mnt/hf_home
-export TORCH_HOME=/mnt/torch_home
-export PIP_CACHE_DIR=/mnt/pip_cache
-EOF
-source ~/.bashrc
+bash scripts/download_datasets.sh
 ```
 
-### 3.4 Create a Python virtual environment
+This downloads into `~/hf_home/datasets` and survives `clean.sh` runs.
+
+You can also download a single dataset:
 
 ```bash
-cd ~/nvidia-model-evaluation
-python3 -m venv .venv
-source .venv/bin/activate
+bash scripts/download_datasets.sh librispeech_clean
 ```
 
-### 3.5 Install dependencies
+Available names: `librispeech_clean`, `librispeech_other`, `tedlium`, `gigaspeech`, `spgispeech`, `earnings22`, `ami`, `common_voice_en`, `ljspeech`.
 
-`fairseq` (pulled in by `utmos`) ships an old `omegaconf 2.0.6` with an invalid requirement format that pip 24+ rejects. Unpin it first, then install everything:
-
-```bash
-pip install --upgrade pip wheel setuptools
-
-# Fix omegaconf before the full install
-pip install "omegaconf>=2.1" --no-cache-dir
-
-# Install all requirements
-pip install -r requirements.txt --no-cache-dir
-
-# spaCy English model (needed for Test 1.8 domain vocabulary)
-python -m spacy download en_core_web_sm
-```
-
-> **Note on UTMOS / NISQA:** These packages may require extra steps if the PyPI version is outdated.
-> If `pip install utmos` fails, install from source:
-> ```bash
-> pip install git+https://github.com/sarulab-speech/UTMOS22.git
-> ```
-
-> **Note on pyworld:** F0 extraction in TTS Test 2.3 uses pyworld. If import fails with
-> `No module named 'pkg_resources'`, install setuptools into the venv:
-> ```bash
-> .venv/bin/pip install setuptools --no-cache-dir
-> ```
-> The test will run without F0 metrics if pyworld is unavailable.
+> **Disk space:** All test splits together are ~20–40 GB. With a 512 GB OS disk this is fine.
 
 ---
 
 ## 4. Configure Endpoints
 
-Edit `eval/config.yaml` with your actual AI Core values. Note that each service has its own `grpc_uri`:
+Edit `eval/config.yaml` with your actual AI Core values. Each service has its own `grpc_uri`:
 
 ```yaml
 riva:
@@ -155,100 +124,73 @@ tts:
   sample_rate: 22050
 ```
 
-Then export your bearer token (get it from the AI Core service key / OAuth token endpoint):
-
-```bash
-export AICORE_BEARER_TOKEN="eyJ..."
-```
-
-To make this permanent across sessions, add it to `~/.bashrc`:
-
-```bash
-echo 'export AICORE_BEARER_TOKEN="eyJ..."' >> ~/.bashrc
-```
-
-### Quick connectivity check
-
-Before running any tests, verify the endpoints are reachable:
-
-```bash
-python -m eval.run phase0
-```
-
-This runs all Phase 0 discovery checks (gRPC ping, REST ping, schema discovery, smoke tests, cold-start measurement) and writes results to `results/phase0/discovery.json`. Fix any connectivity issues before proceeding.
-
 ---
 
 ## 5. Running the Evaluation
 
-All commands are run from the repo root with the venv active.
-
-### Run everything end-to-end
+Use `start_eval.sh` — it handles everything: pulls latest code, asks for your AICORE token, and runs the eval inside a persistent tmux session so SSH disconnects don't interrupt it.
 
 ```bash
-python -m eval.run all
+bash scripts/start_eval.sh           # run everything (phase0 + stt + tts + report)
+bash scripts/start_eval.sh stt       # STT tests only
+bash scripts/start_eval.sh tts       # TTS tests only
+bash scripts/start_eval.sh phase0    # connectivity check only
+bash scripts/start_eval.sh report    # regenerate report from existing results
 ```
 
-This runs Phase 0 → all 11 STT tests → all 8 TTS tests → generates `results/report.html`.
-Expected runtime on the A100 VM: **4–8 hours** depending on API throughput.
-
----
-
-### Run one phase at a time (recommended)
+Monitor progress from outside tmux:
 
 ```bash
-# Phase 0: connectivity + discovery
-python -m eval.run phase0
+tail -f results/run.log
+```
 
-# All STT tests
-python -m eval.run stt
+Re-attach to the tmux session:
 
-# All TTS tests
-python -m eval.run tts
-
-# Generate report from whatever results exist so far
-python -m eval.run report
+```bash
+tmux attach -t eval
+# Detach without killing: Ctrl+B then D
 ```
 
 ---
 
-### Run a single test
+### Run manually (without the start script)
+
+If you prefer to run commands directly (e.g., for a single test):
 
 ```bash
-# By name:
+source .venv/bin/activate
+export HF_HOME=~/hf_home
+export AICORE_BEARER_TOKEN="eyJ..."
+
+# Pre-download datasets (if not done yet):
+python -m eval.run download
+
+# Single test:
 python -m eval.run stt --test accuracy
-python -m eval.run stt --test streaming
 python -m eval.run tts --test naturalness
-python -m eval.run tts --test edge_cases
 
-# Available STT test names:
-#   accuracy, performance, streaming, rest_vs_grpc, noise_robustness,
-#   accent, long_form, domain, output_quality, confidence, format_robustness
+# Full run:
+python -m eval.run all
 
-# Available TTS test names:
-#   naturalness, intelligibility, prosody, signal_quality,
-#   latency, concurrency, edge_cases, long_form
-```
-
----
-
-### Dry run (check config without calling the API)
-
-```bash
+# Dry-run (verify config without API calls):
 python -m eval.run all --dry-run
 ```
 
-Prints resolved endpoints and exits. Useful for verifying config before a long run.
+Available STT test names:
+`accuracy`, `performance`, `streaming`, `rest_vs_grpc`, `noise_robustness`, `accent`, `long_form`, `domain`, `output_quality`, `confidence`, `format_robustness`
+
+Available TTS test names:
+`naturalness`, `intelligibility`, `prosody`, `signal_quality`, `latency`, `concurrency`, `edge_cases`, `long_form`
 
 ---
 
 ## 6. Resuming After Interruption
 
-Every API call result is written to a `.jsonl` file immediately. If a test is interrupted, re-running the same command will **skip already-completed items** automatically — no data is lost and no duplicate API calls are made.
+Every API call result is written to a `.jsonl` file immediately. Re-running the same command **skips already-completed items** automatically — no data is lost and no duplicate API calls are made.
 
 ```bash
-# Safe to re-run at any time:
-python -m eval.run stt --test accuracy
+# Safe to re-run at any time — resumes from where it stopped:
+bash scripts/start_eval.sh stt
 ```
 
 ---
@@ -276,49 +218,54 @@ results/
 └── report.html                   # Full evaluation report (open in browser)
 ```
 
-After the run, copy the report back to your laptop:
+Copy the report to your laptop:
 
 ```bash
-# From your laptop:
 scp <vm-user>@<vm-ip>:~/nvidia-model-evaluation/results/report.html ~/Desktop/
 ```
 
 ---
 
-## 8. Keeping the VM Run Alive
-
-SSH sessions that disconnect will kill the process. Use `tmux` or `nohup`:
-
-### Option A — tmux (recommended)
+## 8. Cleaning Up
 
 ```bash
-# On the VM, start a tmux session:
-tmux new -s eval
+# Clear results only — keeps .venv and downloaded datasets:
+bash scripts/clean.sh
 
-# Inside tmux, activate venv and run:
-source .venv/bin/activate
-python -m eval.run all 2>&1 | tee results/run.log
+# Also wipe the HuggingFace dataset cache (forces re-download):
+bash scripts/clean.sh --data
 
-# Detach from tmux (the process keeps running):
-# Press Ctrl+B, then D
+# Full reset — also removes .venv (run setup.sh again afterwards):
+bash scripts/clean.sh --full
 
-# Re-attach later:
-tmux attach -t eval
+# Combined:
+bash scripts/clean.sh --full --data
 ```
 
-### Option B — nohup
+> After a plain `clean.sh`, datasets are still cached in `~/hf_home/datasets`.
+> Run `bash scripts/start_eval.sh` directly — no re-download needed.
 
-```bash
-nohup python -m eval.run all > results/run.log 2>&1 &
-echo "PID: $!"
+---
 
-# Monitor progress:
-tail -f results/run.log
+## 9. Typical Workflow
+
+```
+First time on a new VM:
+  bash scripts/setup.sh                  # ~15 min
+  bash scripts/download_datasets.sh      # ~30-60 min (downloads ~20-40 GB)
+  # edit eval/config.yaml with endpoints
+
+Every eval run:
+  bash scripts/start_eval.sh             # enter token → runs in tmux
+
+After a run (clean results, keep datasets):
+  bash scripts/clean.sh
+  bash scripts/start_eval.sh             # no re-download, starts immediately
 ```
 
 ---
 
-## 9. Log Level & Debugging
+## 10. Log Level & Debugging
 
 ```bash
 # Verbose output:
@@ -330,7 +277,7 @@ python -m eval.run tts --log-level WARNING
 
 ---
 
-## 10. Test Runtime Estimates (A100 VM, Frankfurt → AI Core)
+## 11. Test Runtime Estimates (A100 VM, Frankfurt → AI Core)
 
 | Test | Calls | Estimated Time |
 |------|-------|----------------|
@@ -358,7 +305,7 @@ python -m eval.run tts --log-level WARNING
 
 ---
 
-## 11. Troubleshooting
+## 12. Troubleshooting
 
 ### `$AICORE_BEARER_TOKEN not set`
 ```bash
@@ -379,55 +326,73 @@ pip install nvidia-riva-client
 ```
 
 ### `ModuleNotFoundError: No module named 'pkg_resources'` (pyworld)
-pyworld depends on setuptools which may be missing from the venv:
+setuptools may be missing from the venv:
 ```bash
 .venv/bin/pip install setuptools --no-cache-dir
 ```
 Always use `.venv/bin/pip` (not plain `pip`) to target the venv.
+F0 metrics in TTS Test 2.3 are skipped automatically if pyworld is unavailable.
 
 ### `omegaconf` / `invalid-installed-package` error during pip install
-pip 24+ rejects `omegaconf 2.0.6` (pulled in by `fairseq`/`utmos`) due to an invalid requirement format. Fix:
+pip 24+ rejects `omegaconf 2.0.6` (pulled in by `fairseq`/`utmos`). Fix:
 ```bash
 .venv/bin/pip uninstall -y omegaconf
 .venv/bin/pip install "omegaconf>=2.1" --no-cache-dir
 .venv/bin/pip install -r requirements.txt --no-cache-dir
 ```
+`setup.sh` handles this automatically.
+
+### `resolution-too-deep` error during pip install
+pip cannot resolve the dependency graph for complex packages (fairseq, utmos). Use `uv`:
+```bash
+pip install uv --no-cache-dir
+uv pip install -r requirements.txt --no-cache-dir
+```
+`setup.sh` uses `uv` automatically.
+
+### UTMOS `libcudart.so.13: cannot open shared object file`
+PyTorch ships its own CUDA runtime. Add it to `LD_LIBRARY_PATH`:
+```bash
+TORCH_LIB=$(python -c 'import torch, os; print(os.path.dirname(torch.__file__))')/lib
+export LD_LIBRARY_PATH="$TORCH_LIB:${LD_LIBRARY_PATH:-}"
+```
+`setup.sh` and `start_eval.sh` set this automatically.
+
+### `libopenh264.so.5: cannot open shared object file` (ffmpeg)
+```bash
+sudo apt-get install -y libopenh264-dev
+# If only .so.6 is available:
+sudo ln -sf /usr/lib/x86_64-linux-gnu/libopenh264.so.6 \
+            /usr/lib/x86_64-linux-gnu/libopenh264.so.5
+```
+`setup.sh` handles this automatically.
+
+### `Unauthorized` / 403 on HuggingFace datasets
+1. Make sure you are logged in: `huggingface-cli login`
+2. For GigaSpeech and SPGISpeech, accept terms at:
+   - https://huggingface.co/datasets/speechcolab/gigaspeech
+   - https://huggingface.co/datasets/kensho/spgispeech
 
 ### `[Errno 28] No space left on device`
-The `/mnt` data disk is full. Find what's using space:
+Check disk usage:
 ```bash
-du -sh /mnt/* 2>/dev/null | sort -rh | head -10
+df -h /
+du -sh ~/hf_home ~/torch_home ~/pip_cache 2>/dev/null | sort -rh
 ```
-Common culprits:
+Free up space:
 ```bash
-# HuggingFace model/dataset cache
-rm -rf /mnt/hf_cache
+# Remove pip wheel cache:
+rm -rf ~/pip_cache/*
 
-# pip wheel build cache
-rm -rf /mnt/pip_cache/*
-```
-Check that caches are redirected to `/mnt` and not filling the OS disk:
-```bash
-df -h / /mnt
-```
+# Remove HuggingFace model weights (re-downloaded on next use):
+rm -rf ~/hf_home/hub
 
-### `[Errno 13] Permission denied: '/mnt/hf_home'`
-Fix ownership of the cache directories:
-```bash
-sudo chown -R $USER /mnt/hf_home /mnt/torch_home /mnt/pip_cache
+# Remove dataset cache (re-download with download_datasets.sh):
+bash scripts/clean.sh --data
 ```
 
-### `Unauthorized` / 403 on HuggingFace datasets (esb/datasets)
-Several STT datasets (LibriSpeech, TED-LIUM, GigaSpeech, etc.) are loaded via the gated `esb/datasets` collection. To access them:
-1. Request access at https://huggingface.co/datasets/esb/datasets
-2. Once approved, log in on the VM:
-   ```bash
-   huggingface-cli login   # paste your HF token when prompted
-   ```
-Tests will skip gracefully if datasets are unavailable — this is not a fatal error.
-
-### UTMOS / SpeechBrain downloads fail
-These models download weights on first use (~hundreds of MB). Ensure the VM has internet access and enough disk space (50 GB recommended on `/mnt`).
+### UTMOS / SpeechBrain model downloads fail
+These models download weights on first use (~hundreds of MB). Ensure the VM has internet access and enough disk space. Check `~/hf_home/hub` for partial downloads and delete them before retrying.
 
 ### `ffmpeg not found` (pydub / librosa errors)
 ```bash

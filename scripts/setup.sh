@@ -17,6 +17,17 @@ echo "[1/6] Installing system packages..."
 sudo apt-get update -qq
 sudo apt-get install -y ffmpeg libavcodec-extra libsndfile1 git python3 python3-pip python3-venv
 
+# libopenh264: ffmpeg needs this for H.264; version on the system may differ
+sudo apt-get install -y libopenh264-dev 2>/dev/null || true
+# If only .so.6 is available, symlink it as .so.5 (what ffmpeg looks for)
+if [ ! -f /usr/lib/x86_64-linux-gnu/libopenh264.so.5 ]; then
+    SO6=$(find /usr/lib -name "libopenh264.so.6" 2>/dev/null | head -1)
+    if [ -n "$SO6" ]; then
+        sudo ln -sf "$SO6" /usr/lib/x86_64-linux-gnu/libopenh264.so.5
+        echo "  Symlinked libopenh264.so.6 → libopenh264.so.5"
+    fi
+fi
+
 # ── 2. /mnt cache directories ───────────────────────────────────────────────
 echo ""
 echo "[2/6] Setting up /mnt cache directories..."

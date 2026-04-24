@@ -9,7 +9,6 @@ import yaml
 
 @dataclass
 class RivaConfig:
-    grpc_uri: str
     use_ssl: bool = True
     auth_token_env: str = "AICORE_BEARER_TOKEN"
 
@@ -25,6 +24,7 @@ class RivaConfig:
 
 @dataclass
 class STTConfig:
+    grpc_uri: str
     model_name: str
     rest_endpoint: str
     language_code: str = "en-US"
@@ -34,6 +34,7 @@ class STTConfig:
 
 @dataclass
 class TTSConfig:
+    grpc_uri: str
     model_name: str
     voice_name: str
     rest_endpoint: str

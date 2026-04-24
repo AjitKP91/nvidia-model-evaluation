@@ -1,10 +1,10 @@
 # nvidia-riva-client gRPC connection
 riva:
-  grpc_uri: <aicore-grpc-host>:<port>
   use_ssl: true
   auth_token_env: AICORE_BEARER_TOKEN
 
 stt:
+  grpc_uri: nim-parakeet.ai.preprod-eu-cc.eu-central-1.aws.ml.hana.ondemand.com:443
   model_name: parakeet-1.1b-en-US-asr-offline
   rest_endpoint: https://<aicore-host>/v1/deployments/<id>/predictions
   language_code: en-US
@@ -12,6 +12,7 @@ stt:
   request_timeout_s: 120
 
 tts:
+  grpc_uri: nim-magpie.ai.preprod-eu-cc.eu-central-1.aws.ml.hana.ondemand.com:443
   model_name: Magpie-Multilingual.EN-US.Aria
   voice_name: Magpie-Multilingual.EN-US.Aria
   rest_endpoint: https://<aicore-host>/v1/deployments/<id>/predictions

@@ -25,7 +25,7 @@ class STTClient:
         self.riva_cfg = config.riva
 
         self.auth = riva.client.Auth(
-            uri=self.riva_cfg.grpc_uri,
+            uri=self.stt_cfg.grpc_uri,
             use_ssl=self.riva_cfg.use_ssl,
             metadata_args=[
                 ["authorization", f"Bearer {self.riva_cfg.auth_token}"]

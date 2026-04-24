@@ -177,7 +177,8 @@ def main(argv=None):
 
     if args.dry_run:
         log.info("[DRY RUN] Config loaded. Command=%s test=%s", args.command, args.test)
-        log.info("  gRPC URI : %s", config.riva.grpc_uri)
+        log.info("  STT gRPC : %s", config.stt.grpc_uri)
+        log.info("  TTS gRPC : %s", config.tts.grpc_uri)
         log.info("  STT REST : %s", config.stt.rest_endpoint)
         log.info("  TTS REST : %s", config.tts.rest_endpoint)
         log.info("  Results  : %s", config.evaluation.results_dir)

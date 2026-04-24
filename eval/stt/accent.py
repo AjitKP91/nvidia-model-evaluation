@@ -32,7 +32,7 @@ def run(config: Config) -> dict:
     try:
         cv_ds = load_dataset(
             "mozilla-foundation/common_voice_17_0", "en",
-            split="test", trust_remote_code=True,
+            split="test", trust_remote_code=True, token=True,
         )
     except Exception as e:
         logger.error("Common Voice EN not available: %s", e)

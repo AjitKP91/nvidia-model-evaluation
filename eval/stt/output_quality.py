@@ -134,7 +134,7 @@ def run(config: Config) -> dict:
     for ds_name, (hf_path, hf_name), label in datasets_to_test:
         logger.info("Processing %s", label)
         try:
-            ds = load_dataset(hf_path, hf_name, split="test", trust_remote_code=True)
+            ds = load_dataset(hf_path, hf_name, split="test", trust_remote_code=True, token=True)
         except Exception as e:
             logger.error("Failed to load %s: %s", ds_name, e)
             continue

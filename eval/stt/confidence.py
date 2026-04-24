@@ -48,11 +48,11 @@ def run(config: Config) -> dict:
     logger.info("=== Test 1.10: Confidence Score Calibration ===")
 
     # Load 1000+ utterances from LibriSpeech + GigaSpeech
-    ls_ds = load_dataset("esb/datasets", "librispeech", split="test", trust_remote_code=True)
+    ls_ds = load_dataset("esb/datasets", "librispeech", split="test", trust_remote_code=True, token=True)
     ls_subset = list(ls_ds.select(range(min(700, len(ls_ds)))))
 
     try:
-        gs_ds = load_dataset("esb/datasets", "gigaspeech", split="test", trust_remote_code=True)
+        gs_ds = load_dataset("esb/datasets", "gigaspeech", split="test", trust_remote_code=True, token=True)
         gs_subset = list(gs_ds.select(range(min(300, len(gs_ds)))))
     except Exception:
         gs_subset = []

@@ -46,17 +46,20 @@ source "$REPO_DIR/.venv/bin/activate"
 # ── 4. Install Python dependencies ──────────────────────────────────────────
 echo ""
 echo "[4/6] Installing Python dependencies (this may take 10-20 minutes)..."
-pip install --upgrade pip wheel setuptools --no-cache-dir -q
+
+# Install uv — much faster resolver, handles complex graphs pip cannot
+pip install uv --no-cache-dir -q
+echo "  uv installed."
 
 # Pre-fix omegaconf: fairseq/utmos ships 2.0.6 which pip 24+ rejects
 echo "  Pre-fixing omegaconf..."
-pip install "omegaconf>=2.1" --no-cache-dir -q
+uv pip install "omegaconf>=2.1" --no-cache-dir
 
-# Main install
-pip install -r "$REPO_DIR/requirements.txt" --no-cache-dir
+# Install all requirements via uv (avoids resolution-too-deep errors)
+uv pip install -r "$REPO_DIR/requirements.txt" --no-cache-dir
 
 # Ensure setuptools is present for pyworld
-pip install setuptools --no-cache-dir -q
+uv pip install setuptools --no-cache-dir
 
 # spaCy language model
 echo "  Downloading spaCy model..."

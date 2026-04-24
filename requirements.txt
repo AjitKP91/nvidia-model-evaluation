@@ -1,9 +1,10 @@
 # PyTorch — installed with CUDA 12.1 wheel by setup.sh before this file.
+# Pinned to 2.2.1 to satisfy nisqa's strict torch==2.2.1 requirement.
 # Listed here so uv/pip knows the package is already satisfied and does
 # not downgrade to the CPU-only PyPI wheel when resolving other deps.
-torch
-torchvision
-torchaudio
+torch==2.2.1
+torchvision==0.17.1
+torchaudio==2.2.1
 
 # NVIDIA Riva gRPC SDK
 nvidia-riva-client

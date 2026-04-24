@@ -62,10 +62,11 @@ pip install uv --no-cache-dir -q
 echo "  uv installed."
 
 # Install PyTorch with CUDA 12.1 support (compatible with CUDA 12.x drivers).
+# Pinned to 2.2.1 to match nisqa's strict torch==2.2.1 requirement.
 # Must be done BEFORE requirements.txt so other packages (utmos, whisper,
 # speechbrain) pick up the GPU-enabled torch instead of the CPU-only PyPI wheel.
-echo "  Installing PyTorch (CUDA 12.1)..."
-uv pip install torch torchvision torchaudio \
+echo "  Installing PyTorch 2.2.1 (CUDA 12.1)..."
+uv pip install "torch==2.2.1" "torchvision==0.17.1" "torchaudio==2.2.1" \
     --index-url https://download.pytorch.org/whl/cu121 \
     --no-cache-dir
 python -c "import torch; print('  torch CUDA available:', torch.cuda.is_available())"

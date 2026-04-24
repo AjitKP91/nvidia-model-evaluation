@@ -138,7 +138,7 @@ def main(argv=None):
     )
     parser.add_argument(
         "command",
-        choices=["phase0", "stt", "tts", "all", "report"],
+        choices=["phase0", "stt", "tts", "all", "report", "download"],
         help="What to run",
     )
     parser.add_argument(
@@ -219,6 +219,16 @@ def main(argv=None):
         from eval.report.generate_report import generate
         report_path = generate(config.evaluation.results_dir)
         log.info("Report: %s", report_path)
+
+    elif args.command == "download":
+        from eval.data.download_datasets import download_all
+        log.info("Pre-downloading all evaluation datasets...")
+        results = download_all()
+        ok = sum(1 for v in results.values() if v is not None)
+        log.info("Downloaded %d/%d datasets", ok, len(results))
+        for name, ds in results.items():
+            status = f"{len(ds)} examples" if ds is not None else "FAILED"
+            log.info("  %-20s %s", name, status)
 
     elif args.command == "report":
         from eval.report.generate_report import generate

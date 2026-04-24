@@ -76,6 +76,7 @@ def download_dataset(name: str, cache_dir: str | Path | None = None) -> object:
         "path": info["hf_path"],
         "split": info["split"],
         "trust_remote_code": True,
+        "token": True,
     }
     if info.get("hf_name"):
         kwargs["name"] = info["hf_name"]

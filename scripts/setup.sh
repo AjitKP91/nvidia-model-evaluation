@@ -61,6 +61,15 @@ echo "[4/6] Installing Python dependencies (this may take 10-20 minutes)..."
 pip install uv --no-cache-dir -q
 echo "  uv installed."
 
+# Install PyTorch with CUDA 12.1 support (compatible with CUDA 12.x drivers).
+# Must be done BEFORE requirements.txt so other packages (utmos, whisper,
+# speechbrain) pick up the GPU-enabled torch instead of the CPU-only PyPI wheel.
+echo "  Installing PyTorch (CUDA 12.1)..."
+uv pip install torch torchvision torchaudio \
+    --index-url https://download.pytorch.org/whl/cu121 \
+    --no-cache-dir
+python -c "import torch; print('  torch CUDA available:', torch.cuda.is_available())"
+
 # Pre-fix omegaconf: fairseq/utmos ships 2.0.6 which pip 24+ rejects
 echo "  Pre-fixing omegaconf..."
 uv pip install "omegaconf>=2.1" --no-cache-dir
@@ -90,8 +99,9 @@ fi
 echo ""
 echo "[5/6] HuggingFace login"
 echo "  Get your token at: https://huggingface.co/settings/tokens"
-echo "  Make sure you have accepted access to esb/datasets at:"
-echo "  https://huggingface.co/datasets/esb/datasets"
+echo "  Gated datasets (GigaSpeech, SPGISpeech) require accepting terms at:"
+echo "  https://huggingface.co/datasets/speechcolab/gigaspeech"
+echo "  https://huggingface.co/datasets/kensho/spgispeech"
 echo ""
 read -rsp "  Paste your HuggingFace token (input hidden): " HF_TOKEN
 echo ""
@@ -105,6 +115,7 @@ python -c "import riva.client; print('  riva.client OK')"
 python -c "import jiwer; print('  jiwer OK')"
 python -c "import soundfile; print('  soundfile OK')"
 python -c "import pkg_resources; print('  pkg_resources OK')"
+python -c "import torch; avail = torch.cuda.is_available(); print('  torch CUDA:', avail, '(' + (torch.version.cuda or 'CPU only') + ')')"
 
 echo ""
 echo "=========================================="

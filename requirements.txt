@@ -1,3 +1,10 @@
+# PyTorch — installed with CUDA 12.1 wheel by setup.sh before this file.
+# Listed here so uv/pip knows the package is already satisfied and does
+# not downgrade to the CPU-only PyPI wheel when resolving other deps.
+torch
+torchvision
+torchaudio
+
 # NVIDIA Riva gRPC SDK
 nvidia-riva-client
 

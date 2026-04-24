@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import tempfile
 from pathlib import Path
 
@@ -96,11 +97,13 @@ def run(config: Config) -> dict:
                     example.get("norm_text") or
                     example.get("text", ""))
 
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-            sf.write(tmp.name, audio_array, sr)
-            tmp_path = tmp.name
-
+        # Use mkstemp to avoid NamedTemporaryFile dual-open conflict.
+        # Write int16 PCM so wave.open() in stream_recognize can parse it.
+        fd, tmp_path = tempfile.mkstemp(suffix=".wav")
+        os.close(fd)
         try:
+            audio_int16 = (audio_array * 32767).astype(np.int16)
+            sf.write(tmp_path, audio_int16, sr, subtype="PCM_16")
             result = stt_client.stream_recognize(tmp_path)
 
             stability = _compute_stability_rate(result["partials"])
@@ -155,16 +158,18 @@ def run(config: Config) -> dict:
         except Exception:
             pass
 
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-            sf.write(tmp.name, audio_array, sr)
-            try:
-                stream_result = stt_client.stream_recognize(tmp.name)
-                stream_refs.append(ref)
-                stream_hyps.append(stream_result["transcript"])
-            except Exception:
-                pass
-            finally:
-                Path(tmp.name).unlink(missing_ok=True)
+        fd, tmp_path_wer = tempfile.mkstemp(suffix=".wav")
+        os.close(fd)
+        try:
+            audio_int16 = (audio_array * 32768).astype(np.int16)
+            sf.write(tmp_path_wer, audio_int16, sr, subtype="PCM_16")
+            stream_result = stt_client.stream_recognize(tmp_path_wer)
+            stream_refs.append(ref)
+            stream_hyps.append(stream_result["transcript"])
+        except Exception:
+            pass
+        finally:
+            Path(tmp_path_wer).unlink(missing_ok=True)
 
     batch_wer = jiwer.wer(batch_refs, batch_hyps, reference_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER) if batch_refs else None
     stream_wer = jiwer.wer(stream_refs, stream_hyps, reference_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER) if stream_refs else None

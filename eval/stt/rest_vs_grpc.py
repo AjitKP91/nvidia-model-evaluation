@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import tempfile
 from pathlib import Path
 
@@ -43,10 +44,12 @@ def run(config: Config) -> dict:
     sr = ref_example["audio"]["sampling_rate"]
     audio_bytes = (audio_array * 32768).astype(np.int16).tobytes()
 
-    # Save as WAV for streaming tests
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-        sf.write(tmp.name, audio_array, sr)
-        wav_path = tmp.name
+    # Use mkstemp to avoid NamedTemporaryFile dual-open conflict.
+    # Write int16 PCM so wave.open() in stream_recognize can parse it.
+    fd, wav_path = tempfile.mkstemp(suffix=".wav")
+    os.close(fd)
+    audio_int16 = (audio_array * 32767).astype(np.int16)
+    sf.write(wav_path, audio_int16, sr, subtype="PCM_16")
 
     # ---- Batch comparison ----
     grpc_batch_latencies = []

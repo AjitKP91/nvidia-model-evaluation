@@ -26,6 +26,16 @@ NORMALIZE_FOR_WER = jiwer.Compose([
     jiwer.ReduceToListOfListOfWords(),
 ])
 
+# Same as above but without RemoveEmptyStrings — use for aggregate (list) calls
+# so that empty refs/hyps stay in the list and lengths never diverge.
+NORMALIZE_FOR_WER_AGG = jiwer.Compose([
+    jiwer.ToLowerCase(),
+    jiwer.RemovePunctuation(),
+    jiwer.RemoveMultipleSpaces(),
+    jiwer.Strip(),
+    jiwer.ReduceToListOfListOfWords(),
+])
+
 
 def normalize_text(text: str) -> str:
     return (

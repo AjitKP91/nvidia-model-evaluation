@@ -15,6 +15,7 @@ from eval.config import Config
 from eval.stt.client import STTClient
 from eval.utils import (
     NORMALIZE_FOR_WER,
+    NORMALIZE_FOR_WER_AGG,
     bootstrap_ci,
     get_completed_ids,
     load_dataset_tmp,
@@ -127,37 +128,28 @@ def run(config: Config) -> dict:
             logger.warning("No results for %s", ds_name)
             continue
 
-        # Drop pairs where the reference has no word content after punctuation removal.
-        # jiwer's RemoveEmptyStrings would silently shorten the reference list inside
-        # the aggregate call, causing a length mismatch error.
-        import string as _string
-        valid = [
-            (r, h, w) for r, h, w in zip(references, hypotheses, per_utt_wers)
-            if r.translate(str.maketrans("", "", _string.punctuation)).strip()
-        ]
-        if not valid:
-            logger.warning("No valid references for %s after filtering", ds_name)
-            continue
-        if len(valid) < len(references):
-            logger.warning("Dropped %d empty-normalizing refs for %s",
-                           len(references) - len(valid), ds_name)
-        references = [x[0] for x in valid]
-        hypotheses = [x[1] for x in valid]
-        per_utt_wers = [x[2] for x in valid]
-
-        # Aggregate metrics
+        # Aggregate metrics — use NORMALIZE_FOR_WER_AGG (no RemoveEmptyStrings)
+        # so empty refs/hyps don't shorten one list and cause a length mismatch.
         agg_wer = jiwer.wer(
             references, hypotheses,
-            reference_transform=NORMALIZE_FOR_WER,
-            hypothesis_transform=NORMALIZE_FOR_WER,
+            reference_transform=NORMALIZE_FOR_WER_AGG,
+            hypothesis_transform=NORMALIZE_FOR_WER_AGG,
         )
         agg_cer = jiwer.cer(
             references, hypotheses,
-            reference_transform=NORMALIZE_FOR_WER,
-            hypothesis_transform=NORMALIZE_FOR_WER,
+            reference_transform=NORMALIZE_FOR_WER_AGG,
+            hypothesis_transform=NORMALIZE_FOR_WER_AGG,
         )
-        agg_mer = jiwer.mer(references, hypotheses)
-        agg_wil = jiwer.wil(references, hypotheses)
+        agg_mer = jiwer.mer(
+            references, hypotheses,
+            reference_transform=NORMALIZE_FOR_WER_AGG,
+            hypothesis_transform=NORMALIZE_FOR_WER_AGG,
+        )
+        agg_wil = jiwer.wil(
+            references, hypotheses,
+            reference_transform=NORMALIZE_FOR_WER_AGG,
+            hypothesis_transform=NORMALIZE_FOR_WER_AGG,
+        )
 
         # SER: fraction of utterances with at least 1 error
         ser = sum(1 for w in per_utt_wers if w > 0) / len(per_utt_wers)

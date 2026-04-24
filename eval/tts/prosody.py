@@ -6,8 +6,14 @@ from pathlib import Path
 
 import librosa
 import numpy as np
-import pyworld as pw
 from scipy.stats import pearsonr
+
+try:
+    import pyworld as pw
+    _PYWORLD_AVAILABLE = True
+except ImportError:
+    pw = None
+    _PYWORLD_AVAILABLE = False
 from tqdm import tqdm
 
 from eval.config import Config
@@ -18,6 +24,8 @@ logger = logging.getLogger("eval.tts.prosody")
 
 
 def extract_f0(audio_path: str, sr: int = 16000) -> np.ndarray:
+    if not _PYWORLD_AVAILABLE:
+        return np.array([])
     wav, actual_sr = librosa.load(audio_path, sr=sr)
     wav = wav.astype(np.float64)
     f0, t = pw.dio(wav, sr)

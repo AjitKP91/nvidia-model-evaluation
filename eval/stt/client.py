@@ -47,6 +47,7 @@ class STTClient:
         enable_word_times: bool = True,
     ) -> dict[str, Any]:
         config = riva.client.RecognitionConfig(
+            encoding=riva.client.AudioEncoding.LINEAR_PCM,
             language_code=self.stt_cfg.language_code,
             max_alternatives=1,
             enable_automatic_punctuation=enable_punctuation,
@@ -153,6 +154,7 @@ class STTClient:
 
         streaming_config = riva.client.StreamingRecognitionConfig(
             config=riva.client.RecognitionConfig(
+                encoding=riva.client.AudioEncoding.LINEAR_PCM,
                 language_code=self.stt_cfg.language_code,
                 max_alternatives=1,
                 enable_automatic_punctuation=True,

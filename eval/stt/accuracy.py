@@ -47,7 +47,9 @@ THRESHOLDS = {
 
 def _load_dataset(ds_info: dict) -> object:
     path, name = ds_info["hf"]
-    kwargs = {"path": path, "split": ds_info["split"], "trust_remote_code": True, "token": True}
+    kwargs = {"path": path, "split": ds_info["split"], "token": True}
+    if not path.startswith("esb/"):
+        kwargs["trust_remote_code"] = True
     if name:
         kwargs["name"] = name
     return load_dataset(**kwargs)

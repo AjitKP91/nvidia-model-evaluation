@@ -86,7 +86,9 @@ def run(config: Config) -> dict:
         logger.info("Processing %s", ds_info["label"])
         try:
             path, name = ds_info["hf"]
-            kwargs = {"path": path, "split": "test", "trust_remote_code": True, "token": True}
+            kwargs = {"path": path, "split": "test", "token": True}
+            if not path.startswith("esb/"):
+                kwargs["trust_remote_code"] = True
             if name:
                 kwargs["name"] = name
             ds = load_dataset(**kwargs)

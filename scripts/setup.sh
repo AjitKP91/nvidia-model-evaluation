@@ -104,7 +104,7 @@ echo "  Gated datasets (GigaSpeech, SPGISpeech) require accepting terms at:"
 echo "  https://huggingface.co/datasets/speechcolab/gigaspeech"
 echo "  https://huggingface.co/datasets/kensho/spgispeech"
 echo ""
-hf login
+hf auth login
 echo "  HuggingFace login done."
 
 # ── 6. Verify ────────────────────────────────────────────────────────────────

@@ -127,14 +127,23 @@ def run(config: Config) -> dict:
             logger.warning("No results for %s", ds_name)
             continue
 
-        # Guard against list length mismatch (e.g. one item had empty ref)
-        if len(references) != len(hypotheses):
-            min_len = min(len(references), len(hypotheses))
-            logger.warning("Ref/hyp length mismatch (%d vs %d), truncating to %d",
-                           len(references), len(hypotheses), min_len)
-            references = references[:min_len]
-            hypotheses = hypotheses[:min_len]
-            per_utt_wers = per_utt_wers[:min_len]
+        # Drop pairs where the reference has no word content after punctuation removal.
+        # jiwer's RemoveEmptyStrings would silently shorten the reference list inside
+        # the aggregate call, causing a length mismatch error.
+        import string as _string
+        valid = [
+            (r, h, w) for r, h, w in zip(references, hypotheses, per_utt_wers)
+            if r.translate(str.maketrans("", "", _string.punctuation)).strip()
+        ]
+        if not valid:
+            logger.warning("No valid references for %s after filtering", ds_name)
+            continue
+        if len(valid) < len(references):
+            logger.warning("Dropped %d empty-normalizing refs for %s",
+                           len(references) - len(valid), ds_name)
+        references = [x[0] for x in valid]
+        hypotheses = [x[1] for x in valid]
+        per_utt_wers = [x[2] for x in valid]
 
         # Aggregate metrics
         agg_wer = jiwer.wer(

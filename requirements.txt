@@ -11,7 +11,7 @@ audiomentations
 spacy
 scikit-learn
 pyarrow>=14.0
-datasets
+datasets>=2.14.0
 soundfile
 pydub
 

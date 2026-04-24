@@ -138,7 +138,7 @@ def run(config: Config) -> dict:
                 logger.warning("Failed %s item %d: %s", ds_info["name"], i, e)
 
         if refs:
-            domain_wer = jiwer.wer(refs, hyps, truth_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
+            domain_wer = jiwer.wer(refs, hyps, reference_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
             row = {
                 "dataset": ds_info["label"],
                 "n_utterances": len(refs),

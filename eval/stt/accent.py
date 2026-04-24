@@ -78,7 +78,7 @@ def run(config: Config) -> dict:
                 refs.append(ref)
                 hyps.append(hyp)
 
-                utt_wer = jiwer.wer(ref, hyp, truth_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
+                utt_wer = jiwer.wer(ref, hyp, reference_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
                 per_utt_wers.append(utt_wer)
 
                 write_jsonl(jsonl_path, {
@@ -89,7 +89,7 @@ def run(config: Config) -> dict:
                 logger.warning("Failed %s: %s", item_id, e)
 
         if refs:
-            agg_wer = jiwer.wer(refs, hyps, truth_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
+            agg_wer = jiwer.wer(refs, hyps, reference_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
             mean_wer, ci_lo, ci_hi = bootstrap_ci(per_utt_wers, n_bootstrap=config.evaluation.bootstrap_n)
             group_wers[accent] = agg_wer
 

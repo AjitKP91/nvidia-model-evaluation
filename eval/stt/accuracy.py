@@ -101,12 +101,12 @@ def run(config: Config) -> dict:
 
                 utt_wer = jiwer.wer(
                     ref_text, hyp,
-                    truth_transform=NORMALIZE_FOR_WER,
+                    reference_transform=NORMALIZE_FOR_WER,
                     hypothesis_transform=NORMALIZE_FOR_WER,
                 )
                 utt_cer = jiwer.cer(
                     ref_text, hyp,
-                    truth_transform=NORMALIZE_FOR_WER,
+                    reference_transform=NORMALIZE_FOR_WER,
                     hypothesis_transform=NORMALIZE_FOR_WER,
                 )
 
@@ -135,12 +135,12 @@ def run(config: Config) -> dict:
         # Aggregate metrics
         agg_wer = jiwer.wer(
             references, hypotheses,
-            truth_transform=NORMALIZE_FOR_WER,
+            reference_transform=NORMALIZE_FOR_WER,
             hypothesis_transform=NORMALIZE_FOR_WER,
         )
         agg_cer = jiwer.cer(
             references, hypotheses,
-            truth_transform=NORMALIZE_FOR_WER,
+            reference_transform=NORMALIZE_FOR_WER,
             hypothesis_transform=NORMALIZE_FOR_WER,
         )
         agg_mer = jiwer.mer(references, hypotheses)

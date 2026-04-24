@@ -31,7 +31,7 @@ def _round_trip_wer(text: str, audio_path: str) -> float | None:
         result = model.transcribe(audio_path)
         return float(jiwer.wer(
             text, result["text"],
-            truth_transform=NORMALIZE_FOR_WER,
+            reference_transform=NORMALIZE_FOR_WER,
             hypothesis_transform=NORMALIZE_FOR_WER,
         ))
     except Exception:

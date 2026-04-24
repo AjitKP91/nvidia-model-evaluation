@@ -64,12 +64,12 @@ def run(config: Config) -> dict:
 
                 wer_val = jiwer.wer(
                     text, hyp,
-                    truth_transform=NORMALIZE_FOR_WER,
+                    reference_transform=NORMALIZE_FOR_WER,
                     hypothesis_transform=NORMALIZE_FOR_WER,
                 )
                 cer_val = jiwer.cer(
                     text, hyp,
-                    truth_transform=NORMALIZE_FOR_WER,
+                    reference_transform=NORMALIZE_FOR_WER,
                     hypothesis_transform=NORMALIZE_FOR_WER,
                 )
 
@@ -89,8 +89,8 @@ def run(config: Config) -> dict:
                 logger.warning("Failed %s_%d: %s", category, i, e)
 
         if refs:
-            agg_wer = jiwer.wer(refs, hyps, truth_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
-            agg_cer = jiwer.cer(refs, hyps, truth_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
+            agg_wer = jiwer.wer(refs, hyps, reference_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
+            agg_cer = jiwer.cer(refs, hyps, reference_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
 
             row = {
                 "category": category,

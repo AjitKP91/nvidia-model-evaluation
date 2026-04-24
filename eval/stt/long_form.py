@@ -111,7 +111,7 @@ def run(config: Config) -> dict:
             # Full-file transcription
             full_result = stt_client.recognize_batch(audio_bytes, sr)
             full_hyp = full_result["transcript"]
-            full_wer = jiwer.wer(ref, full_hyp, truth_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
+            full_wer = jiwer.wer(ref, full_hyp, reference_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
 
             # Chunked transcription
             chunks = _chunk_audio(audio, sr, CHUNK_DURATION_S)
@@ -121,7 +121,7 @@ def run(config: Config) -> dict:
                 cr = stt_client.recognize_batch(chunk_bytes, sr)
                 chunk_hyps.append(cr["transcript"])
             chunked_hyp = " ".join(chunk_hyps)
-            chunked_wer = jiwer.wer(ref, chunked_hyp, truth_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
+            chunked_wer = jiwer.wer(ref, chunked_hyp, reference_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
 
             hall = _detect_hallucinations(ref, full_hyp)
             rep = _detect_repetitions(full_hyp)
@@ -164,7 +164,7 @@ def run(config: Config) -> dict:
         try:
             full_result = stt_client.recognize_batch(concat_bytes, sr)
             full_hyp = full_result["transcript"]
-            full_wer = jiwer.wer(concat_ref, full_hyp, truth_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
+            full_wer = jiwer.wer(concat_ref, full_hyp, reference_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
 
             hall = _detect_hallucinations(concat_ref, full_hyp)
             rep = _detect_repetitions(full_hyp)

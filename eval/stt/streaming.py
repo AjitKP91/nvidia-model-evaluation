@@ -164,8 +164,8 @@ def run(config: Config) -> dict:
             finally:
                 Path(tmp.name).unlink(missing_ok=True)
 
-    batch_wer = jiwer.wer(batch_refs, batch_hyps, truth_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER) if batch_refs else None
-    stream_wer = jiwer.wer(stream_refs, stream_hyps, truth_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER) if stream_refs else None
+    batch_wer = jiwer.wer(batch_refs, batch_hyps, reference_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER) if batch_refs else None
+    stream_wer = jiwer.wer(stream_refs, stream_hyps, reference_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER) if stream_refs else None
 
     # ---- Summary ----
     summary = {

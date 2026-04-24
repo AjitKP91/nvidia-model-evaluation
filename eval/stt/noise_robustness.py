@@ -84,7 +84,7 @@ def run(config: Config) -> dict:
         except Exception:
             pass
 
-    clean_wer = jiwer.wer(clean_refs, clean_hyps, truth_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER) if clean_refs else 0.1
+    clean_wer = jiwer.wer(clean_refs, clean_hyps, reference_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER) if clean_refs else 0.1
 
     # Noisy conditions
     summary_rows = [{"noise_type": "clean", "snr_db": "inf", "wer": round(clean_wer, 4), "delta_rel": 0.0}]
@@ -123,7 +123,7 @@ def run(config: Config) -> dict:
                     logger.warning("Failed %s@%ddB item %d: %s", noise_type, snr_db, i, e)
 
             if refs:
-                wer = jiwer.wer(refs, hyps, truth_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
+                wer = jiwer.wer(refs, hyps, reference_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
                 delta = (wer - clean_wer) / clean_wer * 100 if clean_wer > 0 else 0
                 summary_rows.append({
                     "noise_type": noise_type,

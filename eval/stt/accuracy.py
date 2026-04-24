@@ -101,6 +101,8 @@ def run(config: Config) -> dict:
 
             try:
                 audio_array, sr, ref_text = _get_audio_and_ref(example)
+                if not ref_text.strip():
+                    continue
                 audio_bytes = (audio_array * 32768).astype(np.int16).tobytes()
 
                 result = stt_client.recognize_batch(audio_bytes, sr)
@@ -138,6 +140,15 @@ def run(config: Config) -> dict:
         if not references:
             logger.warning("No results for %s", ds_name)
             continue
+
+        # Guard against list length mismatch (e.g. one item had empty ref)
+        if len(references) != len(hypotheses):
+            min_len = min(len(references), len(hypotheses))
+            logger.warning("Ref/hyp length mismatch (%d vs %d), truncating to %d",
+                           len(references), len(hypotheses), min_len)
+            references = references[:min_len]
+            hypotheses = hypotheses[:min_len]
+            per_utt_wers = per_utt_wers[:min_len]
 
         # Aggregate metrics
         agg_wer = jiwer.wer(

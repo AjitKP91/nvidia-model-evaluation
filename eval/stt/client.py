@@ -53,7 +53,7 @@ class STTClient:
             enable_automatic_punctuation=enable_punctuation,
             enable_word_time_offsets=enable_word_times,
             sample_rate_hertz=sample_rate,
-            audio_channel_count=channels,
+            audio_channel_count=1,
         )
 
         start = time.perf_counter()
@@ -319,6 +319,9 @@ class STTClient:
 
     def audio_to_bytes(self, path: str, target_sr: int | None = None) -> tuple[bytes, int]:
         audio, sr = sf.read(path, dtype="int16")
+        # downmix to mono — Parakeet does not support multi-channel
+        if audio.ndim > 1:
+            audio = audio.mean(axis=1).astype(np.int16)
         if target_sr and sr != target_sr:
             import librosa
             audio_f = audio.astype(np.float32) / 32768.0

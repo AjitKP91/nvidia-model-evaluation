@@ -70,19 +70,18 @@ class TTSClient:
     def synthesize_batch_rest(self, text: str) -> dict[str, Any]:
         headers = {
             self.tts_cfg.auth_header: f"Bearer {self.riva_cfg.auth_token}",
-            "Content-Type": "application/json",
         }
-        payload = {
+        data = {
             "text": text,
-            "voice": {"name": self.tts_cfg.voice_name},
-            "language_code": self.tts_cfg.language_code,
-            "sample_rate_hz": self.sample_rate,
+            "voice": self.tts_cfg.voice_name,
+            "language": self.tts_cfg.language_code,
+            "sample_rate_hz": str(self.sample_rate),
         }
 
         start = time.perf_counter()
         resp = requests.post(
             self.tts_cfg.rest_endpoint,
-            json=payload,
+            data=data,
             headers=headers,
             timeout=self.tts_cfg.request_timeout_s,
         )
@@ -155,19 +154,18 @@ class TTSClient:
     def synthesize_stream_rest(self, text: str) -> dict[str, Any]:
         headers = {
             self.tts_cfg.auth_header: f"Bearer {self.riva_cfg.auth_token}",
-            "Content-Type": "application/json",
         }
-        payload = {
+        data = {
             "text": text,
-            "voice": {"name": self.tts_cfg.voice_name},
-            "language_code": self.tts_cfg.language_code,
-            "sample_rate_hz": self.sample_rate,
+            "voice": self.tts_cfg.voice_name,
+            "language": self.tts_cfg.language_code,
+            "sample_rate_hz": str(self.sample_rate),
         }
 
         start = time.perf_counter()
         resp = requests.post(
             self.tts_cfg.rest_endpoint,
-            json=payload,
+            data=data,
             headers=headers,
             timeout=self.tts_cfg.request_timeout_s,
             stream=True,

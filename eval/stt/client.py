@@ -97,52 +97,42 @@ class STTClient:
         sample_rate: int,
         content_type: str = "audio/wav",
     ) -> dict[str, Any]:
-        import base64
+        import io
 
         headers = {
             self.stt_cfg.auth_header: f"Bearer {self.riva_cfg.auth_token}",
-            "Content-Type": "application/json",
         }
-        payload = {
-            "audio": base64.b64encode(audio_bytes).decode(),
-            "config": {
-                "language_code": self.stt_cfg.language_code,
-                "sample_rate_hertz": sample_rate,
-                "enable_automatic_punctuation": True,
-                "enable_word_time_offsets": True,
-            },
+        files = {
+            "file": ("audio.wav", io.BytesIO(audio_bytes), "audio/wav"),
+        }
+        data = {
+            "model": self.stt_cfg.model_name,
+            "language": self.stt_cfg.language_code,
         }
 
         start = time.perf_counter()
         resp = requests.post(
             self.stt_cfg.rest_endpoint,
-            json=payload,
+            files=files,
+            data=data,
             headers=headers,
             timeout=self.stt_cfg.request_timeout_s,
         )
         elapsed = time.perf_counter() - start
         resp.raise_for_status()
-        data = resp.json()
+        result = resp.json()
 
-        transcript = ""
-        confidence = 0.0
-        words = []
-        results = data.get("results", [])
-        if results:
-            alt = results[0].get("alternatives", [{}])[0]
-            transcript = alt.get("transcript", "")
-            confidence = alt.get("confidence", 0.0)
-            words = alt.get("words", [])
+        transcript = result.get("text", "")
 
         return {
             "transcript": transcript,
-            "confidence": confidence,
-            "words": words,
+            "confidence": 0.0,
+            "words": [],
             "elapsed_s": elapsed,
             "interface": "rest",
             "mode": "batch",
             "http_status": resp.status_code,
-            "raw_response": data,
+            "raw_response": result,
         }
 
     # ------------------------------------------------------------------
@@ -254,20 +244,29 @@ class STTClient:
         self,
         audio_path: str,
     ) -> dict[str, Any]:
+        import io as _io
+
         audio, sr = sf.read(audio_path, dtype="int16")
-        buf = io.BytesIO()
+        buf = _io.BytesIO()
         sf.write(buf, audio, sr, format="WAV")
         audio_bytes = buf.getvalue()
 
         headers = {
             self.stt_cfg.auth_header: f"Bearer {self.riva_cfg.auth_token}",
-            "Content-Type": "audio/wav",
+        }
+        files = {
+            "file": ("audio.wav", _io.BytesIO(audio_bytes), "audio/wav"),
+        }
+        form_data = {
+            "model": self.stt_cfg.model_name,
+            "language": self.stt_cfg.language_code,
         }
 
         start = time.perf_counter()
         resp = requests.post(
             self.stt_cfg.rest_endpoint,
-            data=audio_bytes,
+            files=files,
+            data=form_data,
             headers=headers,
             timeout=self.stt_cfg.request_timeout_s,
             stream=True,
@@ -282,27 +281,20 @@ class STTClient:
         elapsed = time.perf_counter() - start
         resp.raise_for_status()
 
+        import json as _json
         body = b"".join(chunks)
         data = {}
         try:
-            import json
-            data = json.loads(body)
+            data = _json.loads(body)
         except Exception:
             pass
 
-        transcript = ""
-        results = data.get("results", [])
-        if results:
-            transcript = results[0].get("alternatives", [{}])[0].get(
-                "transcript", ""
-            )
+        transcript = data.get("text", "")
 
         return {
             "transcript": transcript,
             "elapsed_s": elapsed,
-            "ttfb": (
-                first_byte_time - start if first_byte_time else None
-            ),
+            "ttfb": (first_byte_time - start if first_byte_time else None),
             "interface": "rest",
             "mode": "streaming",
             "http_status": resp.status_code,

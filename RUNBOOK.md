@@ -47,7 +47,31 @@ rsync -avz --exclude results/ --exclude __pycache__ \
     <vm-user>@<vm-ip>:~/nvidia-model-evaluation/
 ```
 
-### 2.3 Create a Python virtual environment
+### 2.3 Redirect caches to the data disk
+
+The OS disk fills quickly. Before installing anything, point all caches to `/mnt` (the larger data disk):
+
+```bash
+sudo mkdir -p /mnt/hf_home /mnt/torch_home /mnt/pip_cache
+sudo chown -R $USER /mnt/hf_home /mnt/torch_home /mnt/pip_cache
+
+export HF_HOME=/mnt/hf_home
+export TORCH_HOME=/mnt/torch_home
+export PIP_CACHE_DIR=/mnt/pip_cache
+```
+
+Add these exports to `~/.bashrc` so they survive reboots and new tmux sessions:
+
+```bash
+cat >> ~/.bashrc <<'EOF'
+export HF_HOME=/mnt/hf_home
+export TORCH_HOME=/mnt/torch_home
+export PIP_CACHE_DIR=/mnt/pip_cache
+EOF
+source ~/.bashrc
+```
+
+### 2.4 Create a Python virtual environment
 
 ```bash
 cd ~/nvidia-model-evaluation
@@ -55,17 +79,21 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### 2.4 Install dependencies
+### 2.5 Install dependencies
+
+`fairseq` (pulled in by `utmos`) ships an old `omegaconf 2.0.6` with an invalid requirement format that pip 24+ rejects. Unpin it first, then install everything:
 
 ```bash
-pip install --upgrade pip wheel
-pip install -r requirements.txt
+pip install --upgrade pip wheel setuptools
+
+# Fix omegaconf before the full install
+pip install "omegaconf>=2.1" --no-cache-dir
+
+# Install all requirements
+pip install -r requirements.txt --no-cache-dir
 
 # spaCy English model (needed for Test 1.8 domain vocabulary)
 python -m spacy download en_core_web_sm
-
-# Whisper (downloads model weights on first use — ~3 GB for large-v3)
-# No extra install needed; openai-whisper is in requirements.txt
 ```
 
 > **Note on UTMOS / NISQA:** These packages may require extra steps if the PyPI version is outdated.
@@ -74,26 +102,41 @@ python -m spacy download en_core_web_sm
 > pip install git+https://github.com/sarulab-speech/UTMOS22.git
 > ```
 
+> **Note on pyworld:** F0 extraction in TTS Test 2.3 uses pyworld. If import fails with
+> `No module named 'pkg_resources'`, install setuptools into the venv:
+> ```bash
+> .venv/bin/pip install setuptools --no-cache-dir
+> ```
+> The test will run without F0 metrics if pyworld is unavailable.
+
 ---
 
 ## 3. Configure Endpoints
 
-Edit `eval/config.yaml` with your actual AI Core values:
+Edit `eval/config.yaml` with your actual AI Core values. Note that each service has its own `grpc_uri`:
 
 ```yaml
 riva:
-  grpc_uri: <aicore-grpc-host>:<port>    # e.g. grpc-host.eu-central-1.aws.ml.hana.ondemand.com:443
   use_ssl: true
-  auth_token_env: AICORE_BEARER_TOKEN    # name of the env var holding your token
+  auth_token_env: AICORE_BEARER_TOKEN
 
 stt:
+  grpc_uri: <parakeet-host>:443        # gRPC host:port (no https://)
   model_name: parakeet-1.1b-en-US-asr-offline
-  rest_endpoint: https://<aicore-host>/v1/deployments/<stt-deployment-id>/predictions
+  rest_endpoint: https://<parakeet-host>/v1/audio/transcriptions
+  language_code: en-US
+  auth_header: Authorization
+  request_timeout_s: 120
 
 tts:
+  grpc_uri: <magpie-host>:443          # gRPC host:port (no https://)
   model_name: Magpie-Multilingual.EN-US.Aria
   voice_name: Magpie-Multilingual.EN-US.Aria
-  rest_endpoint: https://<aicore-host>/v1/deployments/<tts-deployment-id>/predictions
+  rest_endpoint: https://<magpie-host>/v1/audio/synthesize_online
+  language_code: en-US
+  auth_header: Authorization
+  request_timeout_s: 60
+  sample_rate: 22050
 ```
 
 Then export your bearer token (get it from the AI Core service key / OAuth token endpoint):
@@ -319,17 +362,64 @@ source .venv/bin/activate
 pip install nvidia-riva-client
 ```
 
+### `ModuleNotFoundError: No module named 'pkg_resources'` (pyworld)
+pyworld depends on setuptools which may be missing from the venv:
+```bash
+.venv/bin/pip install setuptools --no-cache-dir
+```
+Always use `.venv/bin/pip` (not plain `pip`) to target the venv.
+
+### `omegaconf` / `invalid-installed-package` error during pip install
+pip 24+ rejects `omegaconf 2.0.6` (pulled in by `fairseq`/`utmos`) due to an invalid requirement format. Fix:
+```bash
+.venv/bin/pip uninstall -y omegaconf
+.venv/bin/pip install "omegaconf>=2.1" --no-cache-dir
+.venv/bin/pip install -r requirements.txt --no-cache-dir
+```
+
+### `[Errno 28] No space left on device`
+The `/mnt` data disk is full. Find what's using space:
+```bash
+du -sh /mnt/* 2>/dev/null | sort -rh | head -10
+```
+Common culprits:
+```bash
+# HuggingFace model/dataset cache
+rm -rf /mnt/hf_cache
+
+# pip wheel build cache
+rm -rf /mnt/pip_cache/*
+```
+Check that caches are redirected to `/mnt` and not filling the OS disk:
+```bash
+df -h / /mnt
+```
+
+### `[Errno 13] Permission denied: '/mnt/hf_home'`
+Fix ownership of the cache directories:
+```bash
+sudo chown -R $USER /mnt/hf_home /mnt/torch_home /mnt/pip_cache
+```
+
+### `Unauthorized` / 403 on HuggingFace datasets (esb/datasets)
+Several STT datasets (LibriSpeech, TED-LIUM, GigaSpeech, etc.) are loaded via the gated `esb/datasets` collection. To access them:
+1. Request access at https://huggingface.co/datasets/esb/datasets
+2. Once approved, log in on the VM:
+   ```bash
+   huggingface-cli login   # paste your HF token when prompted
+   ```
+Tests will skip gracefully if datasets are unavailable — this is not a fatal error.
+
 ### UTMOS / SpeechBrain downloads fail
-These models download weights on first use (~hundreds of MB). Ensure the VM has internet access and enough disk space (50 GB recommended).
+These models download weights on first use (~hundreds of MB). Ensure the VM has internet access and enough disk space (50 GB recommended on `/mnt`).
 
 ### `ffmpeg not found` (pydub / librosa errors)
 ```bash
 sudo apt-get install -y ffmpeg
 ```
 
-### Out of disk space
-Results with audio files can reach 20–50 GB. Check with `df -h` and clear old runs:
+### Out of disk space in results/
+TTS audio files can reach 20–50 GB. The `.jsonl` and `.csv` files are small; only `.wav` files are large:
 ```bash
 rm -rf results/tts/naturalness/*.wav
 ```
-The `.jsonl` and `.csv` files are small; only the `.wav` files are large.

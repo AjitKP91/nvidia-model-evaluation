@@ -85,22 +85,34 @@ nvidia-model-evaluation/
 **Run this on the Azure VM** (Germany West Central), not a laptop. The VM is co-located with AI Core (Frankfurt / eu-central-1), which keeps network jitter out of latency measurements. See `RUNBOOK.md` for the full setup guide.
 
 ```bash
-# 1. Install dependencies
-pip install -r requirements.txt
+# 1. Redirect caches to the data disk (/mnt) before installing
+sudo mkdir -p /mnt/hf_home /mnt/torch_home /mnt/pip_cache
+sudo chown -R $USER /mnt/hf_home /mnt/torch_home /mnt/pip_cache
+export HF_HOME=/mnt/hf_home
+export TORCH_HOME=/mnt/torch_home
+export PIP_CACHE_DIR=/mnt/pip_cache
+
+# 2. Fix omegaconf before full install (pip 24+ rejects the version pulled by utmos/fairseq)
+pip install --upgrade pip wheel setuptools
+pip install "omegaconf>=2.1" --no-cache-dir
+
+# 3. Install all dependencies
+pip install -r requirements.txt --no-cache-dir
 python -m spacy download en_core_web_sm
 
-# 2. Fill in eval/config.yaml with your AI Core endpoints and deployment IDs
+# 4. Fill in eval/config.yaml with your AI Core endpoints
+#    Each service (stt/tts) has its own grpc_uri and rest_endpoint
 
-# 3. Export your AI Core bearer token
+# 5. Export your AI Core bearer token
 export AICORE_BEARER_TOKEN="eyJ..."
 
-# 4. Verify connectivity
+# 6. Verify connectivity
 python -m eval.run phase0
 
-# 5. Run everything (~7 hours on an A100)
+# 7. Run everything (~7 hours on an A100)
 python -m eval.run all
 
-# 6. Open the report
+# 8. Open the report
 open results/report.html
 ```
 
@@ -150,12 +162,14 @@ Key packages (see `requirements.txt` for the full list):
 | `openai-whisper` | Round-trip WER transcription (TTS 2.2, 2.7) |
 | `jiwer` | WER / CER / MER computation |
 | `speechbrain` | ECAPA-TDNN speaker embeddings (TTS 2.8) |
-| `pyworld` | F0 extraction (TTS 2.3, 2.8) |
+| `pyworld` | F0 extraction (TTS 2.3, 2.8) — optional; test runs without it |
 | `utmos` | Neural MOS estimation (TTS 2.1, 2.7) |
 | `librosa` | Audio loading, MFCC, duration |
 | `audiomentations` | Noise injection for STT 1.5 |
 | `spacy` | NER for key-term recall (STT 1.8) |
-| `datasets` | HuggingFace dataset loading |
+| `datasets>=2.14,<3` | HuggingFace dataset loading |
+| `pyarrow>=14,<15` | Required by datasets 2.x (`PyExtensionType` removed in pyarrow 15+) |
+| `setuptools` | Required by pyworld at import time |
 | `aiohttp` | Async REST concurrency (TTS 2.6) |
 
 ---

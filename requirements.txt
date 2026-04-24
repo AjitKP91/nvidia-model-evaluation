@@ -1,0 +1,39 @@
+# NVIDIA Riva gRPC SDK
+nvidia-riva-client
+
+# REST / async HTTP
+requests
+aiohttp
+
+# STT evaluation
+jiwer>=3.0
+audiomentations
+spacy
+scikit-learn
+datasets
+soundfile
+pydub
+
+# TTS evaluation
+utmos
+nisqa
+pesq
+pystoi
+pyworld
+dtw-python
+librosa
+speechbrain
+
+# Reference transcription
+openai-whisper
+
+# Forced alignment (install separately: conda/pip + model download)
+# montreal-forced-aligner
+
+# Audio / reporting
+numpy
+scipy
+matplotlib
+pandas
+tqdm
+pyyaml

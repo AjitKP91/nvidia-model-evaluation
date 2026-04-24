@@ -30,9 +30,9 @@ mkdir -p "$REPO_DIR/results"
 rm -f "$REPO_DIR/scripts/_tmux_launcher.sh"
 
 # ── Clear partial/failed HF dataset downloads ────────────────────────────────
-if [ -d "/mnt/hf_home/datasets" ]; then
-    echo "Clearing HuggingFace dataset cache (/mnt/hf_home/datasets)..."
-    rm -rf /mnt/hf_home/datasets
+if [ -d "$HOME/hf_home/datasets" ]; then
+    echo "Clearing HuggingFace dataset cache (~/$HOME/hf_home/datasets)..."
+    rm -rf "$HOME/hf_home/datasets"
 fi
 
 # ── Full clean: remove venv ──────────────────────────────────────────────────
@@ -45,10 +45,10 @@ fi
 # ── Check disk space on /mnt ─────────────────────────────────────────────────
 echo ""
 echo "Disk usage after clean:"
-df -h / /mnt 2>/dev/null || df -h /
+df -h /
 echo ""
-echo "Largest items in /mnt:"
-du -sh /mnt/* 2>/dev/null | sort -rh | head -5 || true
+echo "Largest items in home:"
+du -sh ~/* 2>/dev/null | sort -rh | head -5 || true
 
 echo ""
 echo "=========================================="

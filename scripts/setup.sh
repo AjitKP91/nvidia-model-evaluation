@@ -28,22 +28,21 @@ if [ ! -f /usr/lib/x86_64-linux-gnu/libopenh264.so.5 ]; then
     fi
 fi
 
-# ── 2. /mnt cache directories ───────────────────────────────────────────────
+# ── 2. Cache directories in home (OS disk now 512GB) ────────────────────────
 echo ""
-echo "[2/6] Setting up /mnt cache directories..."
-sudo mkdir -p /mnt/hf_home /mnt/torch_home /mnt/pip_cache
-sudo chown -R "$USER" /mnt/hf_home /mnt/torch_home /mnt/pip_cache
+echo "[2/6] Setting up cache directories..."
+mkdir -p ~/hf_home ~/torch_home ~/pip_cache
 
 # Persist env vars in ~/.bashrc (idempotent)
 for line in \
-    'export HF_HOME=/mnt/hf_home' \
-    'export TORCH_HOME=/mnt/torch_home' \
-    'export PIP_CACHE_DIR=/mnt/pip_cache'; do
+    'export HF_HOME=~/hf_home' \
+    'export TORCH_HOME=~/torch_home' \
+    'export PIP_CACHE_DIR=~/pip_cache'; do
     grep -qxF "$line" ~/.bashrc || echo "$line" >> ~/.bashrc
 done
-export HF_HOME=/mnt/hf_home
-export TORCH_HOME=/mnt/torch_home
-export PIP_CACHE_DIR=/mnt/pip_cache
+export HF_HOME=~/hf_home
+export TORCH_HOME=~/torch_home
+export PIP_CACHE_DIR=~/pip_cache
 echo "  Cache dirs: HF_HOME=$HF_HOME  TORCH_HOME=$TORCH_HOME"
 
 # ── 3. Python venv ──────────────────────────────────────────────────────────

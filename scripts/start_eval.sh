@@ -46,9 +46,9 @@ cat > "$LAUNCHER" <<LAUNCHER_EOF
 set -euo pipefail
 cd "$REPO_DIR"
 source "$REPO_DIR/.venv/bin/activate"
-export HF_HOME=/mnt/hf_home
-export TORCH_HOME=/mnt/torch_home
-export PIP_CACHE_DIR=/mnt/pip_cache
+export HF_HOME=~/hf_home
+export TORCH_HOME=~/torch_home
+export PIP_CACHE_DIR=~/pip_cache
 export AICORE_BEARER_TOKEN="$AICORE_TOKEN"
 # Make PyTorch bundled CUDA visible (fixes UTMOS libcudart error)
 TORCH_LIB="\$(python -c 'import torch, os; print(os.path.dirname(torch.__file__))')/lib"

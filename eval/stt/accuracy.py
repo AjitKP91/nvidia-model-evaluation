@@ -25,8 +25,8 @@ from eval.utils import (
 logger = logging.getLogger("eval.stt.accuracy")
 
 DATASETS = [
-    {"name": "librispeech_clean", "hf": ("librispeech_asr", "clean"), "split": "test.clean", "label": "LibriSpeech clean"},
-    {"name": "librispeech_other", "hf": ("librispeech_asr", "other"), "split": "test.other", "label": "LibriSpeech other"},
+    {"name": "librispeech_clean", "hf": ("librispeech_asr", "clean"), "split": "test", "label": "LibriSpeech clean"},
+    {"name": "librispeech_other", "hf": ("librispeech_asr", "other"), "split": "test", "label": "LibriSpeech other"},
     # VoxPopuli EN replaces TED-LIUM v3 (LIUM/tedlium not on HF Hub)
     {"name": "voxpopuli_en", "hf": ("facebook/voxpopuli", "en"), "split": "test", "label": "VoxPopuli EN"},
     {"name": "gigaspeech", "hf": ("speechcolab/gigaspeech", "xs"), "split": "test", "label": "GigaSpeech"},

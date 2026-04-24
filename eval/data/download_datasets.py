@@ -13,13 +13,13 @@ DATASETS = {
     "librispeech_clean": {
         "hf_path": "librispeech_asr",
         "hf_name": "clean",
-        "split": "test.clean",
+        "split": "test",
         "description": "LibriSpeech test-clean (5.4 h narrated audiobooks)",
     },
     "librispeech_other": {
         "hf_path": "librispeech_asr",
         "hf_name": "other",
-        "split": "test.other",
+        "split": "test",
         "description": "LibriSpeech test-other (5.4 h challenging narration)",
     },
     "tedlium": {

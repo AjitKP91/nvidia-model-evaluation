@@ -48,7 +48,7 @@ def run(config: Config) -> dict:
     logger.info("=== Test 1.10: Confidence Score Calibration ===")
 
     # Load 1000+ utterances from LibriSpeech + GigaSpeech
-    ls_ds = load_dataset("librispeech_asr", "clean", split="test.clean", token=True)
+    ls_ds = load_dataset("librispeech_asr", "clean", split="test", token=True)
     ls_subset = list(ls_ds.select(range(min(700, len(ls_ds)))))
 
     try:

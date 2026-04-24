@@ -88,7 +88,7 @@ def run(config: Config) -> dict:
 
     # Also create concatenated LibriSpeech files
     try:
-        ls_ds = load_dataset("librispeech_asr", "clean", split="test.clean", token=True)
+        ls_ds = load_dataset("librispeech_asr", "clean", split="test", token=True)
         concat_groups = []
         for start in range(0, min(100, len(ls_ds)), 10):
             group = list(ls_ds.select(range(start, min(start + 10, len(ls_ds)))))

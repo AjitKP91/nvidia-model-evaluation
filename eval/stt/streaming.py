@@ -66,7 +66,7 @@ def run(config: Config) -> dict:
     logger.info("=== Test 1.3: Streaming Performance ===")
 
     # Load datasets
-    ls_ds = load_dataset("librispeech_asr", "clean", split="test.clean", token=True)
+    ls_ds = load_dataset("librispeech_asr", "clean", split="test", token=True)
     ls_subset = list(ls_ds.select(range(min(200, len(ls_ds)))))
 
     try:

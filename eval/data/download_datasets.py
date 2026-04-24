@@ -75,9 +75,11 @@ def download_dataset(name: str, cache_dir: str | Path | None = None) -> object:
     kwargs = {
         "path": info["hf_path"],
         "split": info["split"],
-        "trust_remote_code": True,
         "token": True,
     }
+    # Only Common Voice uses a custom loading script that requires trust_remote_code
+    if info["hf_path"].startswith("mozilla-foundation/"):
+        kwargs["trust_remote_code"] = True
     if info.get("hf_name"):
         kwargs["name"] = info["hf_name"]
     if cache_dir:

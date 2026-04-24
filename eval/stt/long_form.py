@@ -80,7 +80,7 @@ def run(config: Config) -> dict:
 
     # Load TED-LIUM full talks
     try:
-        ds = load_dataset("LIUM/tedlium", "release3", split="test", token=True, trust_remote_code=True)
+        ds = load_dataset("LIUM/tedlium", "release3", split="test", token=True)
         items = list(ds.select(range(min(50, len(ds)))))
     except Exception:
         items = []
@@ -88,7 +88,7 @@ def run(config: Config) -> dict:
 
     # Also create concatenated LibriSpeech files
     try:
-        ls_ds = load_dataset("librispeech_asr", "clean", split="test.clean", token=True, trust_remote_code=True)
+        ls_ds = load_dataset("librispeech_asr", "clean", split="test.clean", token=True)
         concat_groups = []
         for start in range(0, min(100, len(ls_ds)), 10):
             group = list(ls_ds.select(range(start, min(start + 10, len(ls_ds)))))

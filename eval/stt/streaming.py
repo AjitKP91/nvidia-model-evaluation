@@ -66,11 +66,11 @@ def run(config: Config) -> dict:
     logger.info("=== Test 1.3: Streaming Performance ===")
 
     # Load datasets
-    ls_ds = load_dataset("librispeech_asr", "clean", split="test.clean", token=True, trust_remote_code=True)
+    ls_ds = load_dataset("librispeech_asr", "clean", split="test.clean", token=True)
     ls_subset = list(ls_ds.select(range(min(200, len(ls_ds)))))
 
     try:
-        ted_ds = load_dataset("LIUM/tedlium", "release3", split="test", token=True, trust_remote_code=True)
+        ted_ds = load_dataset("LIUM/tedlium", "release3", split="test", token=True)
         ted_subset = list(ted_ds.select(range(min(100, len(ted_ds)))))
     except Exception:
         ted_subset = []

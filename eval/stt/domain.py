@@ -86,7 +86,7 @@ def run(config: Config) -> dict:
         logger.info("Processing %s", ds_info["label"])
         try:
             path, name = ds_info["hf"]
-            kwargs = {"path": path, "split": ds_info.get("split", "test"), "token": True, "trust_remote_code": True}
+            kwargs = {"path": path, "split": ds_info.get("split", "test"), "token": True}
             if name:
                 kwargs["name"] = name
             ds = load_dataset(**kwargs)

@@ -42,7 +42,7 @@ def run(config: Config) -> dict:
 
     logger.info("=== Test 1.2: Batch Processing Performance ===")
 
-    ds = load_dataset("librispeech_asr", "clean", split="test.clean", token=True, trust_remote_code=True)
+    ds = load_dataset("librispeech_asr", "clean", split="test.clean", token=True)
 
     all_results = []
 

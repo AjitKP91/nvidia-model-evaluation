@@ -51,7 +51,7 @@ def _get_ljspeech_matched_sentences() -> list[dict]:
     """Return LJSpeech sentences for prosody comparison."""
     try:
         from datasets import load_dataset
-        lj = load_dataset("keithito/lj_speech", split="train", trust_remote_code=True, token=True)
+        lj = load_dataset("keithito/lj_speech", split="train", token=True)
         sentences = []
         for i, ex in enumerate(lj):
             if i >= 50:

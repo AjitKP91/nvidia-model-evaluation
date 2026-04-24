@@ -28,7 +28,7 @@ def run(config: Config) -> dict:
     logger.info("=== Test 1.4: REST vs gRPC Comparison ===")
 
     # Pick a 30s utterance
-    ds = load_dataset("librispeech_asr", "clean", split="test.clean", token=True, trust_remote_code=True)
+    ds = load_dataset("librispeech_asr", "clean", split="test.clean", token=True)
     ref_example = None
     for ex in ds:
         dur = len(ex["audio"]["array"]) / ex["audio"]["sampling_rate"]

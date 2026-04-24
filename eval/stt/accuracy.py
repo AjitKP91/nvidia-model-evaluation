@@ -47,7 +47,14 @@ THRESHOLDS = {
 
 def _load_dataset(ds_info: dict) -> object:
     path, name = ds_info["hf"]
-    kwargs = {"path": path, "split": ds_info["split"], "token": True, "trust_remote_code": True}
+    kwargs = {"path": path, "split": ds_info["split"], "token": True}
+    # Only Common Voice requires trust_remote_code; all other standard HF
+    # datasets are built-in or use simple builders that don't need it.
+    # Passing trust_remote_code=True on others causes the library to look for
+    # a local dataset script (e.g. ./LIUM/tedlium/) and triggers ** pattern
+    # errors with Python 3.10 pathlib on datasets that have custom scripts.
+    if path.startswith("mozilla-foundation/"):
+        kwargs["trust_remote_code"] = True
     if name:
         kwargs["name"] = name
     return load_dataset(**kwargs)

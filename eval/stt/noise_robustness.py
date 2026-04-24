@@ -6,12 +6,11 @@ from pathlib import Path
 
 import numpy as np
 import jiwer
-from datasets import load_dataset
 from tqdm import tqdm
 
 from eval.config import Config
 from eval.stt.client import STTClient
-from eval.utils import NORMALIZE_FOR_WER, get_completed_ids, save_summary_csv, write_jsonl
+from eval.utils import NORMALIZE_FOR_WER, get_completed_ids, load_dataset_tmp, save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.stt.noise_robustness")
 
@@ -59,8 +58,8 @@ def run(config: Config) -> dict:
 
     logger.info("=== Test 1.5: Noise Robustness ===")
 
-    ds = load_dataset("librispeech_asr", "clean", split="test", token=True)
-    subset = list(ds.select(range(min(N_UTTERANCES, len(ds)))))
+    with load_dataset_tmp("librispeech_asr", "test", name="clean", limit=N_UTTERANCES) as subset:
+        pass
 
     noise_base = Path(config.evaluation.data_dir) / "noise"
     noise_dirs = {

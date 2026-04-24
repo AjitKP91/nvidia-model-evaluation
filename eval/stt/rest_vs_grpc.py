@@ -8,12 +8,11 @@ from pathlib import Path
 
 import numpy as np
 import soundfile as sf
-from datasets import load_dataset
 from tqdm import tqdm
 
 from eval.config import Config
 from eval.stt.client import STTClient
-from eval.utils import compute_percentiles, save_summary_csv, write_jsonl
+from eval.utils import compute_percentiles, load_dataset_tmp, save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.stt.rest_vs_grpc")
 
@@ -29,16 +28,19 @@ def run(config: Config) -> dict:
     logger.info("=== Test 1.4: REST vs gRPC Comparison ===")
 
     # Pick a 30s utterance
-    ds = load_dataset("librispeech_asr", "clean", split="test", token=True)
+    with load_dataset_tmp("librispeech_asr", "test", name="clean") as examples:
+        pass
     ref_example = None
-    for ex in ds:
+    first_example = None
+    for ex in examples:
+        if first_example is None:
+            first_example = ex
         dur = len(ex["audio"]["array"]) / ex["audio"]["sampling_rate"]
         if 25 < dur < 35:
             ref_example = ex
             break
-
     if ref_example is None:
-        ref_example = ds[0]
+        ref_example = first_example
 
     audio_array = np.array(ref_example["audio"]["array"], dtype=np.float32)
     sr = ref_example["audio"]["sampling_rate"]

@@ -9,7 +9,6 @@ from pathlib import Path
 import jiwer
 import numpy as np
 import soundfile as sf
-from datasets import load_dataset
 from tqdm import tqdm
 
 from eval.config import Config
@@ -19,6 +18,7 @@ from eval.utils import (
     bootstrap_ci,
     compute_percentiles,
     get_completed_ids,
+    load_dataset_tmp,
     save_summary_csv,
     write_jsonl,
 )
@@ -67,12 +67,11 @@ def run(config: Config) -> dict:
     logger.info("=== Test 1.3: Streaming Performance ===")
 
     # Load datasets
-    ls_ds = load_dataset("librispeech_asr", "clean", split="test", token=True)
-    ls_subset = list(ls_ds.select(range(min(200, len(ls_ds)))))
-
+    with load_dataset_tmp("librispeech_asr", "test", name="clean", limit=200) as ls_subset:
+        pass
     try:
-        vp_ds = load_dataset("facebook/voxpopuli", "en", split="test", token=True)
-        vp_subset = list(vp_ds.select(range(min(100, len(vp_ds)))))
+        with load_dataset_tmp("facebook/voxpopuli", "test", name="en", limit=100) as vp_subset:
+            pass
     except Exception:
         vp_subset = []
         logger.warning("VoxPopuli not available; using LibriSpeech only")

@@ -7,12 +7,11 @@ from pathlib import Path
 
 import jiwer
 import numpy as np
-from datasets import load_dataset
 from tqdm import tqdm
 
 from eval.config import Config
 from eval.stt.client import STTClient
-from eval.utils import NORMALIZE_FOR_WER, bootstrap_ci, get_completed_ids, save_summary_csv, write_jsonl
+from eval.utils import NORMALIZE_FOR_WER, bootstrap_ci, get_completed_ids, load_dataset_tmp, save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.stt.accent")
 
@@ -30,18 +29,19 @@ def run(config: Config) -> dict:
 
     # ---- Common Voice EN (accent metadata) ----
     try:
-        cv_ds = load_dataset(
-            "mozilla-foundation/common_voice_17_0", "en",
-            split="test", trust_remote_code=True, token=True,
-        )
+        with load_dataset_tmp(
+            "mozilla-foundation/common_voice_17_0", "test", name="en",
+            trust_remote_code=True,
+        ) as cv_examples:
+            pass
     except Exception as e:
         logger.error("Common Voice EN not available: %s", e)
-        cv_ds = None
+        cv_examples = []
 
     accent_groups: dict[str, list] = defaultdict(list)
 
-    if cv_ds:
-        for i, ex in enumerate(cv_ds):
+    if cv_examples:
+        for i, ex in enumerate(cv_examples):
             accent = ex.get("accent", "unknown") or "unknown"
             if len(accent_groups[accent]) < 150:
                 accent_groups[accent].append((f"cv_{accent}_{i}", ex))

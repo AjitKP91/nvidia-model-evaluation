@@ -6,13 +6,11 @@ import re
 from pathlib import Path
 
 import numpy as np
-from datasets import load_dataset
-from sklearn.metrics import precision_recall_fscore_support
 from tqdm import tqdm
 
 from eval.config import Config
 from eval.stt.client import STTClient
-from eval.utils import get_completed_ids, save_summary_csv, write_jsonl
+from eval.utils import get_completed_ids, load_dataset_tmp, save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.stt.output_quality")
 
@@ -134,13 +132,11 @@ def run(config: Config) -> dict:
     for ds_name, (hf_path, hf_name), label, split in datasets_to_test:
         logger.info("Processing %s", label)
         try:
-            _kwargs = {"split": split, "token": True}
-            ds = load_dataset(hf_path, hf_name, **_kwargs)
+            with load_dataset_tmp(hf_path, split, name=hf_name, limit=500) as subset:
+                pass
         except Exception as e:
             logger.error("Failed to load %s: %s", ds_name, e)
             continue
-
-        subset = list(ds.select(range(min(500, len(ds)))))
 
         for i, ex in enumerate(tqdm(subset, desc=ds_name)):
             item_id = f"{ds_name}_{i}"

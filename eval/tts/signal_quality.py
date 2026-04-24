@@ -74,9 +74,9 @@ def run(config: Config) -> dict:
 
     # Load LJSpeech for matched reference
     try:
-        from datasets import load_dataset
-        lj = load_dataset("keithito/lj_speech", split="train")
-        lj_items = list(lj.select(range(min(50, len(lj)))))
+        from eval.utils import load_dataset_tmp
+        with load_dataset_tmp("keithito/lj_speech", "train", limit=50) as lj_items:
+            pass
     except Exception as e:
         logger.warning("LJSpeech not available: %s. Skipping matched-speaker metrics.", e)
         lj_items = []

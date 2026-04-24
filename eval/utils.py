@@ -168,3 +168,37 @@ def save_summary_csv(path: str | Path, rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(rows).to_csv(path, index=False)
     logger.info("Summary saved to %s", path)
+
+
+# ---------------------------------------------------------------------------
+# Dataset loader — download, load into memory, delete cache
+# ---------------------------------------------------------------------------
+
+from contextlib import contextmanager
+
+
+@contextmanager
+def load_dataset_tmp(path: str, split: str, name=None, limit: int | None = None, **kwargs):
+    """Download a HF dataset to a temp dir, convert to an in-memory list, delete cache.
+
+    Usage:
+        with load_dataset_tmp("librispeech_asr", "test", name="clean") as examples:
+            for ex in examples: ...
+    """
+    import itertools
+    import shutil
+    import tempfile
+
+    from datasets import load_dataset
+
+    cache_dir = tempfile.mkdtemp(prefix="eval_ds_", dir="/tmp")
+    try:
+        kw: dict = {"split": split, "token": True, "cache_dir": cache_dir, **kwargs}
+        if name is not None:
+            kw["name"] = name
+        ds = load_dataset(path, **kw)
+        data = list(itertools.islice(ds, limit)) if limit is not None else list(ds)
+        del ds
+    finally:
+        shutil.rmtree(cache_dir, ignore_errors=True)
+    yield data

@@ -50,12 +50,11 @@ def npvi(durations: list[float]) -> float:
 def _get_ljspeech_matched_sentences() -> list[dict]:
     """Return LJSpeech sentences for prosody comparison."""
     try:
-        from datasets import load_dataset
-        lj = load_dataset("keithito/lj_speech", split="train")
+        from eval.utils import load_dataset_tmp
+        with load_dataset_tmp("keithito/lj_speech", "train", limit=50) as examples:
+            pass
         sentences = []
-        for i, ex in enumerate(lj):
-            if i >= 50:
-                break
+        for i, ex in enumerate(examples):
             sentences.append({
                 "id": ex.get("id", f"LJ{i:04d}"),
                 "text": ex.get("normalized_text") or ex.get("text", ""),

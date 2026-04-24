@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 from eval.config import Config
 from eval.stt.client import STTClient
-from eval.utils import NORMALIZE_FOR_WER, get_completed_ids, save_summary_csv, write_jsonl
+from eval.utils import NORMALIZE_FOR_WER, get_completed_ids, load_dataset_tmp, save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.stt.confidence")
 
@@ -48,12 +48,12 @@ def run(config: Config) -> dict:
     logger.info("=== Test 1.10: Confidence Score Calibration ===")
 
     # Load 1000+ utterances from LibriSpeech + GigaSpeech
-    ls_ds = load_dataset("librispeech_asr", "clean", split="test", token=True)
-    ls_subset = list(ls_ds.select(range(min(700, len(ls_ds)))))
+    with load_dataset_tmp("librispeech_asr", "test", name="clean", limit=700) as ls_subset:
+        pass
 
     try:
-        gs_ds = load_dataset("speechcolab/gigaspeech", "xs", split="test", token=True)
-        gs_subset = list(gs_ds.select(range(min(300, len(gs_ds)))))
+        with load_dataset_tmp("speechcolab/gigaspeech", "test", name="xs", limit=300) as gs_subset:
+            pass
     except Exception:
         gs_subset = []
         logger.warning("GigaSpeech not available; using LibriSpeech only")

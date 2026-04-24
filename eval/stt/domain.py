@@ -6,12 +6,11 @@ from pathlib import Path
 
 import jiwer
 import numpy as np
-from datasets import load_dataset
 from tqdm import tqdm
 
 from eval.config import Config
 from eval.stt.client import STTClient
-from eval.utils import NORMALIZE_FOR_WER, save_summary_csv, write_jsonl
+from eval.utils import NORMALIZE_FOR_WER, load_dataset_tmp, save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.stt.domain")
 
@@ -86,15 +85,12 @@ def run(config: Config) -> dict:
         logger.info("Processing %s", ds_info["label"])
         try:
             path, name = ds_info["hf"]
-            kwargs = {"path": path, "split": ds_info.get("split", "test"), "token": True}
-            if name:
-                kwargs["name"] = name
-            ds = load_dataset(**kwargs)
+            extra = {"trust_remote_code": True} if path.startswith("mozilla-foundation/") else {}
+            with load_dataset_tmp(path, ds_info.get("split", "test"), name=name, limit=500, **extra) as subset:
+                pass
         except Exception as e:
             logger.error("Failed to load %s: %s", ds_info["name"], e)
             continue
-
-        subset = list(ds.select(range(min(500, len(ds)))))
         refs, hyps = [], []
         krr_values = []
         ne_wer_values = []

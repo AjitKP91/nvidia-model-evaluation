@@ -9,7 +9,6 @@ from pathlib import Path
 
 import jiwer
 import numpy as np
-from datasets import load_dataset
 from tqdm import tqdm
 
 from eval.config import Config
@@ -18,6 +17,7 @@ from eval.utils import (
     NORMALIZE_FOR_WER,
     bootstrap_ci,
     get_completed_ids,
+    load_dataset_tmp,
     save_summary_csv,
     write_jsonl,
 )
@@ -27,11 +27,9 @@ logger = logging.getLogger("eval.stt.accuracy")
 DATASETS = [
     {"name": "librispeech_clean", "hf": ("librispeech_asr", "clean"), "split": "test", "label": "LibriSpeech clean"},
     {"name": "librispeech_other", "hf": ("librispeech_asr", "other"), "split": "test", "label": "LibriSpeech other"},
-    # VoxPopuli EN replaces TED-LIUM v3 (LIUM/tedlium not on HF Hub)
     {"name": "voxpopuli_en", "hf": ("facebook/voxpopuli", "en"), "split": "test", "label": "VoxPopuli EN"},
     {"name": "gigaspeech", "hf": ("speechcolab/gigaspeech", "xs"), "split": "test", "label": "GigaSpeech"},
     {"name": "spgispeech", "hf": ("kensho/spgispeech", None), "split": "val", "label": "SPGISpeech"},
-    # edinburghcst/ami and revdotcom/earnings22 removed (unavailable on HF Hub)
 ]
 
 THRESHOLDS = {
@@ -41,16 +39,6 @@ THRESHOLDS = {
     "gigaspeech": {"pass": 0.12, "good": 0.16, "acceptable": 0.22},
     "spgispeech": {"pass": 0.08, "good": 0.12, "acceptable": 0.18},
 }
-
-
-def _load_dataset(ds_info: dict) -> object:
-    path, name = ds_info["hf"]
-    kwargs = {"path": path, "split": ds_info["split"], "token": True, "streaming": True}
-    if path.startswith("mozilla-foundation/"):
-        kwargs["trust_remote_code"] = True
-    if name:
-        kwargs["name"] = name
-    return load_dataset(**kwargs)
 
 
 def _get_audio_and_ref(example: dict) -> tuple[np.ndarray, int, str]:
@@ -79,8 +67,11 @@ def run(config: Config) -> dict:
         jsonl_path = results_dir / f"{ds_name}.jsonl"
         completed = get_completed_ids(jsonl_path)
 
+        path, name = ds_info["hf"]
+        extra = {"trust_remote_code": True} if path.startswith("mozilla-foundation/") else {}
         try:
-            ds = _load_dataset(ds_info)
+            with load_dataset_tmp(path, ds_info["split"], name=name, **extra) as examples:
+                pass
         except Exception as e:
             logger.error("Failed to load %s: %s", ds_name, e)
             continue
@@ -89,7 +80,7 @@ def run(config: Config) -> dict:
         hypotheses = []
         per_utt_wers = []
 
-        for i, example in enumerate(tqdm(ds, desc=ds_name)):
+        for i, example in enumerate(tqdm(examples, desc=ds_name)):
             item_id = f"{ds_name}_{i}"
             if item_id in completed:
                 continue

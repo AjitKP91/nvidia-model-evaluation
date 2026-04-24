@@ -10,12 +10,11 @@ from pathlib import Path
 import jiwer
 import numpy as np
 import soundfile as sf
-from datasets import load_dataset
 from tqdm import tqdm
 
 from eval.config import Config
 from eval.stt.client import STTClient
-from eval.utils import NORMALIZE_FOR_WER, save_summary_csv, write_jsonl
+from eval.utils import NORMALIZE_FOR_WER, load_dataset_tmp, save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.stt.long_form")
 
@@ -80,19 +79,17 @@ def run(config: Config) -> dict:
 
     # Load VoxPopuli EN as long-ish utterances (replaces LIUM/tedlium — not on HF Hub)
     try:
-        ds = load_dataset("facebook/voxpopuli", "en", split="test", token=True)
-        items = list(ds.select(range(min(50, len(ds)))))
+        with load_dataset_tmp("facebook/voxpopuli", "test", name="en", limit=50) as items:
+            pass
     except Exception:
         items = []
         logger.warning("VoxPopuli not available")
 
     # Also create concatenated LibriSpeech files
     try:
-        ls_ds = load_dataset("librispeech_asr", "clean", split="test", token=True)
-        concat_groups = []
-        for start in range(0, min(100, len(ls_ds)), 10):
-            group = list(ls_ds.select(range(start, min(start + 10, len(ls_ds)))))
-            concat_groups.append(group)
+        with load_dataset_tmp("librispeech_asr", "test", name="clean", limit=100) as ls_examples:
+            pass
+        concat_groups = [ls_examples[i:i+10] for i in range(0, len(ls_examples), 10)]
     except Exception:
         concat_groups = []
 

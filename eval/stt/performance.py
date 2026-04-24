@@ -6,12 +6,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import numpy as np
-from datasets import load_dataset
 from tqdm import tqdm
 
 from eval.config import Config
 from eval.stt.client import STTClient
-from eval.utils import compute_percentiles, save_summary_csv, write_jsonl
+from eval.utils import compute_percentiles, load_dataset_tmp, save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.stt.performance")
 
@@ -19,16 +18,14 @@ DURATION_BUCKETS = [10, 30, 60, 300, 600]
 SAMPLES_PER_BUCKET = 20
 
 
-def _pick_utterances_by_duration(ds, target_s: float, n: int, tolerance: float = 0.3):
+def _pick_utterances_by_duration(examples: list, target_s: float, n: int, tolerance: float = 0.3):
     """Select utterances whose duration is close to target_s."""
     candidates = []
-    for i, ex in enumerate(ds):
+    for i, ex in enumerate(examples):
         audio = ex["audio"]
         dur = len(audio["array"]) / audio["sampling_rate"]
         if abs(dur - target_s) / target_s < tolerance:
             candidates.append((i, ex, dur))
-        if len(candidates) >= n * 3:
-            break
     candidates.sort(key=lambda x: abs(x[2] - target_s))
     return candidates[:n]
 
@@ -42,13 +39,14 @@ def run(config: Config) -> dict:
 
     logger.info("=== Test 1.2: Batch Processing Performance ===")
 
-    ds = load_dataset("librispeech_asr", "clean", split="test", token=True)
+    with load_dataset_tmp("librispeech_asr", "test", name="clean") as examples:
+        pass
 
     all_results = []
 
     for bucket_s in DURATION_BUCKETS:
         logger.info("Duration bucket: %d s", bucket_s)
-        utterances = _pick_utterances_by_duration(ds, bucket_s, SAMPLES_PER_BUCKET)
+        utterances = _pick_utterances_by_duration(examples, bucket_s, SAMPLES_PER_BUCKET)
 
         if not utterances:
             logger.warning("No utterances found for %d s bucket", bucket_s)
@@ -78,7 +76,7 @@ def run(config: Config) -> dict:
 
     # ---- Concurrency test ----
     logger.info("Running concurrency test...")
-    ref_utterances = _pick_utterances_by_duration(ds, 30, 1)
+    ref_utterances = _pick_utterances_by_duration(examples, 30, 1)
     if ref_utterances:
         _, ref_ex, _ = ref_utterances[0]
         ref_audio = np.array(ref_ex["audio"]["array"], dtype=np.float32)

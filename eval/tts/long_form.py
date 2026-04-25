@@ -134,6 +134,17 @@ def run(config: Config) -> dict:
         write_jsonl(jsonl_path, record)
         summary_rows.append(record)
 
+        # WAVs no longer needed — delete them and the passage directory
+        for p in paragraph_paths:
+            try:
+                Path(p).unlink(missing_ok=True)
+            except Exception:
+                pass
+        try:
+            passage_dir.rmdir()
+        except Exception:
+            pass
+
         logger.info(
             "Passage %d: SpeakerSim=%.3f±%.3f, F0 drift=%.1f Hz, WPM drift=%.1f",
             pi,

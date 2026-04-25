@@ -53,6 +53,7 @@ class TTSClient:
             voice_name=self.tts_cfg.voice_name,
             language_code=self.tts_cfg.language_code,
             sample_rate_hz=self.sample_rate,
+            future_timeout=self.tts_cfg.request_timeout_s,
         )
         elapsed = time.perf_counter() - start
 
@@ -123,6 +124,7 @@ class TTSClient:
             voice_name=self.tts_cfg.voice_name,
             language_code=self.tts_cfg.language_code,
             sample_rate_hz=self.sample_rate,
+            future_timeout=self.tts_cfg.request_timeout_s,
         )
 
         for resp in responses:

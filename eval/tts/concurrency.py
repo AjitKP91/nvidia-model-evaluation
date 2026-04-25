@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import logging
 import time
 from pathlib import Path
@@ -20,6 +21,8 @@ TEST_TEXT = (
     "The artificial intelligence revolution is transforming industries across the globe, "
     "from healthcare and finance to transportation and entertainment."
 )
+
+_GRPC_CALL_TIMEOUT_S = 60
 
 
 async def _rest_request(session: aiohttp.ClientSession, url: str, headers: dict, payload: dict) -> dict:
@@ -53,31 +56,38 @@ async def _run_concurrent_rest(config: Config, n_concurrent: int, n_total: int) 
         async with sem:
             return await _rest_request(session, config.tts.rest_endpoint, headers, payload)
 
-    async with aiohttp.ClientSession() as session:
+    timeout = aiohttp.ClientTimeout(total=config.tts.request_timeout_s)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
         tasks = [bounded_request(session) for _ in range(n_total)]
-        results = await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    return list(results)
+    return [
+        r if isinstance(r, dict) else {"elapsed_s": 0, "status": -1, "error": str(r)}
+        for r in results
+    ]
 
 
-def _run_concurrent_grpc(tts_client: TTSClient, n_concurrent: int, n_total: int) -> list[dict]:
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-
-    results = []
+def _run_concurrent_grpc(tts_client: TTSClient, n_concurrent: int, n_total: int) -> tuple[list[dict], float]:
+    """Returns (results, wall_elapsed_s)."""
+    results: list[dict] = []
+    wall_start = time.perf_counter()
 
     def _call(_):
         return tts_client.synthesize_batch(TEST_TEXT)
 
-    with ThreadPoolExecutor(max_workers=n_concurrent) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=n_concurrent) as executor:
         futures = [executor.submit(_call, i) for i in range(n_total)]
-        for f in as_completed(futures):
+        for f in concurrent.futures.as_completed(futures):
             try:
-                r = f.result()
+                r = f.result(timeout=_GRPC_CALL_TIMEOUT_S)
                 results.append({"elapsed_s": r["elapsed_s"], "status": 200, "audio_duration": r["audio_duration"]})
+            except concurrent.futures.TimeoutError:
+                results.append({"elapsed_s": _GRPC_CALL_TIMEOUT_S, "status": -1, "error": "timeout"})
             except Exception as e:
                 results.append({"elapsed_s": 0, "status": -1, "error": str(e)})
 
-    return results
+    wall_elapsed = time.perf_counter() - wall_start
+    return results, wall_elapsed
 
 
 def run(config: Config) -> dict:
@@ -89,7 +99,7 @@ def run(config: Config) -> dict:
 
     logger.info("=== Test 2.6: Throughput & Concurrency ===")
 
-    n_total_per_level = 100
+    n_total_per_level = 50
     summary_rows = []
 
     for n_concurrent in config.evaluation.tts_concurrency_levels:
@@ -97,14 +107,10 @@ def run(config: Config) -> dict:
 
         # gRPC concurrency
         logger.info("  gRPC...")
-        grpc_results = _run_concurrent_grpc(tts_client, n_concurrent, n_total_per_level)
+        grpc_results, grpc_wall = _run_concurrent_grpc(tts_client, n_concurrent, n_total_per_level)
         grpc_latencies = [r["elapsed_s"] for r in grpc_results if r["status"] == 200]
         grpc_errors = sum(1 for r in grpc_results if r["status"] != 200)
-
-        wall_start = time.perf_counter()
-        _ = _run_concurrent_grpc(tts_client, n_concurrent, n_concurrent)
-        wall_elapsed = time.perf_counter() - wall_start
-        grpc_rps = n_concurrent / wall_elapsed if wall_elapsed > 0 else 0
+        grpc_rps = len(grpc_latencies) / grpc_wall if grpc_wall > 0 else 0
 
         if grpc_latencies:
             grpc_stats = compute_percentiles(grpc_latencies)
@@ -114,7 +120,7 @@ def run(config: Config) -> dict:
                 "n_calls": len(grpc_results),
                 "n_success": len(grpc_latencies),
                 "n_errors": grpc_errors,
-                "error_rate": grpc_errors / len(grpc_results),
+                "error_rate": round(grpc_errors / len(grpc_results), 4),
                 "rps": round(grpc_rps, 2),
                 **{f"latency_{k}": round(v, 3) for k, v in grpc_stats.items()},
             }
@@ -132,14 +138,15 @@ def run(config: Config) -> dict:
 
             if rest_latencies:
                 rest_stats = compute_percentiles(rest_latencies)
+                rest_total_time = sum(rest_latencies) / n_concurrent if n_concurrent > 0 else sum(rest_latencies)
                 row = {
                     "interface": "rest",
                     "concurrency": n_concurrent,
                     "n_calls": len(rest_results),
                     "n_success": len(rest_latencies),
                     "n_errors": rest_errors,
-                    "error_rate": rest_errors / len(rest_results),
-                    "rps": round(len(rest_latencies) / sum(rest_latencies) * n_concurrent, 2) if rest_latencies else 0,
+                    "error_rate": round(rest_errors / len(rest_results), 4),
+                    "rps": round(len(rest_latencies) / rest_total_time, 2) if rest_total_time > 0 else 0,
                     **{f"latency_{k}": round(v, 3) for k, v in rest_stats.items()},
                 }
                 summary_rows.append(row)

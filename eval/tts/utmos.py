@@ -81,15 +81,15 @@ def get_utmos_scorer():
     if _utmos_scorer is not None:
         return _utmos_scorer
 
-    # Strategy 1: PyPI utmos package
+    # Strategy 1: PyPI utmos package (rarely available — requires fairseq + PyTorch>=2.4)
     try:
-        from utmos import UTMOSScore
+        from utmos import UTMOSScore  # type: ignore[import]
         _utmos_scorer = ("pypi", UTMOSScore())
         _utmos_available = True
         logger.info("UTMOS scorer initialised (utmos PyPI package)")
         return _utmos_scorer
-    except Exception as e:
-        logger.warning("UTMOS PyPI strategy failed: %s", e)
+    except Exception:
+        pass  # Expected to fail; torch.hub strategy below is the primary path
 
     # Strategy 2: UTMOS22 via direct download + torch.hub source=local
     try:

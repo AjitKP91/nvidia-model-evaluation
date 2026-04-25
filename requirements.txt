@@ -28,7 +28,10 @@ soundfile
 pydub
 
 # TTS evaluation
-utmos
+# utmos (PyPI) requires fairseq which is unbuildable on pip>=24, and also requires
+# transformers with PyTorch>=2.4 (we pin 2.2.1). UTMOS scoring uses the torch.hub
+# UTMOS22 strategy in eval/tts/utmos.py instead.
+# utmos
 nisqa
 # speechmetrics: not on PyPI and declares numpy<1.24 (conflicts with nisqa).
 # Installed separately with --no-deps in setup.sh — works fine at runtime with numpy 1.26.4.

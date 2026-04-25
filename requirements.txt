@@ -51,6 +51,7 @@ openai-whisper
 setuptools
 
 # Audio / reporting
+onnxruntime
 scipy
 matplotlib
 pandas

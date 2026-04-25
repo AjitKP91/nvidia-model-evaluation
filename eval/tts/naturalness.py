@@ -10,53 +10,11 @@ from tqdm import tqdm
 from eval.config import Config
 from eval.data.tts_test_sets import get_naturalness_sentences
 from eval.tts.client import TTSClient
+from eval.tts.dnsmos import score_dnsmos
 from eval.tts.utmos import release_utmos, score_utmos
 from eval.utils import compute_percentiles, get_completed_ids, save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.tts.naturalness")
-
-_dnsmos_available = None
-
-
-def _score_dnsmos(audio_path: str) -> dict | None:
-    global _dnsmos_available
-    if _dnsmos_available is False:
-        return None
-    try:
-        import speechmetrics
-        metrics = speechmetrics.load("dnsmos", window=None)
-        result = metrics(audio_path)
-
-        # Log structure once so we can see the actual keys
-        if _dnsmos_available is None:
-            logger.info("DNSMOS raw result keys: %s", list(result.keys()) if isinstance(result, dict) else type(result))
-
-        _dnsmos_available = True
-
-        # Handle various key formats from different speechmetrics versions
-        for outer in ("dnsmos", "DNSMOS"):
-            inner = result.get(outer) if isinstance(result, dict) else None
-            if inner and isinstance(inner, dict):
-                return {
-                    "ovrl": float(inner.get("OVRL", inner.get("ovrl", 0))),
-                    "sig": float(inner.get("SIG", inner.get("sig", 0))),
-                    "bak": float(inner.get("BAK", inner.get("bak", 0))),
-                }
-        # Flat dict: {"OVRL": x, ...}
-        if isinstance(result, dict) and ("OVRL" in result or "ovrl" in result):
-            return {
-                "ovrl": float(result.get("OVRL", result.get("ovrl", 0))),
-                "sig": float(result.get("SIG", result.get("sig", 0))),
-                "bak": float(result.get("BAK", result.get("bak", 0))),
-            }
-        logger.warning("DNSMOS: unrecognised result structure: %s", result)
-        return None
-    except Exception as e:
-        if _dnsmos_available is None:
-            logger.warning("DNSMOS not available (%s)", e)
-            _dnsmos_available = False
-        return None
-        return None
 
 
 def run(config: Config) -> dict:
@@ -88,7 +46,7 @@ def run(config: Config) -> dict:
             result = tts_client.save_synthesis(text, str(wav_path))
 
             utmos = score_utmos(str(wav_path))
-            dnsmos = _score_dnsmos(str(wav_path))
+            dnsmos = score_dnsmos(str(wav_path))
             wav_path.unlink(missing_ok=True)
 
             record = {

@@ -6,6 +6,10 @@ torch==2.2.1
 torchvision==0.17.1
 torchaudio==2.2.1
 
+# numpy pinned before all other deps — nisqa requires 1.26.4 exactly,
+# and speechmetrics would otherwise downgrade to 1.23.5.
+numpy==1.26.4
+
 # NVIDIA Riva gRPC SDK
 nvidia-riva-client
 
@@ -26,7 +30,7 @@ pydub
 # TTS evaluation
 utmos
 nisqa
-speechmetrics
+speechmetrics @ git+https://github.com/aliutkus/speechmetrics
 pesq
 pystoi
 pyworld
@@ -43,7 +47,6 @@ openai-whisper
 setuptools
 
 # Audio / reporting
-numpy
 scipy
 matplotlib
 pandas

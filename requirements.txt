@@ -30,7 +30,8 @@ pydub
 # TTS evaluation
 utmos
 nisqa
-speechmetrics @ git+https://github.com/aliutkus/speechmetrics
+# speechmetrics: not on PyPI and declares numpy<1.24 (conflicts with nisqa).
+# Installed separately with --no-deps in setup.sh — works fine at runtime with numpy 1.26.4.
 pesq
 pystoi
 pyworld

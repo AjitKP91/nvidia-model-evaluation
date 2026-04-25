@@ -78,6 +78,11 @@ uv pip install "omegaconf>=2.1" --no-cache-dir
 # Install all requirements via uv (avoids resolution-too-deep errors)
 uv pip install -r "$REPO_DIR/requirements.txt" --no-cache-dir
 
+# speechmetrics: not on PyPI and declares numpy<1.24 which conflicts with nisqa.
+# Install with --no-deps to bypass the stale constraint — works fine with numpy 1.26.4.
+echo "  Installing speechmetrics (--no-deps to skip stale numpy<1.24 constraint)..."
+pip install --no-deps git+https://github.com/aliutkus/speechmetrics --no-cache-dir
+
 # Ensure setuptools is present for pyworld
 uv pip install setuptools --no-cache-dir
 

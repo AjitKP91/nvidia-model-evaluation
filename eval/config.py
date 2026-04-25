@@ -42,6 +42,7 @@ class TTSConfig:
     auth_header: str = "Authorization"
     request_timeout_s: int = 60
     sample_rate: int = 22050
+    max_sequence_tokens: int = 400
 
 
 @dataclass

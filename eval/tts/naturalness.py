@@ -23,20 +23,19 @@ def _score_dnsmos(audio_path: str) -> dict | None:
     if _dnsmos_available is False:
         return None
     try:
-        from speechmetrics import relative as sm
-        metrics = sm.load("dnsmos")
+        import speechmetrics
+        metrics = speechmetrics.load("dnsmos", window=None)
         result = metrics(audio_path)
         _dnsmos_available = True
+        dnsmos = result.get("dnsmos", {})
         return {
-            "ovrl": float(result.get("dnsmos", {}).get("ovrl", 0)),
-            "sig": float(result.get("dnsmos", {}).get("sig", 0)),
-            "bak": float(result.get("dnsmos", {}).get("bak", 0)),
+            "ovrl": float(dnsmos.get("ovrl", dnsmos.get("OVRL", 0))),
+            "sig": float(dnsmos.get("sig", dnsmos.get("SIG", 0))),
+            "bak": float(dnsmos.get("bak", dnsmos.get("BAK", 0))),
         }
     except Exception as e:
         if _dnsmos_available is None:
-            logger.warning(
-                "DNSMOS not available (%s) — run: uv pip install speechmetrics", e
-            )
+            logger.warning("DNSMOS not available (%s)", e)
             _dnsmos_available = False
         return None
 

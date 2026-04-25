@@ -23,6 +23,7 @@ TEST_TEXT = (
 )
 
 _GRPC_CALL_TIMEOUT_S = 60
+_LEVEL_WALL_TIMEOUT_S = 300  # abandon a concurrency level after 5 minutes total
 
 
 async def _rest_request(session: aiohttp.ClientSession, url: str, headers: dict, payload: dict) -> dict:
@@ -68,7 +69,7 @@ async def _run_concurrent_rest(config: Config, n_concurrent: int, n_total: int) 
 
 
 def _run_concurrent_grpc(tts_client: TTSClient, n_concurrent: int, n_total: int) -> tuple[list[dict], float]:
-    """Returns (results, wall_elapsed_s)."""
+    """Returns (results, wall_elapsed_s). Abandons after _LEVEL_WALL_TIMEOUT_S."""
     results: list[dict] = []
     wall_start = time.perf_counter()
 
@@ -77,14 +78,21 @@ def _run_concurrent_grpc(tts_client: TTSClient, n_concurrent: int, n_total: int)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=n_concurrent) as executor:
         futures = [executor.submit(_call, i) for i in range(n_total)]
-        for f in concurrent.futures.as_completed(futures):
+        done, not_done = concurrent.futures.wait(futures, timeout=_LEVEL_WALL_TIMEOUT_S)
+
+        for f in done:
             try:
-                r = f.result(timeout=_GRPC_CALL_TIMEOUT_S)
+                r = f.result(timeout=1)
                 results.append({"elapsed_s": r["elapsed_s"], "status": 200, "audio_duration": r["audio_duration"]})
-            except concurrent.futures.TimeoutError:
-                results.append({"elapsed_s": _GRPC_CALL_TIMEOUT_S, "status": -1, "error": "timeout"})
             except Exception as e:
                 results.append({"elapsed_s": 0, "status": -1, "error": str(e)})
+
+        if not_done:
+            logger.warning("  gRPC N=%d: %d futures timed out after %ds, cancelling",
+                           n_concurrent, len(not_done), _LEVEL_WALL_TIMEOUT_S)
+            for f in not_done:
+                f.cancel()
+                results.append({"elapsed_s": _LEVEL_WALL_TIMEOUT_S, "status": -1, "error": "wall_timeout"})
 
     wall_elapsed = time.perf_counter() - wall_start
     return results, wall_elapsed

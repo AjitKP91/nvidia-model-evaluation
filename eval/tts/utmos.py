@@ -40,38 +40,63 @@ _preload_cuda_runtime()
 def _install_utmos22(hub_dir: Path) -> Path | None:
     """Download UTMOS22 via GitHub archive and install into hub_dir.
 
-    Uses /archive/refs/heads/master.zip which extracts to UTMOS22-master/,
-    a predictable name unlike the zipball which uses a commit hash.
-    Returns the installed directory path, or None on failure.
+    Tries the main branch first (current default), then master.
+    Returns the installed directory path (containing hubconf.py), or None.
     """
     import urllib.request
 
-    zip_url = "https://github.com/sarulab-speech/UTMOS22/archive/refs/heads/master.zip"
-    zip_path = hub_dir / "utmos22_master.zip"
     target_dir = hub_dir / "sarulab-speech_UTMOS22_master"
 
-    try:
-        logger.info("Downloading UTMOS22 from GitHub archive")
-        urllib.request.urlretrieve(zip_url, zip_path)
+    for branch in ("main", "master"):
+        zip_url = f"https://github.com/sarulab-speech/UTMOS22/archive/refs/heads/{branch}.zip"
+        zip_path = hub_dir / f"utmos22_{branch}.zip"
+        extracted_name = f"UTMOS22-{branch}"
 
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            zf.extractall(hub_dir)
-        zip_path.unlink(missing_ok=True)
+        try:
+            logger.info("Downloading UTMOS22 from GitHub archive (branch=%s)", branch)
+            urllib.request.urlretrieve(zip_url, zip_path)
 
-        # GitHub /archive/ always extracts to {repo}-{branch}/ = UTMOS22-master/
-        extracted = hub_dir / "UTMOS22-master"
-        if extracted.is_dir():
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                zf.extractall(hub_dir)
+            zip_path.unlink(missing_ok=True)
+
+            extracted = hub_dir / extracted_name
+            if not extracted.is_dir():
+                # GitHub sometimes uses a different prefix — scan for it
+                for d in hub_dir.iterdir():
+                    if d.is_dir() and "utmos22" in d.name.lower() and d != target_dir:
+                        extracted = d
+                        break
+
+            if not extracted.is_dir():
+                logger.warning("Expected %s after extraction but it was not found", extracted_name)
+                continue
+
+            # hubconf.py might be at root or one level down
+            hubconf = extracted / "hubconf.py"
+            if not hubconf.exists():
+                # search one level deep
+                for child in extracted.iterdir():
+                    if child.is_dir() and (child / "hubconf.py").exists():
+                        extracted = child
+                        hubconf = extracted / "hubconf.py"
+                        break
+
+            if not hubconf.exists():
+                logger.warning("hubconf.py not found in %s (branch=%s)", extracted, branch)
+                shutil.rmtree(extracted, ignore_errors=True)
+                continue
+
             shutil.rmtree(target_dir, ignore_errors=True)
             extracted.rename(target_dir)
-            logger.info("Installed UTMOS22 to %s", target_dir)
+            logger.info("Installed UTMOS22 to %s (branch=%s)", target_dir, branch)
             return target_dir
 
-        logger.warning("Expected %s after extraction but it was not found", extracted)
-        return None
-    except Exception as e:
-        logger.warning("UTMOS22 installation failed: %s", e)
-        zip_path.unlink(missing_ok=True)
-        return None
+        except Exception as e:
+            logger.warning("UTMOS22 install failed (branch=%s): %s", branch, e)
+            zip_path.unlink(missing_ok=True)
+
+    return None
 
 
 def get_utmos_scorer():

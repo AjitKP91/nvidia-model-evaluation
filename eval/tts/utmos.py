@@ -74,10 +74,31 @@ def _install_utmos22(hub_dir: Path) -> Path | None:
 
             # Search anywhere in the tree for hubconf.py
             hubconf_matches = list(extracted.rglob("hubconf.py"))
+
             if not hubconf_matches:
-                logger.warning("hubconf.py not found anywhere in %s (branch=%s)", extracted, branch)
-                shutil.rmtree(extracted, ignore_errors=True)
-                continue
+                # hubconf.py may have been removed from the repo; synthesise one
+                # if the UTMOS22 Python package is present in the archive.
+                score_candidates = list(extracted.rglob("score.py"))
+                pkg_dir = next(
+                    (p.parent for p in score_candidates if p.parent.name == "UTMOS22"),
+                    None,
+                )
+                if pkg_dir is not None:
+                    synth = pkg_dir.parent / "hubconf.py"
+                    synth.write_text(
+                        "dependencies = ['torch', 'torchaudio']\n\n"
+                        "def strong(**kwargs):\n"
+                        "    import sys, os\n"
+                        "    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))\n"
+                        "    from UTMOS22.score import Score\n"
+                        "    return Score(**kwargs)\n"
+                    )
+                    hubconf_matches = [synth]
+                    logger.info("Created synthetic hubconf.py alongside UTMOS22 package")
+                else:
+                    logger.warning("hubconf.py not found anywhere in %s (branch=%s)", extracted, branch)
+                    shutil.rmtree(extracted, ignore_errors=True)
+                    continue
 
             # Use the directory that directly contains hubconf.py
             actual_root = hubconf_matches[0].parent

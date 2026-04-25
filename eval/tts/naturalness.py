@@ -26,17 +26,36 @@ def _score_dnsmos(audio_path: str) -> dict | None:
         import speechmetrics
         metrics = speechmetrics.load("dnsmos", window=None)
         result = metrics(audio_path)
+
+        # Log structure once so we can see the actual keys
+        if _dnsmos_available is None:
+            logger.info("DNSMOS raw result keys: %s", list(result.keys()) if isinstance(result, dict) else type(result))
+
         _dnsmos_available = True
-        dnsmos = result.get("dnsmos", {})
-        return {
-            "ovrl": float(dnsmos.get("ovrl", dnsmos.get("OVRL", 0))),
-            "sig": float(dnsmos.get("sig", dnsmos.get("SIG", 0))),
-            "bak": float(dnsmos.get("bak", dnsmos.get("BAK", 0))),
-        }
+
+        # Handle various key formats from different speechmetrics versions
+        for outer in ("dnsmos", "DNSMOS"):
+            inner = result.get(outer) if isinstance(result, dict) else None
+            if inner and isinstance(inner, dict):
+                return {
+                    "ovrl": float(inner.get("OVRL", inner.get("ovrl", 0))),
+                    "sig": float(inner.get("SIG", inner.get("sig", 0))),
+                    "bak": float(inner.get("BAK", inner.get("bak", 0))),
+                }
+        # Flat dict: {"OVRL": x, ...}
+        if isinstance(result, dict) and ("OVRL" in result or "ovrl" in result):
+            return {
+                "ovrl": float(result.get("OVRL", result.get("ovrl", 0))),
+                "sig": float(result.get("SIG", result.get("sig", 0))),
+                "bak": float(result.get("BAK", result.get("bak", 0))),
+            }
+        logger.warning("DNSMOS: unrecognised result structure: %s", result)
+        return None
     except Exception as e:
         if _dnsmos_available is None:
             logger.warning("DNSMOS not available (%s)", e)
             _dnsmos_available = False
+        return None
         return None
 
 

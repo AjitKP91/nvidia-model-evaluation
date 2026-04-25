@@ -1,9 +1,7 @@
 """Test 2.7 — Edge Cases & Input Robustness."""
 from __future__ import annotations
 
-import ctypes
 import logging
-import os
 from pathlib import Path
 
 import jiwer
@@ -12,77 +10,10 @@ from tqdm import tqdm
 from eval.config import Config
 from eval.data.tts_test_sets import get_edge_cases
 from eval.tts.client import TTSClient
+from eval.tts.utmos import score_utmos
 from eval.utils import NORMALIZE_FOR_WER, get_completed_ids, save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.tts.edge_cases")
-
-
-def _preload_cuda_runtime() -> None:
-    try:
-        import torch
-        torch_lib = os.path.join(os.path.dirname(torch.__file__), "lib")
-        current_path = os.environ.get("LD_LIBRARY_PATH", "")
-        if torch_lib not in current_path:
-            os.environ["LD_LIBRARY_PATH"] = f"{torch_lib}:{current_path}"
-        for name in sorted(os.listdir(torch_lib)):
-            if name.startswith("libcudart"):
-                try:
-                    ctypes.CDLL(os.path.join(torch_lib, name))
-                except Exception:
-                    pass
-    except Exception:
-        pass
-
-
-_preload_cuda_runtime()
-
-_utmos_scorer = None
-_utmos_available = None
-
-
-def _score_utmos_single(audio_path: str) -> float | None:
-    global _utmos_scorer, _utmos_available
-    if _utmos_available is False:
-        return None
-    if _utmos_scorer is None:
-        # Strategy 1: PyPI utmos package
-        try:
-            from utmos import UTMOSScore
-            _utmos_scorer = ("pypi", UTMOSScore())
-            _utmos_available = True
-        except Exception:
-            pass
-        # Strategy 2: torch.hub UTMOS22
-        if _utmos_scorer is None:
-            try:
-                import torch
-                predictor = torch.hub.load(
-                    "sarulab-speech/UTMOS22", "strong",
-                    trust_repo=True, verbose=False,
-                )
-                _utmos_scorer = ("hub", predictor)
-                _utmos_available = True
-            except Exception as e:
-                logger.warning("UTMOS not available: %s", e)
-                _utmos_available = False
-                return None
-    kind, model = _utmos_scorer
-    try:
-        if kind == "pypi":
-            return float(model.score(audio_path))
-        else:
-            import soundfile as sf
-            import torch
-            wav, sr = sf.read(audio_path, dtype="float32")
-            if wav.ndim > 1:
-                wav = wav.mean(axis=1)
-            if sr != 16000:
-                import librosa
-                wav = librosa.resample(wav, orig_sr=sr, target_sr=16000)
-            wav_t = torch.tensor(wav).unsqueeze(0)
-            return float(model(wav_t, 16000).item())
-    except Exception:
-        return None
 
 
 def _round_trip_wer(text: str, audio_path: str) -> float | None:
@@ -139,7 +70,7 @@ def run(config: Config) -> dict:
             record["audio_duration_s"] = result["audio_duration"]
 
             if result["audio_duration"] > 0.1:
-                record["utmos"] = _score_utmos_single(str(wav_path))
+                record["utmos"] = score_utmos(str(wav_path))
                 record["round_trip_wer"] = _round_trip_wer(text, str(wav_path))
             else:
                 record["status"] = "degraded"

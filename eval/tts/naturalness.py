@@ -1,119 +1,21 @@
 """Test 2.1 — Automated Naturalness (UTMOS / DNSMOS / NISQA)."""
 from __future__ import annotations
 
-import ctypes
-import gc
 import logging
-import os
-import shutil
 from pathlib import Path
 
 import numpy as np
-import soundfile as sf
 from tqdm import tqdm
 
 from eval.config import Config
 from eval.data.tts_test_sets import get_naturalness_sentences
 from eval.tts.client import TTSClient
+from eval.tts.utmos import release_utmos, score_utmos
 from eval.utils import compute_percentiles, get_completed_ids, save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.tts.naturalness")
 
-
-def _preload_cuda_runtime() -> None:
-    """Preload PyTorch's bundled CUDA runtime so UTMOS can find libcudart.
-
-    Sets LD_LIBRARY_PATH and force-loads all libcudart variants present in
-    PyTorch's lib directory. Must run before 'import utmos'.
-    """
-    try:
-        import torch
-        torch_lib = os.path.join(os.path.dirname(torch.__file__), "lib")
-        current_path = os.environ.get("LD_LIBRARY_PATH", "")
-        if torch_lib not in current_path:
-            os.environ["LD_LIBRARY_PATH"] = f"{torch_lib}:{current_path}"
-        for name in sorted(os.listdir(torch_lib)):
-            if name.startswith("libcudart"):
-                try:
-                    ctypes.CDLL(os.path.join(torch_lib, name))
-                except Exception:
-                    pass
-    except Exception:
-        pass
-
-
-_preload_cuda_runtime()
-
-# Module-level scorer cache — initialise once, reuse across all sentences.
-# _utmos_scorer is a tuple of (kind, model) where kind is "pypi" or "hub".
-_utmos_scorer = None
-_utmos_available = None
 _dnsmos_available = None
-
-
-def _get_utmos_scorer():
-    global _utmos_scorer, _utmos_available
-    if _utmos_available is False:
-        return None
-    if _utmos_scorer is not None:
-        return _utmos_scorer
-
-    # Strategy 1: PyPI utmos package
-    try:
-        from utmos import UTMOSScore
-        _utmos_scorer = ("pypi", UTMOSScore())
-        _utmos_available = True
-        logger.info("UTMOS scorer initialised (utmos package)")
-        return _utmos_scorer
-    except Exception as e:
-        logger.warning("UTMOS PyPI strategy failed: %s", e)
-
-    # Strategy 2: Official UTMOS22 via torch.hub
-    try:
-        import torch
-        from pathlib import Path as _Path
-
-        hub_dir = _Path(torch.hub.get_dir()) / "sarulab-speech_UTMOS22_master"
-        force = not (hub_dir / "hubconf.py").exists()
-        if force:
-            logger.info("UTMOS hubconf.py missing — forcing re-download")
-
-        predictor = torch.hub.load(
-            "sarulab-speech/UTMOS22", "strong",
-            trust_repo=True, verbose=False, force_reload=force,
-        )
-        _utmos_scorer = ("hub", predictor)
-        _utmos_available = True
-        logger.info("UTMOS scorer initialised (torch.hub UTMOS22)")
-        return _utmos_scorer
-    except Exception as e:
-        logger.warning("UTMOS not available: %s", e)
-        _utmos_available = False
-        return None
-
-
-def _score_utmos(audio_path: str) -> float | None:
-    result = _get_utmos_scorer()
-    if result is None:
-        return None
-    kind, model = result
-    try:
-        if kind == "pypi":
-            return float(model.score(audio_path))
-        else:
-            # torch.hub UTMOS22: expects a 1-D float32 tensor at 16 kHz
-            import torch
-            wav, sr = sf.read(audio_path, dtype="float32")
-            if wav.ndim > 1:
-                wav = wav.mean(axis=1)
-            if sr != 16000:
-                import librosa
-                wav = librosa.resample(wav, orig_sr=sr, target_sr=16000)
-            wav_t = torch.tensor(wav).unsqueeze(0)
-            return float(model(wav_t, 16000).item())
-    except Exception as e:
-        logger.warning("UTMOS scoring failed: %s", e)
-        return None
 
 
 def _score_dnsmos(audio_path: str) -> dict | None:
@@ -132,7 +34,9 @@ def _score_dnsmos(audio_path: str) -> dict | None:
         }
     except Exception as e:
         if _dnsmos_available is None:
-            logger.warning("DNSMOS not available (%s), skipping for all sentences", e)
+            logger.warning(
+                "DNSMOS not available (%s) — run: uv pip install speechmetrics", e
+            )
             _dnsmos_available = False
         return None
 
@@ -165,7 +69,7 @@ def run(config: Config) -> dict:
         try:
             result = tts_client.save_synthesis(text, str(wav_path))
 
-            utmos = _score_utmos(str(wav_path))
+            utmos = score_utmos(str(wav_path))
             dnsmos = _score_dnsmos(str(wav_path))
 
             record = {
@@ -204,24 +108,6 @@ def run(config: Config) -> dict:
     if dnsmos_ovrl_scores:
         logger.info("DNSMOS OVRL: mean=%.2f", np.mean(dnsmos_ovrl_scores))
 
-    # Release UTMOS model and delete its torch.hub cache.
-    global _utmos_scorer, _utmos_available
-    if _utmos_scorer is not None:
-        kind, model = _utmos_scorer
-        del model
-        _utmos_scorer = None
-        _utmos_available = None
-        gc.collect()
-        if kind == "hub":
-            try:
-                import torch
-                torch.cuda.empty_cache()
-                hub_dir = Path(torch.hub.get_dir())
-                for entry in hub_dir.iterdir():
-                    if "utmos" in entry.name.lower() or "sarulab" in entry.name.lower():
-                        shutil.rmtree(entry, ignore_errors=True)
-                        logger.info("Deleted UTMOS hub cache: %s", entry)
-            except Exception as e:
-                logger.warning("UTMOS cache cleanup failed: %s", e)
+    release_utmos()
 
     return {"test": "2.1", "name": "naturalness", "results": summary}

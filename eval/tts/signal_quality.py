@@ -125,6 +125,9 @@ def run(config: Config) -> dict:
             })
         except Exception as e:
             logger.warning("Failed signal quality %d: %s", i, e)
+        finally:
+            ref_path.unlink(missing_ok=True)
+            syn_path.unlink(missing_ok=True)
 
     summary = {
         "speaker_mismatch_warning": (

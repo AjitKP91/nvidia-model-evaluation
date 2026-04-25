@@ -70,6 +70,7 @@ def run(config: Config) -> dict:
 
             utmos = score_utmos(str(wav_path))
             dnsmos = _score_dnsmos(str(wav_path))
+            wav_path.unlink(missing_ok=True)
 
             record = {
                 "id": f"nat_{i}",

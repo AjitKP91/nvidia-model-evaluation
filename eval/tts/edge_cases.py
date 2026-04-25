@@ -75,10 +75,11 @@ def run(config: Config) -> dict:
             else:
                 record["status"] = "degraded"
                 record["error"] = "audio too short"
-
         except Exception as e:
             record["status"] = "fail"
             record["error"] = str(e)
+        finally:
+            wav_path.unlink(missing_ok=True)
 
         write_jsonl(jsonl_path, record)
         summary_rows.append(record)

@@ -129,6 +129,8 @@ def run(config: Config) -> dict:
 
         except Exception as e:
             logger.warning("Failed prosody %d: %s", i, e)
+        finally:
+            synth_path.unlink(missing_ok=True)
 
     # If no LJSpeech, synthesize standalone sentences for speaking rate
     if not lj_sentences:
@@ -145,6 +147,8 @@ def run(config: Config) -> dict:
                 speaking_rates.append(wpm)
             except Exception:
                 pass
+            finally:
+                synth_path.unlink(missing_ok=True)
 
     summary = {
         "f0_rmse_mean": round(np.mean(f0_rmses), 2) if f0_rmses else None,

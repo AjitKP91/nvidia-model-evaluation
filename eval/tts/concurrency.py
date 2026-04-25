@@ -76,7 +76,8 @@ def _run_concurrent_grpc(tts_client: TTSClient, n_concurrent: int, n_total: int)
     def _call(_):
         return tts_client.synthesize_batch(TEST_TEXT)
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=n_concurrent) as executor:
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=n_concurrent)
+    try:
         futures = [executor.submit(_call, i) for i in range(n_total)]
         done, not_done = concurrent.futures.wait(futures, timeout=_LEVEL_WALL_TIMEOUT_S)
 
@@ -88,11 +89,13 @@ def _run_concurrent_grpc(tts_client: TTSClient, n_concurrent: int, n_total: int)
                 results.append({"elapsed_s": 0, "status": -1, "error": str(e)})
 
         if not_done:
-            logger.warning("  gRPC N=%d: %d futures timed out after %ds, cancelling",
+            logger.warning("  gRPC N=%d: %d futures timed out after %ds, moving on",
                            n_concurrent, len(not_done), _LEVEL_WALL_TIMEOUT_S)
             for f in not_done:
-                f.cancel()
                 results.append({"elapsed_s": _LEVEL_WALL_TIMEOUT_S, "status": -1, "error": "wall_timeout"})
+    finally:
+        # wait=False so we don't block on hung threads; cancel_futures drops queued work
+        executor.shutdown(wait=False, cancel_futures=True)
 
     wall_elapsed = time.perf_counter() - wall_start
     return results, wall_elapsed

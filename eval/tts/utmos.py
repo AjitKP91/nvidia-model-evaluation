@@ -72,20 +72,18 @@ def _install_utmos22(hub_dir: Path) -> Path | None:
                 logger.warning("Expected %s after extraction but it was not found", extracted_name)
                 continue
 
-            # hubconf.py might be at root or one level down
-            hubconf = extracted / "hubconf.py"
-            if not hubconf.exists():
-                # search one level deep
-                for child in extracted.iterdir():
-                    if child.is_dir() and (child / "hubconf.py").exists():
-                        extracted = child
-                        hubconf = extracted / "hubconf.py"
-                        break
-
-            if not hubconf.exists():
-                logger.warning("hubconf.py not found in %s (branch=%s)", extracted, branch)
+            # Search anywhere in the tree for hubconf.py
+            hubconf_matches = list(extracted.rglob("hubconf.py"))
+            if not hubconf_matches:
+                logger.warning("hubconf.py not found anywhere in %s (branch=%s)", extracted, branch)
                 shutil.rmtree(extracted, ignore_errors=True)
                 continue
+
+            # Use the directory that directly contains hubconf.py
+            actual_root = hubconf_matches[0].parent
+            if actual_root != extracted:
+                logger.info("hubconf.py found in subdirectory %s", actual_root)
+                extracted = actual_root
 
             shutil.rmtree(target_dir, ignore_errors=True)
             extracted.rename(target_dir)

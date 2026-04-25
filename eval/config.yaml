@@ -20,6 +20,9 @@ tts:
   auth_header: Authorization
   request_timeout_s: 60
   sample_rate: 22050
+  # Hard model limit confirmed in production: inputs >400 tokens fail with
+  # StatusCode.UNKNOWN "Input sentence is longer than maximum sequence length: N > 400"
+  max_sequence_tokens: 400
 
 evaluation:
   stt_concurrency_levels: [1, 5, 10, 20]

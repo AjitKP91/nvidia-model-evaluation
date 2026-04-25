@@ -30,7 +30,7 @@ DATASETS = [
     {"name": "librispeech_other", "hf": ("librispeech_asr", "other"), "split": "test", "label": "LibriSpeech other"},
     {"name": "voxpopuli_en", "hf": ("facebook/voxpopuli", "en"), "split": "test", "label": "VoxPopuli EN"},
     {"name": "gigaspeech", "hf": ("speechcolab/gigaspeech", "xs"), "split": "test", "label": "GigaSpeech"},
-    {"name": "spgispeech", "hf": ("kensho/spgispeech", None), "split": "val", "label": "SPGISpeech"},
+    {"name": "spgispeech", "hf": ("kensho/spgispeech", "S"), "split": "val", "label": "SPGISpeech"},
 ]
 
 THRESHOLDS = {

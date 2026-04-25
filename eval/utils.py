@@ -208,6 +208,7 @@ def load_dataset_tmp(path: str, split: str, name=None, limit: int | None = None,
             for ex in examples: ...
     """
     import itertools
+    import os
     import shutil
     import tempfile
 
@@ -215,7 +216,7 @@ def load_dataset_tmp(path: str, split: str, name=None, limit: int | None = None,
 
     cache_dir = tempfile.mkdtemp(prefix="eval_ds_", dir="/tmp")
     try:
-        kw: dict = {"split": split, "token": True, "cache_dir": cache_dir, **kwargs}
+        kw: dict = {"split": split, "token": os.environ.get("HF_TOKEN") or True, "cache_dir": cache_dir, **kwargs}
         if name is not None:
             kw["name"] = name
         ds = load_dataset(path, **kw)

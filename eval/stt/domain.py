@@ -75,7 +75,7 @@ def run(config: Config) -> dict:
     logger.info("=== Test 1.8: Domain-Specific Vocabulary ===")
 
     datasets_to_test = [
-        {"name": "spgispeech", "hf": ("kensho/spgispeech", None), "label": "SPGISpeech (financial)", "split": "val"},
+        {"name": "spgispeech", "hf": ("kensho/spgispeech", "S"), "label": "SPGISpeech (financial)", "split": "val"},
         # revdotcom/earnings22 removed — builder downloads from dead third-party URLs
     ]
 

@@ -53,6 +53,14 @@ def _read_summary_csv(path: Path) -> list[dict]:
         return []
 
 
+def _try_float(v) -> float | None:
+    try:
+        f = float(v)
+        return f if f == f else None  # reject NaN
+    except (TypeError, ValueError):
+        return None
+
+
 def _status_badge(value, threshold_key: str, category: str) -> str:
     th = THRESHOLDS.get(category, {}).get(threshold_key)
     if th is None or value is None:
@@ -195,29 +203,32 @@ def _render_tts_section(key: str, data: dict) -> str:
         content += "<h3>Summary</h3>" + _table(summary)
         if key == "naturalness" and summary:
             row = summary[0] if isinstance(summary[0], dict) else {}
-            utmos = row.get("utmos_mean") or row.get("utmos", {})
-            if isinstance(utmos, dict):
-                utmos = utmos.get("mean")
-            if utmos:
-                content += f"<p>UTMOS mean: {_status_badge(float(utmos), 'utmos_mean', 'tts')}</p>"
+            utmos_raw = row.get("utmos_mean") or row.get("utmos")
+            if isinstance(utmos_raw, dict):
+                utmos_raw = utmos_raw.get("mean")
+            utmos = _try_float(utmos_raw)
+            if utmos is not None:
+                content += f"<p>UTMOS mean: {_status_badge(utmos, 'utmos_mean', 'tts')}</p>"
         if key == "intelligibility" and summary:
             for row in summary:
-                wer = row.get("round_trip_wer")
+                wer = _try_float(row.get("round_trip_wer"))
                 if wer is not None:
-                    content += f"<p>{row.get('category', '')}: WER = {_status_badge(float(wer), 'round_trip_wer', 'tts')}</p>"
+                    content += f"<p>{row.get('category', '')}: WER = {_status_badge(wer, 'round_trip_wer', 'tts')}</p>"
         if key == "latency" and summary:
             for row in summary:
-                ttfb = row.get("ttfb_p50") or (row.get("ttfb", {}) or {}).get("p50")
+                ttfb_raw = row.get("ttfb_p50") or (row.get("ttfb") or {}).get("p50") if isinstance(row.get("ttfb"), dict) else row.get("ttfb_p50")
+                ttfb = _try_float(ttfb_raw)
                 if ttfb is not None:
-                    content += f"<p>{row.get('bucket','')} / {row.get('interface','')}: TTFB P50 = {_status_badge(float(ttfb)*1000, 'ttfb_p50_ms', 'tts')} ms</p>"
+                    content += f"<p>{row.get('bucket','')} / {row.get('interface','')}: TTFB P50 = {_status_badge(ttfb * 1000, 'ttfb_p50_ms', 'tts')} ms</p>"
         if key == "long_form" and summary:
             for row in summary:
-                sim = row.get("mean_speaker_sim")
-                f0d = row.get("f0_drift_hz")
+                sim = _try_float(row.get("mean_speaker_sim"))
+                f0d = _try_float(row.get("f0_drift_hz"))
+                label = row.get("title", row.get("passage_id", ""))
                 if sim is not None:
-                    content += f"<p>{row.get('title', row.get('passage_id',''))}: Speaker sim = {_status_badge(float(sim), 'speaker_sim', 'tts')}</p>"
+                    content += f"<p>{label}: Speaker sim = {_status_badge(sim, 'speaker_sim', 'tts')}</p>"
                 if f0d is not None:
-                    content += f"<p>{row.get('title', row.get('passage_id',''))}: F0 drift = {_status_badge(float(f0d), 'f0_drift_hz', 'tts')} Hz</p>"
+                    content += f"<p>{label}: F0 drift = {_status_badge(f0d, 'f0_drift_hz', 'tts')} Hz</p>"
     elif calls:
         content += f"<p>{len(calls)} call records. First few:</p>" + _table(calls[:10])
     else:

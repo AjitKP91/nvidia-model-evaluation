@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from eval.config import Config
 from eval.data.tts_test_sets import get_text_length_buckets
-from eval.tts.client import TTSClient
+from eval.tts.client import TTSClient, TTS_MAX_SEQUENCE_TOKENS
 from eval.utils import compute_percentiles, get_completed_ids, save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.tts.latency")
@@ -89,6 +89,16 @@ def run(config: Config) -> dict:
                     row["ttfb"].get("p99", 0) * 1000,
                     row["rtf"].get("p50", 0) if row["rtf"] else 0,
                 )
+            else:
+                sample_len = len(texts[0]) if texts else 0
+                if sample_len > TTS_MAX_SEQUENCE_TOKENS:
+                    logger.warning(
+                        "  Bucket %s/%s: all %d reps failed — text length %d chars likely exceeds "
+                        "model token limit (%d). Skipping bucket.",
+                        bucket_name, interface, N_REPS_PER_BUCKET, sample_len, TTS_MAX_SEQUENCE_TOKENS,
+                    )
+                else:
+                    logger.warning("  Bucket %s/%s: no successful calls", bucket_name, interface)
 
     save_summary_csv(results_dir / "summary.csv", summary_rows)
     return {"test": "2.5", "name": "streaming_ttfb_rtf", "results": summary_rows}

@@ -18,6 +18,10 @@ from eval.utils import retry_with_backoff
 
 logger = logging.getLogger("eval.tts.client")
 
+# Magpie TTS hard limit confirmed from production errors (StatusCode.UNKNOWN,
+# "Input sentence is longer than maximum sequence length: N > 400")
+TTS_MAX_SEQUENCE_TOKENS = 400
+
 
 def _is_permanent_tts_error(exc: Exception) -> bool:
     """Return True for errors that will never succeed on retry."""

@@ -10,7 +10,7 @@ from tqdm import tqdm
 from eval.config import Config
 from eval.data.tts_test_sets import get_text_length_buckets
 from eval.tts.client import TTSClient
-from eval.utils import compute_percentiles, save_summary_csv, write_jsonl
+from eval.utils import compute_percentiles, get_completed_ids, save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.tts.latency")
 
@@ -23,6 +23,7 @@ def run(config: Config) -> dict:
 
     tts_client = TTSClient(config)
     jsonl_path = results_dir / "calls.jsonl"
+    completed = get_completed_ids(jsonl_path)
 
     logger.info("=== Test 2.5: Streaming TTFB & RTF ===")
 
@@ -38,6 +39,9 @@ def run(config: Config) -> dict:
             elapsed_values = []
 
             for rep in tqdm(range(N_REPS_PER_BUCKET), desc=f"{bucket_name}/{interface}"):
+                item_id = f"{bucket_name}_{interface}_{rep}"
+                if item_id in completed:
+                    continue
                 text = texts[rep % len(texts)]
 
                 try:

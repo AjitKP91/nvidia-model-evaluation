@@ -21,7 +21,13 @@ logger = logging.getLogger("eval.tts.client")
 
 def _is_permanent_tts_error(exc: Exception) -> bool:
     """Return True for errors that will never succeed on retry."""
-    msg = str(exc)
+    # Check both str() and gRPC .details() — __str__ format varies by grpcio version.
+    candidates = [str(exc)]
+    try:
+        candidates.append(exc.details())  # type: ignore[attr-defined]
+    except AttributeError:
+        pass
+    msg = " ".join(candidates)
     return "longer than maximum sequence length" in msg or "Input sentence is longer" in msg
 
 

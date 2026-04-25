@@ -63,6 +63,7 @@ def run(config: Config) -> dict:
             try:
                 result = tts_client.save_synthesis(text, str(wav_path))
                 hyp = _transcribe_whisper(str(wav_path), whisper_model)
+                wav_path.unlink(missing_ok=True)
 
                 wer_val = jiwer.wer(
                     text, hyp,
@@ -88,6 +89,7 @@ def run(config: Config) -> dict:
                     "cer": cer_val,
                 })
             except Exception as e:
+                wav_path.unlink(missing_ok=True)
                 logger.warning("Failed %s_%d: %s", category, i, e)
 
         if refs:

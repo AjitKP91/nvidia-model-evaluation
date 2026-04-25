@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 from eval.config import Config
 from eval.stt.client import STTClient
-from eval.utils import NORMALIZE_FOR_WER, bootstrap_ci, get_completed_ids, load_dataset_tmp, save_summary_csv, write_jsonl
+from eval.utils import NORMALIZE_FOR_WER, bootstrap_ci, get_completed_ids, save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.stt.accent")
 
@@ -27,16 +27,16 @@ def run(config: Config) -> dict:
 
     logger.info("=== Test 1.6: Accent & Dialect Robustness ===")
 
-    # ---- Common Voice EN (accent metadata) ----
-    try:
-        with load_dataset_tmp(
-            "mozilla-foundation/common_voice_17_0", "test", name="en",
-            trust_remote_code=True,
-        ) as cv_examples:
-            pass
-    except Exception as e:
-        logger.error("Common Voice EN not available: %s", e)
-        cv_examples = []
+    # Common Voice 17 was removed from HuggingFace in October 2025 — Mozilla
+    # migrated all CV datasets to the Mozilla Data Collective (not on HF Hub).
+    # Accent grouping via CV is therefore unavailable; the test produces an
+    # empty summary until a replacement dataset is wired up.
+    logger.warning(
+        "Common Voice 17 is no longer available on HuggingFace (moved to Mozilla "
+        "Data Collective, Oct 2025). Accent robustness test has no data source. "
+        "Skipping."
+    )
+    cv_examples = []
 
     accent_groups: dict[str, list] = defaultdict(list)
 

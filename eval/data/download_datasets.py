@@ -42,12 +42,8 @@ DATASETS = {
     },
     # revdotcom/earnings22 removed — builder downloads from dead third-party URLs
     # edinburghcst/ami removed — dataset not on HF Hub
-    "common_voice_en": {
-        "hf_path": "mozilla-foundation/common_voice_17_0",
-        "hf_name": "en",
-        "split": "test",
-        "description": "Common Voice EN test (accented speech)",
-    },
+    # common_voice_en removed — Mozilla migrated all CV datasets to Mozilla Data
+    #   Collective in October 2025; the HF repo (common_voice_17_0) is now empty
     # ---- TTS reference datasets ----
     "ljspeech": {
         "hf_path": "keithito/lj_speech",
@@ -67,9 +63,6 @@ def download_dataset(name: str, cache_dir: str | Path | None = None) -> object:
         "split": info["split"],
         "token": True,
     }
-    # Only Common Voice uses a custom loading script that requires trust_remote_code
-    if info["hf_path"].startswith("mozilla-foundation/"):
-        kwargs["trust_remote_code"] = True
     if info.get("hf_name"):
         kwargs["name"] = info["hf_name"]
     if cache_dir:

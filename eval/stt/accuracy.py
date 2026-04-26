@@ -5,6 +5,7 @@ Establish the accuracy baseline across diverse English speech styles.
 from __future__ import annotations
 
 import logging
+import re
 from pathlib import Path
 
 import jiwer
@@ -41,6 +42,18 @@ THRESHOLDS = {
     "gigaspeech": {"pass": 0.12, "good": 0.16, "acceptable": 0.22},
     "spgispeech": {"pass": 0.08, "good": 0.12, "acceptable": 0.18},
 }
+
+
+_GIGASPEECH_PUNCT = {"<COMMA>": ",", "<PERIOD>": ".", "<QUESTIONMARK>": "?", "<EXCLAMATIONPOINT>": "!"}
+_GIGASPEECH_NOISE = re.compile(r"<(?:NOISE|MUSIC|SIL)>")
+_GIGASPEECH_SKIP  = re.compile(r"^<OTHER>$")
+
+
+def _normalize_gigaspeech_ref(text: str) -> str:
+    for tag, punct in _GIGASPEECH_PUNCT.items():
+        text = text.replace(tag, punct)
+    text = _GIGASPEECH_NOISE.sub("", text).strip()
+    return text
 
 
 def _get_audio_and_ref(example: dict) -> tuple[np.ndarray, int, str]:
@@ -89,6 +102,10 @@ def run(config: Config) -> dict:
 
             try:
                 audio_array, sr, ref_text = _get_audio_and_ref(example)
+                if ds_name == "gigaspeech":
+                    ref_text = _normalize_gigaspeech_ref(ref_text)
+                    if not ref_text or _GIGASPEECH_SKIP.match(ref_text):
+                        continue
                 if not ref_text.strip():
                     continue
                 audio_bytes = (audio_array * 32768).astype(np.int16).tobytes()
@@ -129,10 +146,22 @@ def run(config: Config) -> dict:
             # All items were already completed on a prior run — reconstruct from JSONL.
             if jsonl_path.exists():
                 for rec in read_jsonl(jsonl_path):
-                    if rec.get("reference") and rec.get("hypothesis") is not None:
-                        references.append(rec["reference"])
+                    ref = rec.get("reference", "")
+                    if ds_name == "gigaspeech":
+                        ref = _normalize_gigaspeech_ref(ref)
+                        if not ref or _GIGASPEECH_SKIP.match(ref):
+                            continue
+                    if ref and rec.get("hypothesis") is not None:
+                        references.append(ref)
                         hypotheses.append(rec["hypothesis"])
-                        per_utt_wers.append(rec.get("wer", 0.0))
+                        # Stored per-utt WER for GigaSpeech is inflated by tags — recompute.
+                        if ds_name == "gigaspeech":
+                            w = jiwer.wer(ref, rec["hypothesis"],
+                                          reference_transform=NORMALIZE_FOR_WER,
+                                          hypothesis_transform=NORMALIZE_FOR_WER)
+                            per_utt_wers.append(w)
+                        else:
+                            per_utt_wers.append(rec.get("wer", 0.0))
             if not references:
                 logger.warning("No results for %s", ds_name)
                 continue

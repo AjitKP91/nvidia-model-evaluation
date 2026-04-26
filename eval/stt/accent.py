@@ -38,7 +38,9 @@ def _load_accent_groups() -> dict[str, list]:
     for i, ex in enumerate(ds):
         if i >= _MAX_ITER:
             break
-        accent = (ex.get("accent") or "").strip() or "unknown"
+        accent_raw = ex.get("accent")
+        accent = str(accent_raw).strip() if accent_raw is not None else "unknown"
+        accent = accent or "unknown"
         if accent == "unknown":
             continue
         if len(groups[accent]) < _MAX_PER_ACCENT:

@@ -5,36 +5,41 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NVIDIA STT &amp; TTS Model Evaluation Report</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #f8f9fa;
+  --bg: #f4f7f6;
   --surface: #ffffff;
-  --text: #1a1a2e;
-  --text-muted: #6c757d;
-  --border: #dee2e6;
-  --accent: #4361ee;
-  --pass: #2d6a4f;
-  --pass-bg: #d8f3dc;
-  --flag: #e67e22;
-  --flag-bg: #fef3cd;
-  --fail: #c0392b;
-  --fail-bg: #f8d7da;
-  --note-bg: #d1ecf1;
-  --note: #0c5460;
-  --code-bg: #e9ecef;
-  --shadow: 0 1px 3px rgba(0,0,0,0.08);
-  --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --accent: #3b82f6;
+  --pass: #059669;
+  --pass-bg: #d1fae5;
+  --flag: #d97706;
+  --flag-bg: #fef3c7;
+  --fail: #dc2626;
+  --fail-bg: #fee2e2;
+  --note-bg: #e0f2fe;
+  --note: #0284c7;
+  --code-bg: #f1f5f9;
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 70px;
+}
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
   font-size: 15px;
 }
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
+a { color: var(--accent); text-decoration: none; transition: color 0.15s; }
+a:hover { text-decoration: underline; color: #2563eb; }
 
 /* Header */
 .hero {
@@ -60,24 +65,49 @@ a:hover { text-decoration: underline; }
 /* Nav */
 nav {
   position: sticky; top: 0; z-index: 100;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   box-shadow: var(--shadow);
-  overflow-x: auto;
-  white-space: nowrap;
 }
 nav .inner {
   max-width: 1200px; margin: 0 auto;
-  display: flex; gap: 0; padding: 0 16px;
+  display: flex; gap: 0; padding: 0 16px; align-items: center;
 }
-nav a {
+nav > .inner > a {
   display: inline-block; padding: 12px 16px;
   color: var(--text-muted); font-size: 0.85rem; font-weight: 500;
   border-bottom: 2px solid transparent;
   transition: all 0.15s;
 }
-nav a:hover { color: var(--text); text-decoration: none; border-bottom-color: var(--accent); }
-nav .sep { width: 1px; background: var(--border); margin: 8px 4px; flex-shrink: 0; }
+nav > .inner > a:hover { color: var(--text); text-decoration: none; border-bottom-color: var(--accent); }
+.nav-dropdown {
+  position: relative;
+}
+.nav-dropdown > span {
+  display: inline-block; padding: 12px 16px;
+  color: var(--text-muted); font-size: 0.85rem; font-weight: 500;
+  cursor: pointer; user-select: none;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+.nav-dropdown > span::after { content: ' \25BE'; font-size: 0.7rem; }
+.nav-dropdown:hover > span { color: var(--text); border-bottom-color: var(--accent); }
+.nav-dropdown-menu {
+  display: none; position: absolute; top: 100%; left: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; box-shadow: var(--shadow-lg);
+  min-width: 230px; padding: 6px 0; z-index: 200;
+}
+.nav-dropdown:hover .nav-dropdown-menu { display: block; }
+.nav-dropdown-menu a {
+  display: block; padding: 8px 16px;
+  color: var(--text); font-size: 0.84rem; font-weight: 400;
+}
+.nav-dropdown-menu a:hover {
+  background: var(--bg); color: var(--accent); text-decoration: none;
+}
 
 /* Main */
 .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px 80px; }
@@ -86,10 +116,18 @@ nav .sep { width: 1px; background: var(--border); margin: 8px 4px; flex-shrink: 
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   box-shadow: var(--shadow);
   margin-bottom: 28px;
   overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+.card-body {
+  overflow-x: auto;
 }
 .card-header {
   padding: 16px 24px;
@@ -124,8 +162,10 @@ nav .sep { width: 1px; background: var(--border); margin: 8px 4px; flex-shrink: 
 table {
   width: 100%; border-collapse: collapse; font-size: 0.88rem;
 }
-th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
-th { font-weight: 600; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.4px; background: #f8f9fa; }
+th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+th { font-weight: 600; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.4px; background: rgba(0,0,0,0.02); }
+tbody tr { transition: background-color 0.15s ease; }
+tbody tr:hover { background-color: var(--code-bg); }
 tr:last-child td { border-bottom: none; }
 td.num { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; text-align: right; }
 th.num { text-align: right; }
@@ -176,6 +216,32 @@ th.num { text-align: right; }
   margin: 2px;
 }
 
+/* Info tooltip */
+.info-tip {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 50%; background: var(--code-bg);
+  color: var(--text-muted); font-size: 0.7rem; font-weight: 700; cursor: pointer;
+  border: 1px solid var(--border); margin-left: auto; flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+.info-tip:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.info-tip-content {
+  display: none; position: absolute; top: 32px; right: 0; z-index: 200;
+  width: 380px; padding: 14px 16px; border-radius: 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg); font-size: 0.82rem; font-weight: 400;
+  color: var(--text); line-height: 1.55; text-transform: none; letter-spacing: 0;
+  cursor: default;
+}
+.info-tip-content::before {
+  content: ''; position: absolute; top: -6px; right: 12px;
+  width: 10px; height: 10px; background: var(--surface);
+  border-left: 1px solid var(--border); border-top: 1px solid var(--border);
+  transform: rotate(45deg);
+}
+.info-tip.open .info-tip-content { display: block; }
+@media (max-width: 768px) { .info-tip-content { width: 280px; right: -8px; } }
+
 /* Footer */
 footer {
   text-align: center; padding: 32px 16px; color: var(--text-muted);
@@ -208,27 +274,36 @@ footer {
 <nav>
   <div class="inner">
     <a href="#phase0">Phase 0</a>
-    <div class="sep"></div>
-    <a href="#stt-accuracy">1.1 Accuracy</a>
-    <a href="#stt-performance">1.2 Performance</a>
-    <a href="#stt-streaming">1.3 Streaming</a>
-    <a href="#stt-rest-grpc">1.4 REST/gRPC</a>
-    <a href="#stt-noise">1.5 Noise</a>
-    <a href="#stt-accent">1.6 Accent</a>
-    <a href="#stt-longform">1.7 Long-Form</a>
-    <a href="#stt-domain">1.8 Domain</a>
-    <a href="#stt-output">1.9 Output</a>
-    <a href="#stt-confidence">1.10 Confidence</a>
-    <a href="#stt-format">1.11 Format</a>
-    <div class="sep"></div>
-    <a href="#tts-naturalness">2.1 Naturalness</a>
-    <a href="#tts-intelligibility">2.2 Intelligibility</a>
-    <a href="#tts-prosody">2.3 Prosody</a>
-    <a href="#tts-signal">2.4 Signal</a>
-    <a href="#tts-latency">2.5 Latency</a>
-    <a href="#tts-concurrency">2.6 Concurrency</a>
-    <a href="#tts-edge">2.7 Edge Cases</a>
-    <a href="#tts-longform">2.8 Long-Form</a>
+    <div class="nav-dropdown">
+      <span>STT Measurements</span>
+      <div class="nav-dropdown-menu">
+        <a href="#stt-accuracy">1.1 Clean Speech Accuracy</a>
+        <a href="#stt-performance">1.2 Batch Performance</a>
+        <a href="#stt-streaming">1.3 Streaming Performance</a>
+        <a href="#stt-rest-grpc">1.4 REST vs gRPC</a>
+        <a href="#stt-noise">1.5 Noise Robustness</a>
+        <a href="#stt-accent">1.6 Accent Robustness</a>
+        <a href="#stt-longform">1.7 Long-Form Audio</a>
+        <a href="#stt-domain">1.8 Domain Vocabulary</a>
+        <a href="#stt-output">1.9 Output Quality</a>
+        <a href="#stt-confidence">1.10 Confidence Calibration</a>
+        <a href="#stt-format">1.11 Format Robustness</a>
+      </div>
+    </div>
+    <div class="nav-dropdown">
+      <span>TTS Measurements</span>
+      <div class="nav-dropdown-menu">
+        <a href="#tts-naturalness">2.1 Naturalness</a>
+        <a href="#tts-intelligibility">2.2 Intelligibility</a>
+        <a href="#tts-prosody">2.3 Prosody Analysis</a>
+        <a href="#tts-signal">2.4 Signal Quality</a>
+        <a href="#tts-latency">2.5 Streaming Latency</a>
+        <a href="#tts-concurrency">2.6 Concurrency</a>
+        <a href="#tts-edge">2.7 Edge Cases</a>
+        <a href="#tts-longform">2.8 Long-Form Consistency</a>
+      </div>
+    </div>
+    <a href="#summary" style="margin-left:auto;">Summary</a>
   </div>
 </nav>
 
@@ -243,22 +318,25 @@ footer {
   <div class="card-header">
     <h2>Connectivity &amp; Auth</h2>
     <span class="badge badge-pass">All OK</span>
+    <span class="info-tip" onclick="this.classList.toggle('open')" tabindex="0">?<div class="info-tip-content"><strong>How was this measured?</strong><br><br><strong>Endpoint latency:</strong> A short synthetic audio clip is sent to each STT endpoint, and a test sentence is synthesized on each TTS endpoint. The reported time is the full round-trip: network transfer plus model inference.<br><br><strong>Network RTT:</strong> A lightweight HTTP HEAD request to the server &mdash; no model processing, just the raw network round-trip. The gap between RTT (42 ms) and endpoint latency is the model's inference time.<br><br><a href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/phase0/discovery.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
-    <table>
-      <thead><tr><th>Endpoint</th><th>Protocol</th><th class="num">Latency</th><th>Status</th></tr></thead>
-      <tbody>
-        <tr><td>STT</td><td>gRPC</td><td class="num">128 ms</td><td><span class="badge badge-ok">OK</span></td></tr>
-        <tr><td>STT</td><td>REST</td><td class="num">135 ms</td><td><span class="badge badge-ok">OK</span></td></tr>
-        <tr><td>TTS</td><td>gRPC</td><td class="num">302 ms</td><td><span class="badge badge-ok">OK</span></td></tr>
-        <tr><td>TTS</td><td>REST</td><td class="num">250 ms</td><td><span class="badge badge-ok">OK</span></td></tr>
-      </tbody>
-    </table>
-    <div class="metrics-grid" style="margin-top:16px">
+    <h3 style="font-size:0.9rem; color:var(--text-muted); margin-bottom:10px;">Endpoints</h3>
+    <div class="metrics-grid">
+      <div class="metric-card good"><div class="label">gRPC STT</div><div class="value">128<span class="unit"> ms</span></div></div>
+      <div class="metric-card good"><div class="label">REST STT</div><div class="value">135<span class="unit"> ms</span></div></div>
+      <div class="metric-card good"><div class="label">gRPC TTS</div><div class="value">302<span class="unit"> ms</span></div></div>
+      <div class="metric-card good"><div class="label">REST TTS</div><div class="value">250<span class="unit"> ms</span></div></div>
+    </div>
+    <h3 style="font-size:0.9rem; color:var(--text-muted); margin:16px 0 10px;">Infrastructure</h3>
+    <div class="metrics-grid">
       <div class="metric-card good"><div class="label">Network RTT</div><div class="value">42<span class="unit"> ms</span></div></div>
       <div class="metric-card good"><div class="label">Sample Rates</div><div class="value">5/5<span class="unit"> pass</span></div></div>
       <div class="metric-card good"><div class="label">SSML Support</div><div class="value">Yes</div></div>
       <div class="metric-card good"><div class="label">TTS Sample Rate</div><div class="value">22050<span class="unit"> Hz</span></div></div>
+    </div>
+    <div class="info-box info" style="margin-top:16px">
+      <strong>REST endpoints</strong> are served via SAP AI Core's HTTP proxy to the underlying NVIDIA Riva gRPC server. REST adds ~7 ms overhead for STT and is actually ~50 ms faster for TTS (250 ms vs 302 ms), likely due to response serialization differences. Both interfaces are fully functional.
     </div>
   </div>
 </div>
@@ -267,18 +345,18 @@ footer {
   <div class="card-header">
     <h2>Smoke Tests &amp; Cold Start</h2>
     <span class="badge badge-pass">All Pass</span>
+    <span class="info-tip" onclick="this.classList.toggle('open')" tabindex="0">?<div class="info-tip-content"><strong>How was this measured?</strong><br><br><strong>Smoke tests:</strong> Progressively longer audio (10s, 60s) is sent to STT, and a 20-word sentence is synthesized via TTS REST and gRPC streaming. Verifies the service handles realistic workloads without errors or timeouts.<br><br><strong>Cold start ratio:</strong> The very first request after idle is timed, then 10 back-to-back warm requests are averaged. The ratio (first &divide; warm mean) shows whether the model needs to "wake up." A ratio near 1.0 means no cold-start penalty.<br><br><a href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/phase0/discovery.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
-    <table>
-      <thead><tr><th>Test</th><th class="num">Result</th><th>Status</th></tr></thead>
-      <tbody>
-        <tr><td>STT 10s audio</td><td class="num">52 ms</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>STT 60s audio</td><td class="num">184 ms</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>TTS REST (20 words)</td><td class="num">5.06s audio</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>TTS gRPC Streaming</td><td class="num">TTFB 66 ms</td><td><span class="badge badge-pass">Pass</span></td></tr>
-      </tbody>
-    </table>
-    <div class="metrics-grid" style="margin-top:16px">
+    <h3 style="font-size:0.9rem; color:var(--text-muted); margin-bottom:10px;">Smoke Tests</h3>
+    <div class="metrics-grid">
+      <div class="metric-card good"><div class="label">STT 10s Audio</div><div class="value">52<span class="unit"> ms</span></div></div>
+      <div class="metric-card good"><div class="label">STT 60s Audio</div><div class="value">184<span class="unit"> ms</span></div></div>
+      <div class="metric-card good"><div class="label">TTS REST (20 words)</div><div class="value">5.06<span class="unit">s audio</span></div></div>
+      <div class="metric-card good"><div class="label">TTS gRPC Streaming</div><div class="value">66<span class="unit"> ms TTFB</span></div></div>
+    </div>
+    <h3 style="font-size:0.9rem; color:var(--text-muted); margin:16px 0 10px;">Cold Start</h3>
+    <div class="metrics-grid">
       <div class="metric-card good"><div class="label">STT Cold Ratio</div><div class="value">1.08<span class="unit">x</span></div></div>
       <div class="metric-card good"><div class="label">TTS Cold Ratio</div><div class="value">1.04<span class="unit">x</span></div></div>
     </div>
@@ -400,6 +478,20 @@ footer {
     <h3 style="margin-top:24px; font-size:1rem;">STT Concurrency</h3>
     <div class="methodology">
       <strong>Methodology:</strong> ThreadPoolExecutor sending batch requests at N concurrent workers (from <code>results/stt/performance/concurrency_summary.csv</code>).
+    </div>
+    <table style="margin-top: 12px;">
+      <thead>
+        <tr><th class="num">Concurrency</th><th class="num">P50 Latency</th><th class="num">P99 Latency</th><th class="num">Mean RTF</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="num">1</td><td class="num">108 ms</td><td class="num">111 ms</td><td class="num">0.003</td></tr>
+        <tr><td class="num">5</td><td class="num">156 ms</td><td class="num">169 ms</td><td class="num">0.005</td></tr>
+        <tr><td class="num">10</td><td class="num">200 ms</td><td class="num">248 ms</td><td class="num">0.007</td></tr>
+        <tr><td class="num">20</td><td class="num">335 ms</td><td class="num">397 ms</td><td class="num">0.011</td></tr>
+      </tbody>
+    </table>
+    <div class="info-box success" style="margin-top:12px">
+      <strong>Excellent scaling.</strong> Unlike the TTS model, the STT server handles high concurrency effortlessly. Even at 20 concurrent requests, the P99 latency remains under 400ms, and the mean RTF stays phenomenally low at 0.011 (still ~90x faster than real-time).
     </div>
   </div>
 </div>
@@ -1096,6 +1188,11 @@ new Chart(document.getElementById('chart-concurrency'), {
       y: { beginAtZero: true, title: { display: true, text: 'RPS' }, position: 'left' },
       y1: { beginAtZero: true, title: { display: true, text: 'Error Rate (%)' }, position: 'right', grid: { drawOnChartArea: false } }
     }
+  }
+});
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.info-tip')) {
+    document.querySelectorAll('.info-tip.open').forEach(function(t) { t.classList.remove('open'); });
   }
 });
 </script>

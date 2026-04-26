@@ -19,6 +19,7 @@ from eval.utils import (
     bootstrap_ci,
     get_completed_ids,
     load_dataset_tmp,
+    read_jsonl,
     save_summary_csv,
     write_jsonl,
 )
@@ -125,8 +126,16 @@ def run(config: Config) -> dict:
                 logger.warning("Error on %s item %d: %s", ds_name, i, e)
 
         if not references:
-            logger.warning("No results for %s", ds_name)
-            continue
+            # All items were already completed on a prior run — reconstruct from JSONL.
+            if jsonl_path.exists():
+                for rec in read_jsonl(jsonl_path):
+                    if rec.get("reference") and rec.get("hypothesis") is not None:
+                        references.append(rec["reference"])
+                        hypotheses.append(rec["hypothesis"])
+                        per_utt_wers.append(rec.get("wer", 0.0))
+            if not references:
+                logger.warning("No results for %s", ds_name)
+                continue
 
         # Aggregate metrics — use NORMALIZE_FOR_WER_AGG (no RemoveEmptyStrings)
         # so empty refs/hyps don't shorten one list and cause a length mismatch.

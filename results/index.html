@@ -82,6 +82,25 @@ nav > .inner > a {
   transition: all 0.15s;
 }
 nav > .inner > a:hover { color: var(--text); text-decoration: none; border-bottom-color: var(--accent); }
+.nav-brand {
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 8px 14px 8px 4px; border-bottom: none !important;
+  text-decoration: none !important; flex-shrink: 0;
+}
+.nav-brand:hover { border-bottom: none !important; }
+.nav-brand-title {
+  font-size: 0.82rem; font-weight: 700; color: var(--text);
+  line-height: 1.2; white-space: nowrap;
+}
+.nav-brand-sub {
+  font-size: 0.68rem; font-weight: 400; color: var(--text-muted);
+  line-height: 1.2; white-space: nowrap;
+}
+.nav-brand:hover .nav-brand-title { color: var(--accent); }
+.nav-divider {
+  width: 1px; height: 24px; background: var(--border); margin: 0 4px; flex-shrink: 0;
+}
+.nav-summary { margin-left: auto; }
 .nav-dropdown {
   position: relative;
 }
@@ -126,6 +145,8 @@ nav > .inner > a:hover { color: var(--text); text-decoration: none; border-botto
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
 }
+body.tip-open .card { transition: none; }
+body.tip-open .card:hover { transform: none; }
 .card-body {
   overflow-x: auto;
 }
@@ -219,28 +240,74 @@ th.num { text-align: right; }
 /* Info tooltip */
 .info-tip {
   position: relative; display: inline-flex; align-items: center; justify-content: center;
-  width: 20px; height: 20px; border-radius: 50%; background: var(--code-bg);
-  color: var(--text-muted); font-size: 0.7rem; font-weight: 700; cursor: pointer;
+  width: 22px; height: 22px; border-radius: 50%; background: var(--code-bg);
+  color: var(--text-muted); font-size: 0.72rem; font-weight: 700; cursor: pointer;
   border: 1px solid var(--border); margin-left: auto; flex-shrink: 0;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease; z-index: 1;
 }
-.info-tip:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.info-tip:hover:not(.open) { background: var(--accent); color: #fff; border-color: var(--accent); transform: scale(1.1); }
+.info-tip:hover.open { background: var(--accent); color: #fff; border-color: var(--accent); }
+.info-tip.open { background: var(--accent); color: #fff; border-color: var(--accent); z-index: 1001; }
+
+/* Backdrop overlay */
+.tip-backdrop {
+  display: none; position: fixed; inset: 0; z-index: 999;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+  animation: backdropIn 0.2s ease-out;
+}
+.tip-backdrop.active { display: block; }
+@keyframes backdropIn {
+  from { opacity: 0; } to { opacity: 1; }
+}
+
+/* Popup panel — fixed center */
 .info-tip-content {
-  display: none; position: absolute; top: 32px; right: 0; z-index: 200;
-  width: 380px; padding: 14px 16px; border-radius: 8px;
+  display: none; position: fixed; z-index: 1000;
+  top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 480px; max-height: 75vh; overflow-y: auto;
+  padding: 28px 28px 22px; border-radius: 14px;
   background: var(--surface); border: 1px solid var(--border);
-  box-shadow: var(--shadow-lg); font-size: 0.82rem; font-weight: 400;
-  color: var(--text); line-height: 1.55; text-transform: none; letter-spacing: 0;
-  cursor: default;
+  border-top: 3px solid var(--accent);
+  box-shadow: 0 25px 60px -12px rgba(0,0,0,0.3), 0 12px 24px -8px rgba(0,0,0,0.15);
+  font-size: 0.86rem; font-weight: 400; color: var(--text); line-height: 1.7;
+  text-transform: none; letter-spacing: 0; cursor: default;
 }
-.info-tip-content::before {
-  content: ''; position: absolute; top: -6px; right: 12px;
-  width: 10px; height: 10px; background: var(--surface);
-  border-left: 1px solid var(--border); border-top: 1px solid var(--border);
-  transform: rotate(45deg);
+.info-tip-content::-webkit-scrollbar { width: 5px; }
+.info-tip-content::-webkit-scrollbar-track { background: transparent; }
+.info-tip-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.info-tip-content::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+.info-tip.open .info-tip-content { display: block; animation: tipFadeIn 0.2s ease-out; }
+@keyframes tipFadeIn {
+  from { opacity: 0; transform: translate(-50%, -48%); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
 }
-.info-tip.open .info-tip-content { display: block; }
-@media (max-width: 768px) { .info-tip-content { width: 280px; right: -8px; } }
+.info-tip-content .tip-title {
+  font-weight: 700; font-size: 1rem; color: var(--text);
+  margin: 0 0 14px; padding-bottom: 10px; border-bottom: 2px solid var(--accent);
+}
+.tip-close {
+  position: absolute; top: 12px; right: 14px; background: none; border: none;
+  font-size: 1.4rem; color: var(--text-muted); cursor: pointer; padding: 4px 8px;
+  border-radius: 6px; line-height: 1; transition: all 0.15s;
+}
+.tip-close:hover { background: var(--fail-bg); color: var(--fail); }
+.info-tip-content dl { margin: 10px 0 14px; }
+.info-tip-content dt {
+  font-weight: 600; font-size: 0.84rem; color: var(--accent); margin-top: 12px;
+}
+.info-tip-content dt:first-child { margin-top: 0; }
+.info-tip-content dd { margin: 3px 0 0 0; color: var(--text-muted); }
+.info-tip-content p { margin: 0 0 10px; }
+.info-tip-content p:last-child { margin-bottom: 0; }
+.info-tip-content .tip-src {
+  display: inline-block; margin-top: 14px; padding-top: 10px;
+  border-top: 1px solid var(--border); font-size: 0.82rem; font-weight: 500;
+  width: 100%;
+}
+@media (max-width: 768px) {
+  .info-tip-content { width: calc(100vw - 32px); max-height: 70vh; padding: 22px 20px 18px; }
+}
 
 /* Footer */
 footer {
@@ -273,6 +340,11 @@ footer {
 <!-- Nav -->
 <nav>
   <div class="inner">
+    <a href="#" class="nav-brand">
+      <span class="nav-brand-title">NVIDIA STT &amp; TTS</span>
+      <span class="nav-brand-sub">Model Evaluation</span>
+    </a>
+    <div class="nav-divider"></div>
     <a href="#phase0">Phase 0</a>
     <div class="nav-dropdown">
       <span>STT Measurements</span>
@@ -303,10 +375,11 @@ footer {
         <a href="#tts-longform">2.8 Long-Form Consistency</a>
       </div>
     </div>
-    <a href="#summary" style="margin-left:auto;">Summary</a>
+    <a href="#summary" class="nav-summary">Summary</a>
   </div>
 </nav>
 
+<div class="tip-backdrop" id="tipBackdrop"></div>
 <div class="container">
 
 <!-- ============================================================ -->
@@ -318,7 +391,7 @@ footer {
   <div class="card-header">
     <h2>Connectivity &amp; Auth</h2>
     <span class="badge badge-pass">All OK</span>
-    <span class="info-tip" onclick="this.classList.toggle('open')" tabindex="0">?<div class="info-tip-content"><strong>How was this measured?</strong><br><br><strong>Endpoint latency:</strong> A short synthetic audio clip is sent to each STT endpoint, and a test sentence is synthesized on each TTS endpoint. The reported time is the full round-trip: network transfer plus model inference.<br><br><strong>Network RTT:</strong> A lightweight HTTP HEAD request to the server &mdash; no model processing, just the raw network round-trip. The gap between RTT (42 ms) and endpoint latency is the model's inference time.<br><br><a href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/phase0/discovery.py" target="_blank">View source &rarr;</a></div></span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Connectivity &amp; Auth</div><p>This check verifies that the evaluation machine can reach the STT and TTS services and that authentication tokens are accepted.</p><dl><dt>Endpoint Latency</dt><dd>A short synthetic audio clip (sine wave) is sent to each STT endpoint, and a test sentence is synthesized on each TTS endpoint. The reported time is the full round-trip: network transfer + model inference.</dd><dt>Network RTT</dt><dd>A lightweight HTTP HEAD request &mdash; no model processing, just the raw network round-trip. The gap between RTT and endpoint latency shows how long the model itself takes.</dd><dt>Sample Rates</dt><dd>The model is tested with audio at 5 common rates (8, 16, 22.05, 44.1, 48 kHz) to ensure it handles diverse inputs.</dd><dt>SSML Support</dt><dd>Speech Synthesis Markup Language &mdash; an XML-based way to control pronunciation, pauses, and emphasis in TTS.</dd></dl><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/phase0/discovery.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <h3 style="font-size:0.9rem; color:var(--text-muted); margin-bottom:10px;">Endpoints</h3>
@@ -345,7 +418,7 @@ footer {
   <div class="card-header">
     <h2>Smoke Tests &amp; Cold Start</h2>
     <span class="badge badge-pass">All Pass</span>
-    <span class="info-tip" onclick="this.classList.toggle('open')" tabindex="0">?<div class="info-tip-content"><strong>How was this measured?</strong><br><br><strong>Smoke tests:</strong> Progressively longer audio (10s, 60s) is sent to STT, and a 20-word sentence is synthesized via TTS REST and gRPC streaming. Verifies the service handles realistic workloads without errors or timeouts.<br><br><strong>Cold start ratio:</strong> The very first request after idle is timed, then 10 back-to-back warm requests are averaged. The ratio (first &divide; warm mean) shows whether the model needs to "wake up." A ratio near 1.0 means no cold-start penalty.<br><br><a href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/phase0/discovery.py" target="_blank">View source &rarr;</a></div></span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Smoke Tests &amp; Cold Start</div><p>Smoke tests send realistic workloads to verify the service works end-to-end before running expensive evaluations.</p><dl><dt>Smoke Tests</dt><dd>Progressively longer audio (10s, 60s) is sent to STT, and a 20-word sentence is synthesized via TTS REST and gRPC streaming. Confirms the service handles typical inputs without errors or timeouts.</dd><dt>Cold Start Ratio</dt><dd>The very first request after idle is timed, then 10 back-to-back "warm" requests are averaged. The ratio = first &divide; warm mean. A value near 1.0 means no startup penalty &mdash; the model is always loaded and ready.</dd><dt>TTFB</dt><dd>Time to First Byte &mdash; how quickly the first chunk of synthesized audio arrives after sending the text. Critical for conversational AI where delays feel awkward.</dd></dl><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/phase0/discovery.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <h3 style="font-size:0.9rem; color:var(--text-muted); margin-bottom:10px;">Smoke Tests</h3>
@@ -374,6 +447,7 @@ footer {
   <div class="card-header">
     <h2>Test 1.1 &mdash; Clean Speech Accuracy</h2>
     <span class="test-id">Baseline WER/CER across diverse English datasets</span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>This is the most fundamental STT test: how accurately does the model convert spoken words to text, using studio-quality recordings with known transcripts?</p><dl><dt>WER (Word Error Rate)</dt><dd>The percentage of words the model gets wrong. It counts substitutions ("cat" &rarr; "cap"), deletions (missed words), and insertions (extra words). Lower is better; human-level is roughly 5%.</dd><dt>CER (Character Error Rate)</dt><dd>Same idea but at the character level. Catches minor misspellings that WER might over-penalize.</dd><dt>SER (Sentence Error Rate)</dt><dd>The fraction of sentences with at least one error. A high SER means errors are spread across many utterances, not concentrated in a few.</dd><dt>Bootstrap 95% CI</dt><dd>A statistical confidence interval. We resample the results 1,000 times and report the range where the true WER likely falls. Narrower = more certain.</dd><dt>jiwer</dt><dd>The open-source Python library used to compute all these metrics. It normalizes text (lowercase, strip punctuation) before comparing.</dd></dl><p>Multiple datasets are tested because each has different speakers, accents, recording conditions, and topics &mdash; revealing where the model is strong or weak.</p><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/stt/accuracy.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
@@ -457,6 +531,7 @@ footer {
   <div class="card-header">
     <h2>Test 1.2 &mdash; Batch Performance</h2>
     <span class="test-id">Real-Time Factor &amp; latency by audio duration</span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>Measures how fast the model transcribes audio when given a complete file at once (as opposed to streaming chunks in real time).</p><dl><dt>RTF (Real-Time Factor)</dt><dd>Processing time &divide; audio duration. An RTF of 0.01 means 1 second of audio is transcribed in just 0.01 seconds. Lower is better.</dd><dt>RTFx</dt><dd>The inverse of RTF, shown as a multiplier. "150x" means the model processes audio 150 times faster than playback speed.</dd><dt>P50 / P90 / P99</dt><dd>Percentile latencies. P50 = median (half of requests are faster). P90 = 90th percentile. P99 = 99th percentile, catching rare slow outliers. A big gap between P50 and P99 means unpredictable performance.</dd><dt>Concurrency</dt><dd>Multiple requests sent simultaneously, simulating multiple users. Tests whether the server maintains speed under parallel load or slows down.</dd></dl><p>This test matters for production capacity planning: can the server handle your expected throughput?</p><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/stt/performance.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
@@ -501,6 +576,7 @@ footer {
   <div class="card-header">
     <h2>Test 1.3 &mdash; Streaming Performance</h2>
     <span class="test-id">TTFW, finalization latency, stability</span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>In streaming mode, audio is sent in small 100 ms chunks &mdash; just like a live microphone. The model returns partial transcriptions that update in real time, then a final confirmed result.</p><dl><dt>TTFW (Time to First Word)</dt><dd>How long after audio starts sending until the first transcribed word appears on screen. Critical for live captioning &mdash; users notice delays above ~500 ms.</dd><dt>Finalization Latency</dt><dd>The delay between sending the last audio chunk and receiving the final, confirmed transcript. Lower means users see the "settled" result sooner.</dd><dt>Streaming RTF</dt><dd>Must be &le; 1.0 to keep up with real-time audio. A value of 1.02 means the system is barely keeping pace and may lag behind on longer recordings.</dd><dt>Stability Rate</dt><dd>How often partial results remain consistent as more audio arrives. Low stability means earlier words "jump" to different words as context changes &mdash; visually distracting for users.</dd></dl><p>Streaming vs Batch WER is compared to quantify the accuracy cost of real-time processing. Streaming is typically slightly worse because the model has less context for early words.</p><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/stt/streaming.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
@@ -533,6 +609,7 @@ footer {
   <div class="card-header">
     <h2>Test 1.4 &mdash; REST vs gRPC</h2>
     <span class="test-id">Interface latency comparison</span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>The same STT model is accessible via two different communication protocols. This test sends identical audio through both to compare speed.</p><dl><dt>gRPC</dt><dd>A high-performance binary protocol by Google using HTTP/2. Supports native streaming, persistent connections, and efficient serialization. Preferred for server-to-server communication.</dd><dt>REST</dt><dd>The standard HTTP/JSON approach used by most web APIs. Easier to integrate (works in browsers, behind proxies) but adds overhead from JSON encoding.</dd><dt>SAP AI Core Proxy</dt><dd>The Riva gRPC server sits behind SAP AI Core's HTTP gateway, which adds a small translation layer for REST calls.</dd></dl><p><strong>Why TTFW (427 ms) looks larger than Streaming Final (141 ms) and REST Total (158 ms):</strong> These three rows measure completely different things and should not be compared directly.</p><dl><dt>Streaming TTFW — 427 ms</dt><dd>Measured from stream open to the moment the first partial word appears. The model must receive several 100 ms audio chunks before it has enough context to predict anything. ~4 chunks in, the first word shows up.</dd><dt>Streaming Final — 141 ms</dt><dd>Measured from the last audio chunk sent to the final confirmed transcript. By this point the model has already heard everything &mdash; it just settles the last few words. This is only the tail-end latency, not total time.</dd><dt>REST Total — 158 ms</dt><dd>REST does not stream. The entire 30-second file is sent in one request and one response is returned. This 158 ms is a complete batch round-trip on a different interface &mdash; an independent measurement, not part of the gRPC streaming timeline.</dd></dl><p>The gRPC streaming timeline looks like: stream open &rarr; first word at ~427 ms &rarr; audio ends at ~30,000 ms &rarr; final result at ~30,141 ms. REST's 158 ms is a separate, parallel measurement.</p><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/stt/rest_vs_grpc.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
@@ -559,6 +636,7 @@ footer {
   <div class="card-header">
     <h2>Test 1.5 &mdash; Noise Robustness</h2>
     <span class="test-id">WER degradation under additive noise</span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>Real-world audio is rarely studio-clean. This test mixes clean speech with different types of noise at various volumes to see how accuracy degrades.</p><dl><dt>SNR (Signal-to-Noise Ratio)</dt><dd>Measured in decibels (dB). Higher = cleaner audio. SNR 20 dB = quiet office. SNR 0 dB = noise is as loud as speech. SNR &minus;5 dB = noise is louder than speech.</dd><dt>Gaussian Noise</dt><dd>Random static/hiss &mdash; a synthetic worst-case scenario. Generated mathematically, not from real recordings.</dd><dt>Babble Noise</dt><dd>Overlapping human voices, simulating a crowded room or open-plan office. From the DEMAND dataset.</dd><dt>Traffic / Office Noise</dt><dd>Real-world environmental recordings from the DEMAND dataset &mdash; road sounds, keyboard clicks, HVAC, phone rings.</dd><dt>DEMAND Dataset</dt><dd>A public collection of real-world noise recordings from 15 environments, widely used in speech research.</dd></dl><p>The results tell you the minimum recording quality (SNR level) needed for usable transcription with this model.</p><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/stt/noise_robustness.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
@@ -585,13 +663,14 @@ footer {
   <div class="card-header">
     <h2>Test 1.6 &mdash; Accent Robustness</h2>
     <span class="test-id">WER by accent group</span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>Evaluates whether the model performs equally well across different English accents and non-native speakers &mdash; a fairness and reliability check.</p><dl><dt>English Accent Dataset (HuggingFace)</dt><dd>A publicly available dataset with 23 distinct English accents (US, British, Indian, Australian, Canadian, Irish, Scottish, South African, and more), sourced from VCTK, EDACC, and VoxPopuli corpora. Each row has a transcript and an accent label &mdash; no authentication required.</dd><dt>WER per Accent</dt><dd>The model is evaluated separately for each accent group. If one accent group has a much higher WER than others, the model is less reliable for speakers of that accent.</dd><dt>Fairness Delta</dt><dd>The WER gap between the best and worst accent groups. A small delta (&lt;10 percentage points) means the model is equitable; a large delta means some accents are under-served.</dd><dt>Why Fairness Matters</dt><dd>A model that works well on standard American English but poorly on other accents would fail for global deployment, accessibility tools, or any diverse user base.</dd></dl><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/stt/accent.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
-      <strong>Methodology:</strong> Planned to use <a href="https://huggingface.co/datasets/mozilla-foundation/common_voice_17_0">Common Voice EN</a> filtered by accent and <a href="https://psi.engr.tamu.edu/l2-arctic-corpus/">L2-ARCTIC</a> corpus.
+      <strong>Methodology:</strong> Uses <a href="https://huggingface.co/datasets/westbrook/English_Accent_DataSet" target="_blank">westbrook/English_Accent_DataSet</a> (HuggingFace) &mdash; 23 English accents, ~79 hours, ~53k utterances with transcripts and accent labels. Up to 150 utterances sampled per accent; groups with fewer than 50 utterances are excluded. WER is computed per accent group and a fairness delta (max&minus;min WER) is reported.
     </div>
-    <div class="info-box error">
-      <strong>No data collected.</strong> The Common Voice dataset requires authentication/agreement to Mozilla's terms of service, and L2-ARCTIC is not available on HuggingFace. This test was skipped during the evaluation run. To complete it, download Common Voice manually and re-run <code>python -m eval.run stt --test accent</code>.
+    <div class="info-box">
+      <strong>Dataset ready.</strong> Re-run <code>python -m eval.run stt --test accent</code> to generate per-accent WER results. The dataset streams from HuggingFace Hub automatically &mdash; no manual download required.
     </div>
   </div>
 </div>
@@ -601,6 +680,7 @@ footer {
   <div class="card-header">
     <h2>Test 1.7 &mdash; Long-Form Audio</h2>
     <span class="test-id">Hallucination, repetition, and accuracy on long audio</span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>Most STT benchmarks use short clips (5&ndash;30 s). This test checks what happens with recordings lasting 40&ndash;90 seconds or more &mdash; closer to real meetings, lectures, and podcasts.</p><dl><dt>Hallucination</dt><dd>When the model outputs words or phrases that were never spoken. Measured by checking for 5-word sequences in the transcript that don't appear anywhere in the reference text.</dd><dt>Repetition</dt><dd>When the model gets stuck in a loop, repeating the same phrase over and over &mdash; a known failure mode in neural sequence models.</dd><dt>Concatenated Audio</dt><dd>Multiple short clips joined end-to-end to create longer files. Tests whether the model handles extended context or degrades after a certain length.</dd><dt>CTC (Connectionist Temporal Classification)</dt><dd>The decoding method used by Parakeet. CTC models process audio frame-by-frame without explicit attention, which can limit their effective context window on very long audio.</dd></dl><p>If the model degrades past ~40 seconds, production systems should chunk long audio into shorter segments &mdash; adding complexity but preserving accuracy.</p><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/stt/long_form.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
@@ -630,6 +710,7 @@ footer {
   <div class="card-header">
     <h2>Test 1.8 &mdash; Domain Vocabulary</h2>
     <span class="test-id">Named entity and financial term recognition</span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>General-purpose STT models often struggle with specialized vocabulary &mdash; company names, ticker symbols, medical terms, or jargon. This test measures that gap.</p><dl><dt>NER (Named Entity Recognition)</dt><dd>An NLP technique (using spaCy) that automatically identifies proper nouns, organizations, dates, and other important terms in text.</dd><dt>KRR (Key Recognition Rate)</dt><dd>What percentage of important named entities the model correctly transcribes. 79.5% means ~1 in 5 entities is missed or garbled.</dd><dt>NE-WER (Named Entity WER)</dt><dd>Word Error Rate computed only on named-entity tokens, isolating how well the model handles the hardest, most important words.</dd><dt>SPGISpeech</dt><dd>S&amp;P Global financial earnings call transcripts &mdash; dense with company names, monetary figures, and financial jargon that challenge general-purpose models.</dd></dl><p>High NE-WER suggests the model would benefit from domain-specific language model rescoring or custom vocabulary boosting for production use in specialized fields.</p><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/stt/domain.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
@@ -664,6 +745,7 @@ footer {
   <div class="card-header">
     <h2>Test 1.9 &mdash; Output Quality</h2>
     <span class="test-id">Punctuation, capitalisation, number formatting</span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>Beyond getting words right, can the model produce "ready to read" text &mdash; with proper punctuation, capitalization, and number formatting?</p><dl><dt>Punctuation F1</dt><dd>A balanced score (0&ndash;100%) combining precision (are the inserted punctuation marks correct?) and recall (are the required marks present?). Scored separately for periods, commas, question marks, and exclamation points.</dd><dt>Capitalisation Accuracy</dt><dd>Whether sentence-initial words and proper nouns are correctly uppercased.</dd><dt>Number Formatting</dt><dd>Whether spoken numbers become digits or symbols ("$5 million") rather than being spelled out ("five million dollars").</dd></dl><p>This matters for downstream use: meeting minutes, captions, and documents all need formatted text. Models that produce raw lowercase text without punctuation require expensive post-processing pipelines.</p><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/stt/output_quality.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
@@ -691,6 +773,7 @@ footer {
   <div class="card-header">
     <h2>Test 1.10 &mdash; Confidence Calibration</h2>
     <span class="test-id">ECE, AUROC, Brier score</span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>When the model says it's "90% confident" about a word, is it actually correct 90% of the time? This test checks that alignment between confidence and reality.</p><dl><dt>ECE (Expected Calibration Error)</dt><dd>Measures the average gap between predicted confidence and actual accuracy. A perfectly calibrated model has ECE = 0. Our threshold: &le; 0.05. Values above 0.1 indicate serious miscalibration.</dd><dt>AUROC (Area Under ROC Curve)</dt><dd>Tests whether confidence scores can separate correct words from incorrect ones. 1.0 = perfect discrimination, 0.5 = no better than random coin flips.</dd><dt>Brier Score</dt><dd>The average squared difference between confidence and outcome (0 or 1). Lower is better. Penalizes both overconfidence and underconfidence.</dd><dt>Reliability Diagram</dt><dd>A chart grouping words by their confidence level and plotting actual accuracy for each group. A well-calibrated model follows the diagonal (50% confidence &rarr; 50% accuracy).</dd><dt>"Overconfident"</dt><dd>The model reports high confidence even on wrong words. This makes confidence scores unreliable for automated decisions like "reject if confidence &lt; 0.8."</dd></dl><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/stt/confidence.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
@@ -716,6 +799,7 @@ footer {
   <div class="card-header">
     <h2>Test 1.11 &mdash; Format Robustness</h2>
     <span class="test-id">Audio formats, sample rates, durations, edge cases</span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>Real-world audio arrives in many different formats and configurations. This test ensures the service handles them all transparently.</p><dl><dt>Sample Rate</dt><dd>How many audio snapshots are taken per second. Phone calls = 8 kHz, standard speech = 16 kHz, CD quality = 44.1 kHz. The model should resample internally as needed.</dd><dt>Audio Formats</dt><dd><strong>WAV</strong> = uncompressed (large files, no quality loss). <strong>FLAC</strong> = lossless compression (smaller, no loss). <strong>MP3</strong> = lossy compression (small, slight loss). <strong>OGG</strong> = open-source lossy format.</dd><dt>Channels</dt><dd>Mono (1 channel) vs Stereo (2 channels). Most speech is mono, but video recordings are often stereo. The model should handle both.</dd><dt>Edge Cases</dt><dd>Silent audio and white noise test whether the service gracefully returns empty results instead of crashing or hallucinating phantom words.</dd><dt>libvorbis</dt><dd>The codec library needed to decode OGG/Vorbis audio. Its absence on the server causes the OGG failure &mdash; a deployment configuration issue, not a model limitation.</dd></dl><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/stt/format_robustness.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
@@ -751,6 +835,7 @@ footer {
   <div class="card-header">
     <h2>Test 2.1 &mdash; Automated Naturalness</h2>
     <span class="test-id">DNSMOS &amp; UTMOS quality scores</span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>How natural and human-like does the synthesized speech sound? Since we can't have humans rate every sample, we use neural networks trained on thousands of human ratings to predict quality scores.</p><dl><dt>MOS (Mean Opinion Score)</dt><dd>The gold-standard speech quality scale: 1 = bad, 2 = poor, 3 = fair, 4 = good, 5 = excellent. Scores &ge; 4.0 are high quality; &ge; 3.5 is acceptable for most applications.</dd><dt>DNSMOS P.835</dt><dd>Microsoft's automated MOS predictor, developed for the Deep Noise Suppression Challenge. It predicts three sub-scores:</dd><dt>&bull; OVRL (Overall)</dt><dd>Combined speech quality &mdash; the single most important number.</dd><dt>&bull; SIG (Signal)</dt><dd>Clarity of the voice itself, ignoring background.</dd><dt>&bull; BAK (Background)</dt><dd>How clean the background is &mdash; absence of hiss, clicks, or artifacts.</dd><dt>UTMOS</dt><dd>University of Tokyo's neural MOS predictor, often considered more accurate than DNSMOS for naturalness. Failed here due to a fairseq/numpy dependency conflict.</dd></dl><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/tts/naturalness.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
@@ -781,6 +866,7 @@ footer {
   <div class="card-header">
     <h2>Test 2.2 &mdash; Round-Trip Intelligibility</h2>
     <span class="test-id">TTS &rarr; Whisper STT &rarr; WER</span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>Can the synthesized speech actually be understood? This test uses a second AI "listener" to check: Original text &rarr; TTS audio &rarr; Whisper transcription &rarr; compare with original.</p><dl><dt>Round-Trip WER</dt><dd>WER between the original text and what Whisper hears in the TTS audio. If 1.65%, then 98.35% of words survive the full text&rarr;speech&rarr;text cycle intact.</dd><dt>Whisper large-v3</dt><dd>OpenAI's state-of-the-art speech recognition model, used as an impartial "listener." It runs locally (not via the Riva STT). If Whisper can't understand the audio, humans likely would struggle too.</dd><dt>Category Breakdown</dt><dd><strong>Harvard Sentences</strong> = standardized phonetically balanced test sentences. <strong>Conversational</strong> = everyday speech. <strong>Technical</strong> = domain jargon, acronyms. <strong>Numbers</strong> = currency, percentages, mixed alphanumeric strings.</dd></dl><p>Low WER on simple speech but high WER on numbers and technical terms means the TTS model mispronounces unusual words &mdash; a problem for IVR systems, financial readouts, and technical documentation.</p><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/tts/intelligibility.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
@@ -807,6 +893,7 @@ footer {
   <div class="card-header">
     <h2>Test 2.3 &mdash; Prosody Analysis</h2>
     <span class="test-id">F0, speaking rate vs LJSpeech reference</span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>Prosody is the rhythm, stress, and intonation of speech &mdash; what makes it sound natural rather than robotic. This test measures pitch and timing patterns.</p><dl><dt>F0 (Fundamental Frequency)</dt><dd>The pitch of the voice in Hertz. Natural speech has dynamic pitch that rises for questions and falls for statements. Monotone speech has a flat F0 contour.</dd><dt>F0 RMSE</dt><dd>Root-Mean-Square Error between synthesized and reference pitch contours. Lower means more similar pitch patterns, but only meaningful when comparing the same speaker.</dd><dt>F0 Pearson r</dt><dd>Correlation between pitch contours. +1 = identical patterns, 0 = no relationship. Low values are expected when comparing different voices.</dd><dt>WPM (Words Per Minute)</dt><dd>Speaking rate. Normal conversational English ranges from 150&ndash;200 WPM. Too fast reduces comprehension; too slow tests patience.</dd><dt>pyworld</dt><dd>A speech analysis library for extracting pitch (F0) from audio using the WORLD vocoder algorithm.</dd></dl><p><strong>Important caveat:</strong> This test compared against LJSpeech (a different female speaker), so pitch differences mostly reflect voice identity rather than prosody quality. A fair comparison needs same-speaker reference audio.</p><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/tts/prosody.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
@@ -829,6 +916,7 @@ footer {
   <div class="card-header">
     <h2>Test 2.4 &mdash; Audio Signal Quality</h2>
     <span class="test-id">PESQ, STOI, MCD vs reference</span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>Standard audio engineering metrics that compare two waveforms sample-by-sample. These are the same metrics used by telecom companies to grade phone call quality.</p><dl><dt>PESQ (Perceptual Evaluation of Speech Quality)</dt><dd>An ITU international standard (P.862) that models how the human ear perceives speech quality. Scale: &minus;0.5 to 4.5. Above 3.0 = acceptable, above 4.0 = excellent.</dd><dt>STOI (Short-Time Objective Intelligibility)</dt><dd>Predicts how much of the speech a human listener would understand. Scale: 0 to 1. Above 0.6 = generally intelligible.</dd><dt>MCD (Mel Cepstral Distortion)</dt><dd>Measures spectral (frequency) difference between two audio signals. Lower is better. Under 8 dB is considered good for TTS.</dd><dt>DTW (Dynamic Time Warping)</dt><dd>An algorithm that aligns two audio signals of different lengths before comparing them, so small timing differences don't dominate the score.</dd></dl><p><strong>Why results are invalid here:</strong> All three metrics require same-speaker reference audio (same voice saying the same words). LJSpeech uses a different speaker than the TTS model (Magpie Aria), so the extreme scores reflect voice identity differences, not synthesis quality.</p><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/tts/signal_quality.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
@@ -853,6 +941,7 @@ footer {
   <div class="card-header">
     <h2>Test 2.5 &mdash; Streaming TTFB &amp; RTF</h2>
     <span class="test-id">Latency by text length and interface</span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>How quickly does the TTS model start producing audio after receiving text? This is the single most important metric for conversational AI and voice assistants.</p><dl><dt>TTFB (Time to First Byte)</dt><dd>The delay between sending text and receiving the first audio chunk. Under 200 ms feels instantaneous; over 500 ms feels laggy. In voice assistants, this is the pause between the user finishing their question and hearing the first syllable of the answer.</dd><dt>RTF (Real-Time Factor)</dt><dd>Total synthesis time &divide; audio duration. RTF &lt; 1.0 means audio is generated faster than it takes to play &mdash; essential for real-time streaming where audio must arrive faster than the listener consumes it.</dd><dt>Text Length Buckets</dt><dd>Requests are grouped by input length (10, 25, 75, 150 words). TTFB should stay roughly constant regardless of text length, since a good streaming system starts outputting audio before processing the full input.</dd></dl><p>gRPC uses native streaming (audio chunks arrive as generated). REST typically buffers more before responding, hence the ~30 ms TTFB gap.</p><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/tts/latency.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
@@ -885,6 +974,7 @@ footer {
   <div class="card-header">
     <h2>Test 2.6 &mdash; Throughput &amp; Concurrency</h2>
     <span class="test-id">RPS, error rates under load</span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>Simulates multiple users requesting speech synthesis at the same time &mdash; finding the server's breaking point before it starts dropping requests.</p><dl><dt>RPS (Requests Per Second)</dt><dd>Throughput measure &mdash; how many synthesis requests complete each second. Ideally scales linearly with concurrency (double the users = double the RPS).</dd><dt>Concurrency Level</dt><dd>The number of simultaneous requests being processed. Tested at 1, 5, 10, and 20 parallel users.</dd><dt>Error Rate</dt><dd>Percentage of requests that fail (timeout, out-of-memory, server overload). Any error rate above 0% in production is concerning and indicates the server is over capacity.</dd><dt>Server Saturation</dt><dd>The point where the GPU runs out of compute or memory. Beyond this, new requests either queue (increasing latency) or fail (increasing error rate). Here, saturation occurs around 10 concurrent requests.</dd></dl><p>If a voice application needs to serve 100 concurrent users but the server saturates at 10, you'd need 10+ replicas &mdash; significantly increasing infrastructure cost.</p><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/tts/concurrency.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
@@ -913,6 +1003,7 @@ footer {
   <div class="card-header">
     <h2>Test 2.7 &mdash; Edge Cases</h2>
     <span class="test-id">17 categories of challenging input</span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>Stress-tests the TTS model with unusual, difficult, or malformed inputs that real applications inevitably encounter.</p><dl><dt>Categories Tested</dt><dd>Numbers &amp; currency ("$1,234.56"), abbreviations ("NASDAQ"), URLs, email addresses, code snippets, very long text, empty input, special characters, mixed case, repetition, and more.</dd><dt>SSML (Speech Synthesis Markup Language)</dt><dd>An XML-based standard for controlling how text is spoken. Example: <code>&lt;break time="500ms"/&gt;</code> inserts a pause, <code>&lt;say-as interpret-as="telephone"&gt;</code> reads digits as a phone number. Partial support here.</dd><dt>Pass Criteria</dt><dd>The model must (1) produce audio without errors and (2) a round-trip Whisper check must recover the intended content with reasonable accuracy.</dd><dt>Boundary Length</dt><dd>Tests the model's text length limits &mdash; very short (single word) and very long (1000+ words) inputs.</dd></dl><p>Production text is messy: users paste URLs, currency amounts, code, and emoji. A model that crashes or garbles these inputs is unreliable for real applications.</p><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/tts/edge_cases.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
@@ -951,6 +1042,7 @@ footer {
   <div class="card-header">
     <h2>Test 2.8 &mdash; Long-Form Consistency</h2>
     <span class="test-id">Voice stability across multi-paragraph synthesis</span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>When synthesizing a long document paragraph by paragraph, does the voice stay consistent? This matters for audiobooks, email narration, documentation, and IVR systems.</p><dl><dt>F0 Drift</dt><dd>Variation in average pitch across paragraphs. Large drift (&gt;10 Hz) means the voice sounds noticeably different between sections. Under 8 Hz is considered stable.</dd><dt>WPM Drift</dt><dd>Variation in speaking rate across paragraphs. Drift above 30 WPM would sound like the speaker rushes through some sections and drags through others.</dd><dt>Speaker Similarity (planned)</dt><dd>Uses ECAPA-TDNN neural speaker embeddings to compute a "voice fingerprint" for each paragraph, then checks cosine similarity between them. Not computed here due to missing dependency.</dd><dt>Cosine Similarity</dt><dd>A measure of how alike two voice fingerprints are. 1.0 = identical voice, 0.0 = completely different. Above 0.85 is typically same-speaker.</dd></dl><p>A 10-paragraph email should sound like one consistent speaker throughout. Voice inconsistency breaks the listening experience and feels unprofessional.</p><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/tts/long_form.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
@@ -983,7 +1075,9 @@ footer {
 <h2 class="section-title" id="summary">Overall Summary</h2>
 
 <div class="card">
-  <div class="card-header"><h2>STT Key Findings</h2></div>
+  <div class="card-header"><h2>STT Key Findings</h2>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Reading the Verdicts</div><dl><dt><span class="badge badge-pass">Pass</span></dt><dd>Meets or exceeds the production-readiness threshold defined in the evaluation plan.</dd><dt><span class="badge badge-flag">Flag</span></dt><dd>Partially meets requirements or has caveats that need attention before production use.</dd><dt><span class="badge badge-fail">Fail</span></dt><dd>Below the acceptable threshold. Requires mitigation (e.g., chunking, post-processing, or model upgrade).</dd><dt><span class="badge badge-note">N/A</span></dt><dd>Test could not be completed (missing dataset, dependency failure, or invalid reference data).</dd></dl><p>STT = Speech-to-Text, converting audio recordings into written text. The model tested is NVIDIA Parakeet CTC 1.1B, a Connectionist Temporal Classification model with 1.1 billion parameters.</p></div></span>
+  </div>
   <div class="card-body">
     <table>
       <thead><tr><th>Test</th><th>Finding</th><th>Verdict</th></tr></thead>
@@ -993,7 +1087,7 @@ footer {
         <tr><td>1.3 Streaming</td><td>RTF ~1.02, TTFW 325ms, 96.8% stability</td><td><span class="badge badge-pass">Pass</span></td></tr>
         <tr><td>1.4 REST/gRPC</td><td>gRPC 30% faster than REST at P50</td><td><span class="badge badge-pass">Pass</span></td></tr>
         <tr><td>1.5 Noise</td><td>Robust above SNR 5; degrades at &minus;5 dB</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>1.6 Accent</td><td>Not evaluated (dataset unavailable)</td><td><span class="badge badge-note">N/A</span></td></tr>
+        <tr><td>1.6 Accent</td><td>Dataset wired up (westbrook/English_Accent_DataSet, 23 accents) &mdash; re-run to collect results</td><td><span class="badge badge-note">Pending</span></td></tr>
         <tr><td>1.7 Long-Form</td><td>79% WER on concatenated audio &gt;40s</td><td><span class="badge badge-fail">Fail</span></td></tr>
         <tr><td>1.8 Domain</td><td>42% NE-WER on financial entities</td><td><span class="badge badge-flag">Flag</span></td></tr>
         <tr><td>1.9 Output</td><td>Weak punctuation (F1 0&ndash;40%), good caps/numbers</td><td><span class="badge badge-flag">Flag</span></td></tr>
@@ -1005,7 +1099,9 @@ footer {
 </div>
 
 <div class="card">
-  <div class="card-header"><h2>TTS Key Findings</h2></div>
+  <div class="card-header"><h2>TTS Key Findings</h2>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Reading the Verdicts</div><dl><dt><span class="badge badge-pass">Pass</span></dt><dd>Meets or exceeds the production-readiness threshold.</dd><dt><span class="badge badge-flag">Flag</span></dt><dd>Partially meets requirements or has notable caveats.</dd><dt><span class="badge badge-fail">Fail</span></dt><dd>Below acceptable threshold &mdash; needs mitigation.</dd><dt><span class="badge badge-note">N/A</span></dt><dd>Test could not produce valid results (e.g., speaker mismatch invalidating metrics).</dd></dl><p>TTS = Text-to-Speech, converting written text into spoken audio. The model tested is NVIDIA Magpie Aria, a neural TTS model served via NVIDIA Riva on SAP AI Core.</p></div></span>
+  </div>
   <div class="card-body">
     <table>
       <thead><tr><th>Test</th><th>Finding</th><th>Verdict</th></tr></thead>
@@ -1190,11 +1286,35 @@ new Chart(document.getElementById('chart-concurrency'), {
     }
   }
 });
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('.info-tip')) {
-    document.querySelectorAll('.info-tip.open').forEach(function(t) { t.classList.remove('open'); });
+var backdrop = document.getElementById('tipBackdrop');
+function closeAllTips() {
+  document.querySelectorAll('.info-tip.open').forEach(function(t) { t.classList.remove('open'); });
+  backdrop.classList.remove('active');
+  document.body.classList.remove('tip-open');
+}
+function openTip(el) {
+  var wasOpen = el.classList.contains('open');
+  closeAllTips();
+  if (!wasOpen) {
+    el.classList.add('open');
+    backdrop.classList.add('active');
+    document.body.classList.add('tip-open');
   }
+}
+document.querySelectorAll('.info-tip').forEach(function(tip) {
+  tip.addEventListener('click', function(e) {
+    if (e.target.closest('.info-tip-content') && !e.target.classList.contains('tip-close')) {
+      e.stopPropagation(); return;
+    }
+    if (e.target.classList.contains('tip-close')) {
+      e.stopPropagation(); closeAllTips(); return;
+    }
+    e.stopPropagation();
+    openTip(tip);
+  });
 });
+backdrop.addEventListener('click', closeAllTips);
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeAllTips(); });
 </script>
 
 </body>

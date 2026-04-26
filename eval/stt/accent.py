@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from eval.config import Config
 from eval.stt.client import STTClient
-from eval.utils import NORMALIZE_FOR_WER, bootstrap_ci, get_completed_ids, save_summary_csv, write_jsonl
+from eval.utils import NORMALIZE_FOR_WER, NORMALIZE_FOR_WER_AGG, bootstrap_ci, get_completed_ids, save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.stt.accent")
 
@@ -120,8 +120,8 @@ def run(config: Config) -> dict:
         if refs:
             agg_wer = jiwer.wer(
                 refs, hyps,
-                reference_transform=NORMALIZE_FOR_WER,
-                hypothesis_transform=NORMALIZE_FOR_WER,
+                reference_transform=NORMALIZE_FOR_WER_AGG,
+                hypothesis_transform=NORMALIZE_FOR_WER_AGG,
             )
             mean_wer, ci_lo, ci_hi = bootstrap_ci(per_utt_wers, n_bootstrap=config.evaluation.bootstrap_n)
             group_wers[accent] = agg_wer

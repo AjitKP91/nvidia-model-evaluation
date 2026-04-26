@@ -383,6 +383,10 @@ def run(config: Config | None = None) -> dict:
         json.dump(results, f, indent=2, default=str)
     logger.info("Phase 0 results written to %s", output_path)
 
+    for wav in out_dir.glob("*.wav"):
+        wav.unlink(missing_ok=True)
+    logger.info("Phase 0 temporary WAV files deleted.")
+
     return results
 
 

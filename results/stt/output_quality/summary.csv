@@ -1,0 +1,7 @@
+metric,value,n_samples
+Punctuation F1 (.),0.401,500.0
+"Punctuation F1 (,)",0.224,500.0
+Punctuation F1 (?),0.014,500.0
+Punctuation F1 (!),0.0,500.0
+Capitalisation Accuracy,0.8899,
+Number Formatting Accuracy,0.9337,

@@ -1,0 +1,2 @@
+speaker_mismatch_warning,mcd_mean,pesq_mean,stoi_mean,n_samples
+"LJSpeech speaker differs from Magpie Aria. PESQ/STOI/MCD scores reflect voice mismatch, not quality.",1026.94,1.069,0.0228,50

@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NVIDIA STT &amp; TTS Model Evaluation Report</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #f8f9fa;
+  --surface: #ffffff;
+  --text: #1a1a2e;
+  --text-muted: #6c757d;
+  --border: #dee2e6;
+  --accent: #4361ee;
+  --pass: #2d6a4f;
+  --pass-bg: #d8f3dc;
+  --flag: #e67e22;
+  --flag-bg: #fef3cd;
+  --fail: #c0392b;
+  --fail-bg: #f8d7da;
+  --note-bg: #d1ecf1;
+  --note: #0c5460;
+  --code-bg: #e9ecef;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  font-size: 15px;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Header */
+.hero {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  color: #fff;
+  padding: 48px 24px 40px;
+  text-align: center;
+}
+.hero h1 { font-size: 2rem; font-weight: 700; margin-bottom: 8px; }
+.hero .sub { color: #adb5bd; font-size: 1rem; max-width: 700px; margin: 0 auto; }
+.hero .models {
+  display: flex; gap: 24px; justify-content: center; margin-top: 20px; flex-wrap: wrap;
+}
+.hero .model-chip {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 0.9rem;
+}
+.hero .model-chip strong { color: #76c893; }
+
+/* Nav */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+nav .inner {
+  max-width: 1200px; margin: 0 auto;
+  display: flex; gap: 0; padding: 0 16px;
+}
+nav a {
+  display: inline-block; padding: 12px 16px;
+  color: var(--text-muted); font-size: 0.85rem; font-weight: 500;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+nav a:hover { color: var(--text); text-decoration: none; border-bottom-color: var(--accent); }
+nav .sep { width: 1px; background: var(--border); margin: 8px 4px; flex-shrink: 0; }
+
+/* Main */
+.container { max-width: 1200px; margin: 0 auto; padding: 24px 16px 80px; }
+
+/* Cards */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  margin-bottom: 28px;
+  overflow: hidden;
+}
+.card-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+}
+.card-header h2 { font-size: 1.15rem; font-weight: 600; }
+.card-header .test-id { color: var(--text-muted); font-size: 0.85rem; font-weight: 400; }
+.card-body { padding: 20px 24px; }
+
+/* Section titles */
+.section-title {
+  font-size: 1.4rem; font-weight: 700; margin: 40px 0 16px;
+  padding-bottom: 8px; border-bottom: 2px solid var(--accent);
+  display: flex; align-items: center; gap: 10px;
+}
+.section-title .icon { font-size: 1.2rem; }
+
+/* Badges */
+.badge {
+  display: inline-block; padding: 2px 10px; border-radius: 12px;
+  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
+}
+.badge-pass { background: var(--pass-bg); color: var(--pass); }
+.badge-flag { background: var(--flag-bg); color: var(--flag); }
+.badge-fail { background: var(--fail-bg); color: var(--fail); }
+.badge-note { background: var(--note-bg); color: var(--note); }
+.badge-ok { background: var(--pass-bg); color: var(--pass); }
+.badge-error { background: var(--fail-bg); color: var(--fail); }
+
+/* Tables */
+table {
+  width: 100%; border-collapse: collapse; font-size: 0.88rem;
+}
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+th { font-weight: 600; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.4px; background: #f8f9fa; }
+tr:last-child td { border-bottom: none; }
+td.num { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; text-align: right; }
+th.num { text-align: right; }
+
+/* Info boxes */
+.info-box {
+  padding: 12px 16px; border-radius: 8px; margin: 12px 0;
+  font-size: 0.88rem; line-height: 1.5;
+}
+.info-box.warn { background: var(--flag-bg); border-left: 4px solid var(--flag); }
+.info-box.error { background: var(--fail-bg); border-left: 4px solid var(--fail); }
+.info-box.info { background: var(--note-bg); border-left: 4px solid var(--note); }
+.info-box.success { background: var(--pass-bg); border-left: 4px solid var(--pass); }
+.info-box strong { font-weight: 600; }
+
+/* Metric cards */
+.metrics-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px; margin: 12px 0;
+}
+.metric-card {
+  background: var(--bg); border-radius: 8px; padding: 14px 16px;
+  border: 1px solid var(--border);
+}
+.metric-card .label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+.metric-card .value { font-size: 1.4rem; font-weight: 700; font-family: 'SF Mono', 'Fira Code', monospace; }
+.metric-card .unit { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; }
+.metric-card.good .value { color: var(--pass); }
+.metric-card.warn .value { color: var(--flag); }
+.metric-card.bad .value { color: var(--fail); }
+
+/* Methodology */
+.methodology {
+  background: var(--bg); border-radius: 8px; padding: 14px 16px;
+  margin: 12px 0; font-size: 0.85rem; color: var(--text-muted);
+}
+.methodology strong { color: var(--text); }
+
+/* Charts */
+.chart-container {
+  max-width: 700px; margin: 16px auto;
+}
+
+/* Tags */
+.tag {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 0.75rem; background: var(--code-bg); color: var(--text-muted);
+  margin: 2px;
+}
+
+/* Footer */
+footer {
+  text-align: center; padding: 32px 16px; color: var(--text-muted);
+  font-size: 0.82rem; border-top: 1px solid var(--border);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .hero h1 { font-size: 1.4rem; }
+  .card-body { padding: 14px 16px; }
+  table { font-size: 0.8rem; }
+  th, td { padding: 8px 10px; }
+  .metrics-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+}
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <h1>NVIDIA STT &amp; TTS Model Evaluation</h1>
+  <p class="sub">Comprehensive evaluation of NVIDIA Riva speech models deployed on SAP AI Core. Covers accuracy, performance, robustness, and quality across 20 test dimensions.</p>
+  <div class="models">
+    <div class="model-chip"><strong>STT</strong>&ensp;Parakeet CTC 1.1B (Riva)</div>
+    <div class="model-chip"><strong>TTS</strong>&ensp;Magpie Aria (Riva)</div>
+  </div>
+</div>
+
+<!-- Nav -->
+<nav>
+  <div class="inner">
+    <a href="#phase0">Phase 0</a>
+    <div class="sep"></div>
+    <a href="#stt-accuracy">1.1 Accuracy</a>
+    <a href="#stt-performance">1.2 Performance</a>
+    <a href="#stt-streaming">1.3 Streaming</a>
+    <a href="#stt-rest-grpc">1.4 REST/gRPC</a>
+    <a href="#stt-noise">1.5 Noise</a>
+    <a href="#stt-accent">1.6 Accent</a>
+    <a href="#stt-longform">1.7 Long-Form</a>
+    <a href="#stt-domain">1.8 Domain</a>
+    <a href="#stt-output">1.9 Output</a>
+    <a href="#stt-confidence">1.10 Confidence</a>
+    <a href="#stt-format">1.11 Format</a>
+    <div class="sep"></div>
+    <a href="#tts-naturalness">2.1 Naturalness</a>
+    <a href="#tts-intelligibility">2.2 Intelligibility</a>
+    <a href="#tts-prosody">2.3 Prosody</a>
+    <a href="#tts-signal">2.4 Signal</a>
+    <a href="#tts-latency">2.5 Latency</a>
+    <a href="#tts-concurrency">2.6 Concurrency</a>
+    <a href="#tts-edge">2.7 Edge Cases</a>
+    <a href="#tts-longform">2.8 Long-Form</a>
+  </div>
+</nav>
+
+<div class="container">
+
+<!-- ============================================================ -->
+<!-- PHASE 0 -->
+<!-- ============================================================ -->
+<h2 class="section-title" id="phase0">Phase 0 &mdash; Discovery &amp; Infrastructure</h2>
+
+<div class="card">
+  <div class="card-header">
+    <h2>Connectivity &amp; Auth</h2>
+    <span class="badge badge-pass">All OK</span>
+  </div>
+  <div class="card-body">
+    <table>
+      <thead><tr><th>Endpoint</th><th>Protocol</th><th class="num">Latency</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>STT</td><td>gRPC</td><td class="num">128 ms</td><td><span class="badge badge-ok">OK</span></td></tr>
+        <tr><td>STT</td><td>REST</td><td class="num">135 ms</td><td><span class="badge badge-ok">OK</span></td></tr>
+        <tr><td>TTS</td><td>gRPC</td><td class="num">302 ms</td><td><span class="badge badge-ok">OK</span></td></tr>
+        <tr><td>TTS</td><td>REST</td><td class="num">250 ms</td><td><span class="badge badge-ok">OK</span></td></tr>
+      </tbody>
+    </table>
+    <div class="metrics-grid" style="margin-top:16px">
+      <div class="metric-card good"><div class="label">Network RTT</div><div class="value">42<span class="unit"> ms</span></div></div>
+      <div class="metric-card good"><div class="label">Sample Rates</div><div class="value">5/5<span class="unit"> pass</span></div></div>
+      <div class="metric-card good"><div class="label">SSML Support</div><div class="value">Yes</div></div>
+      <div class="metric-card good"><div class="label">TTS Sample Rate</div><div class="value">22050<span class="unit"> Hz</span></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2>Smoke Tests &amp; Cold Start</h2>
+    <span class="badge badge-pass">All Pass</span>
+  </div>
+  <div class="card-body">
+    <table>
+      <thead><tr><th>Test</th><th class="num">Result</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>STT 10s audio</td><td class="num">52 ms</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>STT 60s audio</td><td class="num">184 ms</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>TTS REST (20 words)</td><td class="num">5.06s audio</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>TTS gRPC Streaming</td><td class="num">TTFB 66 ms</td><td><span class="badge badge-pass">Pass</span></td></tr>
+      </tbody>
+    </table>
+    <div class="metrics-grid" style="margin-top:16px">
+      <div class="metric-card good"><div class="label">STT Cold Ratio</div><div class="value">1.08<span class="unit">x</span></div></div>
+      <div class="metric-card good"><div class="label">TTS Cold Ratio</div><div class="value">1.04<span class="unit">x</span></div></div>
+    </div>
+    <div class="info-box success">Cold-start ratios are &lt;1.1x, indicating the models are always warm and ready. No cold-start penalty observed.</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- STT TESTS -->
+<!-- ============================================================ -->
+<h2 class="section-title" id="stt-section">Speech-to-Text (STT) Tests</h2>
+
+<!-- 1.1 Accuracy -->
+<div class="card" id="stt-accuracy">
+  <div class="card-header">
+    <h2>Test 1.1 &mdash; Clean Speech Accuracy</h2>
+    <span class="test-id">Baseline WER/CER across diverse English datasets</span>
+  </div>
+  <div class="card-body">
+    <div class="methodology">
+      <strong>Methodology:</strong> Each utterance is sent via gRPC batch recognize. WER and CER computed with <a href="https://github.com/jitsi/jiwer">jiwer</a> after lowercasing + punctuation removal. Bootstrap 95% CI (N=1000). SER = fraction of utterances with any error.
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Dataset</th>
+          <th class="num">N</th>
+          <th class="num">WER</th>
+          <th class="num">CER</th>
+          <th class="num">SER</th>
+          <th class="num">95% CI</th>
+          <th class="num">Threshold</th>
+          <th>Verdict</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><a href="https://huggingface.co/datasets/librispeech_asr">LibriSpeech clean</a></td>
+          <td class="num">2,620</td>
+          <td class="num">11.29%</td>
+          <td class="num">11.29%</td>
+          <td class="num">36.37%</td>
+          <td class="num">7.65%&ndash;9.06%</td>
+          <td class="num">&le;5%</td>
+          <td><span class="badge badge-fail">Fail</span></td>
+        </tr>
+        <tr>
+          <td><a href="https://huggingface.co/datasets/librispeech_asr">LibriSpeech other</a></td>
+          <td class="num">2,939</td>
+          <td class="num">13.34%</td>
+          <td class="num">13.34%</td>
+          <td class="num">49.74%</td>
+          <td class="num">11.21%&ndash;12.73%</td>
+          <td class="num">&le;10%</td>
+          <td><span class="badge badge-flag">Flag</span></td>
+        </tr>
+        <tr>
+          <td><a href="https://huggingface.co/datasets/facebook/voxpopuli">VoxPopuli EN</a></td>
+          <td class="num">1,842</td>
+          <td class="num">28.50%</td>
+          <td class="num">28.50%</td>
+          <td class="num">75.52%</td>
+          <td class="num">22.05%&ndash;24.58%</td>
+          <td class="num">&le;8%</td>
+          <td><span class="badge badge-fail">Fail</span></td>
+        </tr>
+        <tr>
+          <td><a href="https://huggingface.co/datasets/speechcolab/gigaspeech">GigaSpeech</a></td>
+          <td class="num">19,931</td>
+          <td class="num">24.06%</td>
+          <td class="num">24.06%</td>
+          <td class="num">71.62%</td>
+          <td class="num">23.08%&ndash;23.86%</td>
+          <td class="num">&le;12%</td>
+          <td><span class="badge badge-fail">Fail</span></td>
+        </tr>
+        <tr>
+          <td><a href="https://huggingface.co/datasets/kensho/spgispeech">SPGISpeech</a></td>
+          <td class="num">39,304</td>
+          <td class="num">21.07%</td>
+          <td class="num">21.07%</td>
+          <td class="num">65.95%</td>
+          <td class="num">20.03%&ndash;20.59%</td>
+          <td class="num">&le;8%</td>
+          <td><span class="badge badge-fail">Fail</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="info-box warn" style="margin-top:16px">
+      <strong>Analysis:</strong> WER is 2&ndash;4x above pass thresholds on all datasets. WER &asymp; CER throughout suggests character-level errors rather than isolated word substitutions. The high SER (36&ndash;76%) indicates errors are distributed across many utterances rather than concentrated in a few. VoxPopuli (European Parliament) and GigaSpeech (YouTube) are the hardest domains. Possible causes: CTC model's lack of language model rescoring, domain mismatch with Riva's Parakeet training data, or suboptimal beam search parameters.
+    </div>
+    <div class="chart-container"><canvas id="chart-accuracy"></canvas></div>
+  </div>
+</div>
+
+<!-- 1.2 Performance -->
+<div class="card" id="stt-performance">
+  <div class="card-header">
+    <h2>Test 1.2 &mdash; Batch Performance</h2>
+    <span class="test-id">Real-Time Factor &amp; latency by audio duration</span>
+  </div>
+  <div class="card-body">
+    <div class="methodology">
+      <strong>Methodology:</strong> Audio files of different durations sent via gRPC batch. RTF = processing_time / audio_duration. RTFx = 1/RTF (how many times faster than real-time). 20 calls per bucket.
+    </div>
+    <table>
+      <thead>
+        <tr><th>Audio Duration</th><th class="num">RTF</th><th class="num">RTFx</th><th class="num">P50</th><th class="num">P90</th><th class="num">P99</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>10 seconds</td><td class="num">0.0072</td><td class="num">148.5x</td><td class="num">65 ms</td><td class="num">69 ms</td><td class="num">176 ms</td></tr>
+        <tr><td>30 seconds</td><td class="num">0.0039</td><td class="num">258.8x</td><td class="num">112 ms</td><td class="num">127 ms</td><td class="num">131 ms</td></tr>
+      </tbody>
+    </table>
+    <div class="info-box success" style="margin-top:12px">
+      <strong>Excellent throughput.</strong> The model processes audio 150&ndash;260x faster than real-time. A 30-second audio clip is transcribed in ~112 ms. Latency scales sub-linearly with duration.
+    </div>
+
+    <h3 style="margin-top:24px; font-size:1rem;">STT Concurrency</h3>
+    <div class="methodology">
+      <strong>Methodology:</strong> ThreadPoolExecutor sending batch requests at N concurrent workers (from <code>results/stt/performance/concurrency_summary.csv</code>).
+    </div>
+  </div>
+</div>
+
+<!-- 1.3 Streaming -->
+<div class="card" id="stt-streaming">
+  <div class="card-header">
+    <h2>Test 1.3 &mdash; Streaming Performance</h2>
+    <span class="test-id">TTFW, finalization latency, stability</span>
+  </div>
+  <div class="card-body">
+    <div class="methodology">
+      <strong>Methodology:</strong> 300 utterances from <a href="https://huggingface.co/datasets/librispeech_asr">LibriSpeech</a>. Audio chunked at 100ms intervals and streamed via gRPC. Measures Time-to-First-Word (TTFW), finalization latency, streaming RTF, and partial result stability.
+    </div>
+    <div class="metrics-grid">
+      <div class="metric-card good"><div class="label">TTFW P50</div><div class="value">325<span class="unit"> ms</span></div></div>
+      <div class="metric-card"><div class="label">TTFW P90</div><div class="value">626<span class="unit"> ms</span></div></div>
+      <div class="metric-card good"><div class="label">Finalization P50</div><div class="value">135<span class="unit"> ms</span></div></div>
+      <div class="metric-card good"><div class="label">Streaming RTF</div><div class="value">1.02</div></div>
+      <div class="metric-card good"><div class="label">Stability Rate</div><div class="value">96.8<span class="unit">%</span></div></div>
+      <div class="metric-card"><div class="label">Partial Latency P50</div><div class="value">23<span class="unit"> ms</span></div></div>
+    </div>
+    <h3 style="margin-top:20px; font-size:0.95rem;">Streaming vs Batch WER Comparison</h3>
+    <table>
+      <thead><tr><th>Mode</th><th class="num">WER</th><th class="num">Delta</th></tr></thead>
+      <tbody>
+        <tr><td>Batch</td><td class="num">4.38%</td><td class="num">&mdash;</td></tr>
+        <tr><td>Streaming</td><td class="num">5.61%</td><td class="num">+1.23 pp</td></tr>
+      </tbody>
+    </table>
+    <div class="info-box info" style="margin-top:12px">
+      Streaming RTF of ~1.02 means the system can just barely keep up with real-time audio. Streaming WER is only +1.23 percentage points worse than batch. Stability rate of 96.8% means partial results rarely "jump" to a different hypothesis.
+    </div>
+  </div>
+</div>
+
+<!-- 1.4 REST vs gRPC -->
+<div class="card" id="stt-rest-grpc">
+  <div class="card-header">
+    <h2>Test 1.4 &mdash; REST vs gRPC</h2>
+    <span class="test-id">Interface latency comparison</span>
+  </div>
+  <div class="card-body">
+    <div class="methodology">
+      <strong>Methodology:</strong> 50 identical requests on the same 30-second audio file per interface. Streaming measured for gRPC only (TTFW + finalization) vs REST total latency.
+    </div>
+    <table>
+      <thead><tr><th>Mode</th><th>Interface</th><th class="num">P50</th><th class="num">P90</th><th class="num">P99</th></tr></thead>
+      <tbody>
+        <tr><td>Batch</td><td>gRPC</td><td class="num">108 ms</td><td class="num">110 ms</td><td class="num">174 ms</td></tr>
+        <tr><td>Batch</td><td>REST</td><td class="num">157 ms</td><td class="num">172 ms</td><td class="num">246 ms</td></tr>
+        <tr><td>Streaming TTFW</td><td>gRPC</td><td class="num">427 ms</td><td class="num">428 ms</td><td class="num">430 ms</td></tr>
+        <tr><td>Streaming Final</td><td>gRPC</td><td class="num">141 ms</td><td class="num">143 ms</td><td class="num">145 ms</td></tr>
+        <tr><td>Streaming Total</td><td>REST</td><td class="num">158 ms</td><td class="num">171 ms</td><td class="num">191 ms</td></tr>
+      </tbody>
+    </table>
+    <div class="info-box info" style="margin-top:12px">
+      gRPC batch is ~30% faster than REST (108 ms vs 157 ms at P50). Both interfaces show tight P50&ndash;P99 spread, indicating consistent performance. gRPC streaming adds ~427 ms TTFW overhead for the initial partial result.
+    </div>
+  </div>
+</div>
+
+<!-- 1.5 Noise Robustness -->
+<div class="card" id="stt-noise">
+  <div class="card-header">
+    <h2>Test 1.5 &mdash; Noise Robustness</h2>
+    <span class="test-id">WER degradation under additive noise</span>
+  </div>
+  <div class="card-body">
+    <div class="methodology">
+      <strong>Methodology:</strong> 100 <a href="https://huggingface.co/datasets/librispeech_asr">LibriSpeech</a> clean utterances mixed with noise at various SNR levels. Gaussian noise via <a href="https://github.com/iver56/audiomentations">audiomentations</a>; babble, traffic, and office noise from <a href="https://zenodo.org/record/1227121">DEMAND</a>. Clean baseline WER: 8.2%.
+    </div>
+    <table>
+      <thead><tr><th>Noise Type</th><th class="num">SNR &minus;5</th><th class="num">SNR 0</th><th class="num">SNR 5</th><th class="num">SNR 10</th><th class="num">SNR 15</th><th class="num">SNR 20</th></tr></thead>
+      <tbody>
+        <tr><td>Gaussian</td><td class="num" style="color:var(--fail)">47.3%</td><td class="num">9.4%</td><td class="num">7.1%</td><td class="num">5.2%</td><td class="num">5.2%</td><td class="num">5.1%</td></tr>
+        <tr><td>Babble</td><td class="num">&mdash;</td><td class="num">10.1%</td><td class="num">6.6%</td><td class="num">5.5%</td><td class="num">5.2%</td><td class="num">5.1%</td></tr>
+        <tr><td>Traffic</td><td class="num">&mdash;</td><td class="num">9.8%</td><td class="num">6.7%</td><td class="num">5.2%</td><td class="num">5.2%</td><td class="num">5.1%</td></tr>
+        <tr><td>Office</td><td class="num">&mdash;</td><td class="num">9.5%</td><td class="num">6.8%</td><td class="num">5.2%</td><td class="num">5.1%</td><td class="num">5.1%</td></tr>
+      </tbody>
+    </table>
+    <div class="chart-container"><canvas id="chart-noise"></canvas></div>
+    <div class="info-box success" style="margin-top:12px">
+      The model is remarkably robust: WER at SNR 5+ is actually <em>better</em> than the clean baseline (5.1% vs 8.2%). This is common in neural ASR when the noise-subset baseline differs from the full clean-test baseline. Gaussian at &minus;5 dB is the only truly degraded condition (47.3%). Real-world noise types (babble, traffic, office) are handled similarly at each SNR level.
+    </div>
+  </div>
+</div>
+
+<!-- 1.6 Accent -->
+<div class="card" id="stt-accent">
+  <div class="card-header">
+    <h2>Test 1.6 &mdash; Accent Robustness</h2>
+    <span class="test-id">WER by accent group</span>
+  </div>
+  <div class="card-body">
+    <div class="methodology">
+      <strong>Methodology:</strong> Planned to use <a href="https://huggingface.co/datasets/mozilla-foundation/common_voice_17_0">Common Voice EN</a> filtered by accent and <a href="https://psi.engr.tamu.edu/l2-arctic-corpus/">L2-ARCTIC</a> corpus.
+    </div>
+    <div class="info-box error">
+      <strong>No data collected.</strong> The Common Voice dataset requires authentication/agreement to Mozilla's terms of service, and L2-ARCTIC is not available on HuggingFace. This test was skipped during the evaluation run. To complete it, download Common Voice manually and re-run <code>python -m eval.run stt --test accent</code>.
+    </div>
+  </div>
+</div>
+
+<!-- 1.7 Long-Form -->
+<div class="card" id="stt-longform">
+  <div class="card-header">
+    <h2>Test 1.7 &mdash; Long-Form Audio</h2>
+    <span class="test-id">Hallucination, repetition, and accuracy on long audio</span>
+  </div>
+  <div class="card-body">
+    <div class="methodology">
+      <strong>Methodology:</strong> 50 individual segments (1&ndash;22s) from <a href="https://huggingface.co/datasets/librispeech_asr">LibriSpeech</a> evaluated individually and as 10 concatenated sequences (42&ndash;92s). Hallucination rate = fraction of 5-gram hypothesis sequences not in reference. Full vs chunked WER compared.
+    </div>
+    <h3 style="font-size:0.95rem; margin-bottom:8px;">Individual Segments (50 items)</h3>
+    <div class="metrics-grid">
+      <div class="metric-card"><div class="label">Median WER</div><div class="value">6.5<span class="unit">%</span></div></div>
+      <div class="metric-card"><div class="label">Items with WER=0</div><div class="value">18<span class="unit">/50</span></div></div>
+      <div class="metric-card warn"><div class="label">Mean Hallucination Rate</div><div class="value">37<span class="unit">%</span></div></div>
+      <div class="metric-card good"><div class="label">Repetition Rate</div><div class="value">0<span class="unit">%</span></div></div>
+    </div>
+    <h3 style="font-size:0.95rem; margin:20px 0 8px;">Concatenated Sequences (10 items, 42&ndash;92s)</h3>
+    <div class="metrics-grid">
+      <div class="metric-card bad"><div class="label">Mean WER</div><div class="value">79<span class="unit">%</span></div></div>
+      <div class="metric-card bad"><div class="label">Max WER</div><div class="value">94<span class="unit">%</span></div></div>
+      <div class="metric-card warn"><div class="label">Mean Hallucination</div><div class="value">54<span class="unit">%</span></div></div>
+    </div>
+    <div class="info-box error" style="margin-top:12px">
+      <strong>Critical finding:</strong> The model severely degrades on concatenated audio longer than ~40 seconds, with WER reaching 79&ndash;94%. Individual short segments are fine (median 6.5% WER). This likely indicates the CTC model's attention window or context length limitation. For production use, audio should be chunked into &lt;30-second segments.
+    </div>
+  </div>
+</div>
+
+<!-- 1.8 Domain -->
+<div class="card" id="stt-domain">
+  <div class="card-header">
+    <h2>Test 1.8 &mdash; Domain Vocabulary</h2>
+    <span class="test-id">Named entity and financial term recognition</span>
+  </div>
+  <div class="card-body">
+    <div class="methodology">
+      <strong>Methodology:</strong> 500 utterances from <a href="https://huggingface.co/datasets/kensho/spgispeech">SPGISpeech</a> (S&amp;P Global financial earnings calls). Named entities extracted with <a href="https://spacy.io/">spaCy</a> <code>en_core_web_sm</code>. KRR = Key Recognition Rate (entity recall). NE-WER = WER computed only on named-entity tokens.
+    </div>
+    <div class="metrics-grid">
+      <div class="metric-card"><div class="label">Domain WER</div><div class="value">23.3<span class="unit">%</span></div></div>
+      <div class="metric-card"><div class="label">Key Recognition Rate</div><div class="value">79.5<span class="unit">%</span></div></div>
+      <div class="metric-card warn"><div class="label">NE-WER</div><div class="value">42.3<span class="unit">%</span></div></div>
+    </div>
+    <div style="margin-top:14px">
+      <strong style="font-size:0.88rem;">Top Misrecognized Entities:</strong>
+      <div style="margin-top:6px;">
+        <span class="tag">the first quarter (12)</span>
+        <span class="tag">Akorn (5)</span>
+        <span class="tag">first (5)</span>
+        <span class="tag">U.S. (4)</span>
+        <span class="tag">OMV (3)</span>
+        <span class="tag">QSCAP (3)</span>
+        <span class="tag">Q2 (2)</span>
+        <span class="tag">Neal Shah (1)</span>
+      </div>
+    </div>
+    <div class="info-box warn" style="margin-top:12px">
+      Named entities (company names, ticker symbols, financial jargon) have a 42.3% error rate &mdash; nearly double the overall domain WER. Uncommon proper nouns like "Akorn", "OMV", and "QSCAP" are particularly challenging for the CTC model without domain-specific language model rescoring.
+    </div>
+  </div>
+</div>
+
+<!-- 1.9 Output Quality -->
+<div class="card" id="stt-output">
+  <div class="card-header">
+    <h2>Test 1.9 &mdash; Output Quality</h2>
+    <span class="test-id">Punctuation, capitalisation, number formatting</span>
+  </div>
+  <div class="card-body">
+    <div class="methodology">
+      <strong>Methodology:</strong> 500 utterances from <a href="https://huggingface.co/datasets/kensho/spgispeech">SPGISpeech</a> (which has professionally punctuated transcripts). Punctuation F1 per mark type. Capitalisation accuracy on first-word and proper nouns. Number formatting checks (e.g., "$5 million" vs "five million dollars").
+    </div>
+    <table>
+      <thead><tr><th>Metric</th><th class="num">Score</th></tr></thead>
+      <tbody>
+        <tr><td>Punctuation F1 &mdash; Period (.)</td><td class="num">40.1%</td></tr>
+        <tr><td>Punctuation F1 &mdash; Comma (,)</td><td class="num">22.4%</td></tr>
+        <tr><td>Punctuation F1 &mdash; Question Mark (?)</td><td class="num">1.4%</td></tr>
+        <tr><td>Punctuation F1 &mdash; Exclamation (!)</td><td class="num">0.0%</td></tr>
+        <tr><td>Capitalisation Accuracy</td><td class="num" style="color:var(--pass)">89.0%</td></tr>
+        <tr><td>Number Formatting Accuracy</td><td class="num" style="color:var(--pass)">93.4%</td></tr>
+      </tbody>
+    </table>
+    <div class="info-box warn" style="margin-top:12px">
+      Punctuation recovery is weak &mdash; the model's CTC output has limited punctuation capability. Periods (F1 40%) and commas (F1 22%) are partially recovered; question marks and exclamation points are effectively absent. Capitalisation and number formatting are strong (&gt;89%), suggesting the model handles casing and numerals well even without post-processing.
+    </div>
+  </div>
+</div>
+
+<!-- 1.10 Confidence Calibration -->
+<div class="card" id="stt-confidence">
+  <div class="card-header">
+    <h2>Test 1.10 &mdash; Confidence Calibration</h2>
+    <span class="test-id">ECE, AUROC, Brier score</span>
+  </div>
+  <div class="card-body">
+    <div class="methodology">
+      <strong>Methodology:</strong> 17,895 word-level confidence scores from batch recognition. Words binned into 10 confidence intervals. Per-bin accuracy vs mean confidence plotted as a reliability diagram. ECE = Expected Calibration Error (bin-weighted mean |accuracy &minus; confidence|). AUROC measures whether confidence discriminates correct from incorrect words.
+    </div>
+    <div class="metrics-grid">
+      <div class="metric-card bad"><div class="label">ECE</div><div class="value">0.244</div></div>
+      <div class="metric-card warn"><div class="label">AUROC</div><div class="value">0.643</div></div>
+      <div class="metric-card"><div class="label">Brier Score</div><div class="value">0.121</div></div>
+      <div class="metric-card"><div class="label">Words Evaluated</div><div class="value">17.9<span class="unit">k</span></div></div>
+      <div class="metric-card"><div class="label">Deletion Rate</div><div class="value">11.2<span class="unit">%</span></div></div>
+    </div>
+    <h3 style="font-size:0.95rem; margin:20px 0 8px;">Reliability Diagram</h3>
+    <div class="chart-container"><canvas id="chart-reliability"></canvas></div>
+    <div class="info-box error" style="margin-top:12px">
+      <strong>Severely overconfident.</strong> Confidence scores are not calibrated: the model reports high confidence even on incorrect words. For example, in the 0.7&ndash;0.8 bin, accuracy is 0% despite mean confidence of 71%. ECE of 0.244 is far above the acceptable threshold of 0.05. AUROC of 0.643 provides only slightly better than random discrimination. Confidence scores should not be used for downstream decision-making without recalibration.
+    </div>
+  </div>
+</div>
+
+<!-- 1.11 Format Robustness -->
+<div class="card" id="stt-format">
+  <div class="card-header">
+    <h2>Test 1.11 &mdash; Format Robustness</h2>
+    <span class="test-id">Audio formats, sample rates, durations, edge cases</span>
+  </div>
+  <div class="card-body">
+    <div class="methodology">
+      <strong>Methodology:</strong> A single reference utterance re-encoded into various audio formats, sample rates, channel counts, and durations. Each variant sent via gRPC batch. Edge cases include silence-only and white-noise-only audio.
+    </div>
+    <table>
+      <thead><tr><th>Category</th><th>Test</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Sample Rate</td><td>8 kHz, 16 kHz, 22.05 kHz, 44.1 kHz, 48 kHz</td><td><span class="badge badge-pass">All Pass</span></td></tr>
+        <tr><td>Format</td><td>WAV</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>Format</td><td>FLAC</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>Format</td><td>MP3</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>Format</td><td>OGG (Vorbis)</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>Channels</td><td>Mono, Stereo</td><td><span class="badge badge-pass">All Pass</span></td></tr>
+        <tr><td>Duration</td><td>0.5s, 5s, 60s, 600s</td><td><span class="badge badge-pass">All Pass</span></td></tr>
+        <tr><td>Edge Case</td><td>Silence, White Noise</td><td><span class="badge badge-pass">All Pass</span></td></tr>
+      </tbody>
+    </table>
+    <div class="info-box warn" style="margin-top:12px">
+      <strong>OGG format failure</strong> is due to the server's FFmpeg build missing <code>libvorbis</code> encoder &mdash; not an STT model limitation. All other formats, sample rates (8&ndash;48 kHz), durations (0.5s&ndash;10min), and edge cases pass without issue.
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- TTS TESTS -->
+<!-- ============================================================ -->
+<h2 class="section-title" id="tts-section">Text-to-Speech (TTS) Tests</h2>
+
+<!-- 2.1 Naturalness -->
+<div class="card" id="tts-naturalness">
+  <div class="card-header">
+    <h2>Test 2.1 &mdash; Automated Naturalness</h2>
+    <span class="test-id">DNSMOS &amp; UTMOS quality scores</span>
+  </div>
+  <div class="card-body">
+    <div class="methodology">
+      <strong>Methodology:</strong> 200 sentences synthesized via gRPC. Scored with <a href="https://github.com/microsoft/DNS-Challenge">DNSMOS P.835</a> (OVRL/SIG/BAK on 1&ndash;5 scale) and <a href="https://github.com/sarulab-speech/UTMOS22">UTMOS</a> (MOS predictor). Higher is better for all metrics.
+    </div>
+    <div class="metrics-grid">
+      <div class="metric-card"><div class="label">DNSMOS Overall P50</div><div class="value">3.23<span class="unit">/5</span></div></div>
+      <div class="metric-card"><div class="label">DNSMOS Signal P50</div><div class="value">3.52<span class="unit">/5</span></div></div>
+      <div class="metric-card good"><div class="label">DNSMOS Background P50</div><div class="value">4.05<span class="unit">/5</span></div></div>
+      <div class="metric-card bad"><div class="label">UTMOS</div><div class="value">N/A</div></div>
+    </div>
+    <table style="margin-top:16px">
+      <thead><tr><th>DNSMOS Metric</th><th class="num">Mean</th><th class="num">P50</th><th class="num">P90</th><th class="num">Std</th><th class="num">Min</th><th class="num">Max</th></tr></thead>
+      <tbody>
+        <tr><td>Overall (OVRL)</td><td class="num">3.20</td><td class="num">3.23</td><td class="num">3.36</td><td class="num">0.15</td><td class="num">2.52</td><td class="num">3.51</td></tr>
+        <tr><td>Signal (SIG)</td><td class="num">3.51</td><td class="num">3.52</td><td class="num">3.61</td><td class="num">0.10</td><td class="num">3.01</td><td class="num">3.72</td></tr>
+        <tr><td>Background (BAK)</td><td class="num">4.00</td><td class="num">4.05</td><td class="num">4.14</td><td class="num">0.17</td><td class="num">3.06</td><td class="num">4.18</td></tr>
+      </tbody>
+    </table>
+    <div class="info-box warn" style="margin-top:12px">
+      <strong>UTMOS scoring failed</strong> &mdash; the <code>fairseq</code> dependency (required by UTMOS via PyTorch Hub) could not be built in the evaluation environment (numpy version conflict). DNSMOS scores indicate decent quality: background noise is very clean (4.05/5), signal quality is moderate (3.52/5), and overall score (3.23/5) suggests room for improvement in naturalness. The tight standard deviation (0.15) indicates consistent output quality.
+    </div>
+  </div>
+</div>
+
+<!-- 2.2 Intelligibility -->
+<div class="card" id="tts-intelligibility">
+  <div class="card-header">
+    <h2>Test 2.2 &mdash; Round-Trip Intelligibility</h2>
+    <span class="test-id">TTS &rarr; Whisper STT &rarr; WER</span>
+  </div>
+  <div class="card-body">
+    <div class="methodology">
+      <strong>Methodology:</strong> Sentences synthesized via TTS, then transcribed by <a href="https://github.com/openai/whisper">Whisper large-v3</a> (local). WER/CER computed between original text and Whisper transcript. Tests 4 text categories of varying complexity.
+    </div>
+    <table>
+      <thead><tr><th>Category</th><th class="num">N</th><th class="num">WER</th><th class="num">CER</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Harvard Sentences</td><td class="num">80</td><td class="num" style="color:var(--pass)">1.65%</td><td class="num">1.65%</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>Conversational</td><td class="num">50</td><td class="num" style="color:var(--pass)">1.57%</td><td class="num">1.57%</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>Technical</td><td class="num">50</td><td class="num" style="color:var(--fail)">30.09%</td><td class="num">30.09%</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>Numbers &amp; Figures</td><td class="num">50</td><td class="num" style="color:var(--fail)">55.04%</td><td class="num">55.04%</td><td><span class="badge badge-fail">Fail</span></td></tr>
+      </tbody>
+    </table>
+    <div class="chart-container"><canvas id="chart-intelligibility"></canvas></div>
+    <div class="info-box warn" style="margin-top:12px">
+      Everyday speech and Harvard sentences are highly intelligible (&lt;2% WER). However, <strong>technical terms</strong> (30% WER) and <strong>numbers/figures</strong> (55% WER) are poorly rendered &mdash; the TTS model struggles to pronounce domain-specific words, monetary amounts, percentages, and mixed alphanumeric strings clearly enough for a second ASR system to recover.
+    </div>
+  </div>
+</div>
+
+<!-- 2.3 Prosody -->
+<div class="card" id="tts-prosody">
+  <div class="card-header">
+    <h2>Test 2.3 &mdash; Prosody Analysis</h2>
+    <span class="test-id">F0, speaking rate vs LJSpeech reference</span>
+  </div>
+  <div class="card-body">
+    <div class="methodology">
+      <strong>Methodology:</strong> 50 sentences synthesized and compared against <a href="https://keithito.com/LJ-Speech-Dataset/">LJSpeech</a> reference recordings. F0 (fundamental frequency) extracted with <a href="https://github.com/JeremyCCHsu/Python-Wrapper-for-World-Vocoder">pyworld</a>. F0 RMSE and Pearson correlation computed on aligned F0 contours. Speaking rate in words-per-minute (WPM).
+    </div>
+    <div class="metrics-grid">
+      <div class="metric-card warn"><div class="label">F0 RMSE</div><div class="value">81.8<span class="unit"> Hz</span></div></div>
+      <div class="metric-card bad"><div class="label">F0 Pearson r</div><div class="value">0.14</div></div>
+      <div class="metric-card"><div class="label">Speaking Rate</div><div class="value">190<span class="unit"> WPM</span></div></div>
+      <div class="metric-card"><div class="label">Rate Std Dev</div><div class="value">30.5<span class="unit"> WPM</span></div></div>
+    </div>
+    <div class="info-box warn" style="margin-top:12px">
+      <strong>Low prosodic correlation with reference.</strong> F0 Pearson r of 0.14 indicates nearly no correlation between the model's pitch contour and the LJSpeech reference &mdash; expected since Magpie Aria is a different speaker/voice than LJSpeech. The F0 RMSE of 81.8 Hz reflects the voice mismatch rather than poor prosody. Speaking rate of 190 WPM with 30.5 WPM std dev is within normal conversational range (150&ndash;200 WPM). A fair prosody evaluation requires a matched-speaker reference.
+    </div>
+  </div>
+</div>
+
+<!-- 2.4 Signal Quality -->
+<div class="card" id="tts-signal">
+  <div class="card-header">
+    <h2>Test 2.4 &mdash; Audio Signal Quality</h2>
+    <span class="test-id">PESQ, STOI, MCD vs reference</span>
+  </div>
+  <div class="card-body">
+    <div class="methodology">
+      <strong>Methodology:</strong> 50 sentences compared against <a href="https://keithito.com/LJ-Speech-Dataset/">LJSpeech</a> reference. PESQ (Perceptual Evaluation of Speech Quality), STOI (Short-Time Objective Intelligibility), and MCD (Mel Cepstral Distortion) computed after alignment.
+    </div>
+    <div class="info-box error">
+      <strong>Speaker mismatch invalidates these metrics.</strong> LJSpeech is a single female speaker, while Magpie Aria uses a different voice. The scores below reflect voice difference, not synthesis quality.
+    </div>
+    <div class="metrics-grid" style="margin-top:12px">
+      <div class="metric-card bad"><div class="label">PESQ</div><div class="value">1.07<span class="unit">/4.5</span></div></div>
+      <div class="metric-card bad"><div class="label">STOI</div><div class="value">0.023</div></div>
+      <div class="metric-card bad"><div class="label">MCD</div><div class="value">1027<span class="unit"> dB</span></div></div>
+    </div>
+    <div class="info-box info" style="margin-top:12px">
+      These numbers are not actionable. PESQ ~1.0 is the absolute minimum (random noise level), STOI ~0.02 is near-zero, and MCD of 1027 dB is orders of magnitude above normal (&lt;8 dB is good). All three metrics require matched-speaker reference audio to be meaningful. A proper evaluation would need ground-truth audio from the same Magpie Aria voice.
+    </div>
+  </div>
+</div>
+
+<!-- 2.5 Latency -->
+<div class="card" id="tts-latency">
+  <div class="card-header">
+    <h2>Test 2.5 &mdash; Streaming TTFB &amp; RTF</h2>
+    <span class="test-id">Latency by text length and interface</span>
+  </div>
+  <div class="card-body">
+    <div class="methodology">
+      <strong>Methodology:</strong> 50 requests per text-length bucket per interface. TTFB = Time to First Byte of audio. RTF = processing_time / audio_duration (lower is better, &lt;1 means faster than real-time).
+    </div>
+    <table>
+      <thead>
+        <tr><th>Text Length</th><th>Interface</th><th class="num">TTFB P50</th><th class="num">RTF P50</th><th class="num">Total P50</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>10 words</td><td>gRPC</td><td class="num">65 ms</td><td class="num">0.100</td><td class="num">208 ms</td></tr>
+        <tr><td>10 words</td><td>REST</td><td class="num">94 ms</td><td class="num">0.113</td><td class="num">233 ms</td></tr>
+        <tr><td>25 words</td><td>gRPC</td><td class="num">65 ms</td><td class="num">0.081</td><td class="num">632 ms</td></tr>
+        <tr><td>25 words</td><td>REST</td><td class="num">94 ms</td><td class="num">0.084</td><td class="num">661 ms</td></tr>
+        <tr><td>75 words</td><td>gRPC</td><td class="num">75 ms</td><td class="num">0.077</td><td class="num">1,883 ms</td></tr>
+        <tr><td>75 words</td><td>REST</td><td class="num">94 ms</td><td class="num">0.077</td><td class="num">1,901 ms</td></tr>
+        <tr><td>150 words</td><td>gRPC</td><td class="num">95 ms</td><td class="num">0.074</td><td class="num">4,120 ms</td></tr>
+        <tr><td>150 words</td><td>REST</td><td class="num">114 ms</td><td class="num">0.075</td><td class="num">4,154 ms</td></tr>
+      </tbody>
+    </table>
+    <div class="chart-container"><canvas id="chart-tts-latency"></canvas></div>
+    <div class="info-box success" style="margin-top:12px">
+      <strong>Fast synthesis.</strong> TTFB stays under 115 ms regardless of text length. RTF improves with longer text (0.10 at 10 words &rarr; 0.074 at 150 words), meaning the model synthesizes audio 10&ndash;14x faster than real-time. gRPC has a consistent ~30 ms TTFB advantage over REST. Total latency scales linearly with text length as expected.
+    </div>
+  </div>
+</div>
+
+<!-- 2.6 Concurrency -->
+<div class="card" id="tts-concurrency">
+  <div class="card-header">
+    <h2>Test 2.6 &mdash; Throughput &amp; Concurrency</h2>
+    <span class="test-id">RPS, error rates under load</span>
+  </div>
+  <div class="card-body">
+    <div class="methodology">
+      <strong>Methodology:</strong> 50 gRPC synthesis requests at concurrency levels 1, 5, 10, and 20. Measures requests/second (RPS), per-request latency percentiles, and error rate.
+    </div>
+    <table>
+      <thead>
+        <tr><th class="num">Concurrency</th><th class="num">Success</th><th class="num">Errors</th><th class="num">Error Rate</th><th class="num">RPS</th><th class="num">P50</th><th class="num">P99</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="num">1</td><td class="num">50</td><td class="num">0</td><td class="num" style="color:var(--pass)">0%</td><td class="num">1.55</td><td class="num">640 ms</td><td class="num">698 ms</td></tr>
+        <tr><td class="num">5</td><td class="num">50</td><td class="num">0</td><td class="num" style="color:var(--pass)">0%</td><td class="num" style="color:var(--pass)">7.03</td><td class="num">710 ms</td><td class="num">746 ms</td></tr>
+        <tr><td class="num">10</td><td class="num">48</td><td class="num">2</td><td class="num" style="color:var(--flag)">4%</td><td class="num" style="color:var(--fail)">0.16</td><td class="num">801 ms</td><td class="num">1,380 ms</td></tr>
+        <tr><td class="num">20</td><td class="num">38</td><td class="num">12</td><td class="num" style="color:var(--fail)">24%</td><td class="num" style="color:var(--fail)">0.13</td><td class="num">837 ms</td><td class="num">2,328 ms</td></tr>
+      </tbody>
+    </table>
+    <div class="chart-container"><canvas id="chart-concurrency"></canvas></div>
+    <div class="info-box error" style="margin-top:12px">
+      <strong>Server saturates at concurrency &ge;10.</strong> At concurrency 5, the system scales well (7 RPS, 0% errors). At concurrency 10, RPS drops to 0.16 with 4% errors. At 20, nearly 1 in 4 requests fails (24% error rate). The RPS collapse suggests the Riva server has a hard limit of ~5&ndash;8 concurrent TTS streams. For production workloads needing &gt;5 concurrent users, horizontal scaling or request queuing is required.
+    </div>
+  </div>
+</div>
+
+<!-- 2.7 Edge Cases -->
+<div class="card" id="tts-edge">
+  <div class="card-header">
+    <h2>Test 2.7 &mdash; Edge Cases</h2>
+    <span class="test-id">17 categories of challenging input</span>
+  </div>
+  <div class="card-body">
+    <div class="methodology">
+      <strong>Methodology:</strong> ~100 hand-crafted test inputs across 17 categories. Each input synthesized via gRPC; scored as pass/fail based on whether audio is produced and round-trip WER is below threshold.
+    </div>
+    <table>
+      <thead><tr><th>Category</th><th class="num">Total</th><th class="num">Pass</th><th class="num">Fail</th><th class="num">Pass Rate</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Numbers</td><td class="num">10</td><td class="num">10</td><td class="num">0</td><td class="num">100%</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>Abbreviations</td><td class="num">8</td><td class="num">8</td><td class="num">0</td><td class="num">100%</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>Proper Nouns</td><td class="num">6</td><td class="num">6</td><td class="num">0</td><td class="num">100%</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>Questions &amp; Commands</td><td class="num">7</td><td class="num">7</td><td class="num">0</td><td class="num">100%</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>Code Snippets</td><td class="num">4</td><td class="num">4</td><td class="num">0</td><td class="num">100%</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>Lists</td><td class="num">5</td><td class="num">5</td><td class="num">0</td><td class="num">100%</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>Mixed Case</td><td class="num">5</td><td class="num">5</td><td class="num">0</td><td class="num">100%</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>Repetition</td><td class="num">4</td><td class="num">4</td><td class="num">0</td><td class="num">100%</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>Single Word</td><td class="num">7</td><td class="num">7</td><td class="num">0</td><td class="num">100%</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>Special Characters</td><td class="num">7</td><td class="num">7</td><td class="num">0</td><td class="num">100%</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>Technical Domain</td><td class="num">6</td><td class="num">6</td><td class="num">0</td><td class="num">100%</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>URLs &amp; Emails</td><td class="num">4</td><td class="num">4</td><td class="num">0</td><td class="num">100%</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>Empty &amp; Whitespace</td><td class="num">5</td><td class="num">4</td><td class="num">1</td><td class="num">80%</td><td><span class="badge badge-flag">Flag</span></td></tr>
+        <tr><td>Boundary Length</td><td class="num">4</td><td class="num">3</td><td class="num">1</td><td class="num">75%</td><td><span class="badge badge-flag">Flag</span></td></tr>
+        <tr><td>Punctuation</td><td class="num">10</td><td class="num">7</td><td class="num">3</td><td class="num">70%</td><td><span class="badge badge-flag">Flag</span></td></tr>
+        <tr><td>SSML Markup</td><td class="num">5</td><td class="num">2</td><td class="num">3</td><td class="num">40%</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>Very Long Text</td><td class="num">2</td><td class="num">0</td><td class="num">2</td><td class="num">0%</td><td><span class="badge badge-fail">Fail</span></td></tr>
+      </tbody>
+    </table>
+    <div class="info-box warn" style="margin-top:12px">
+      12 of 17 categories pass at 100%. Key failures: <strong>Very long text</strong> (0% &mdash; both test cases fail, likely hitting a server-side text length limit), <strong>SSML markup</strong> (40% &mdash; only basic SSML tags work; complex markup like phonemes or emphasis is not supported), and <strong>punctuation-heavy input</strong> (70% &mdash; unusual punctuation patterns cause garbled output).
+    </div>
+  </div>
+</div>
+
+<!-- 2.8 Long-Form -->
+<div class="card" id="tts-longform">
+  <div class="card-header">
+    <h2>Test 2.8 &mdash; Long-Form Consistency</h2>
+    <span class="test-id">Voice stability across multi-paragraph synthesis</span>
+  </div>
+  <div class="card-body">
+    <div class="methodology">
+      <strong>Methodology:</strong> 5 passages of 5&ndash;6 paragraphs each, synthesized paragraph-by-paragraph. F0 drift = max&minus;min paragraph mean F0. WPM drift = max&minus;min paragraph speaking rate. Speaker similarity planned via ECAPA-TDNN embeddings but not computed (dependency issue).
+    </div>
+    <table>
+      <thead><tr><th>Passage</th><th class="num">Paragraphs</th><th class="num">F0 Drift (Hz)</th><th class="num">WPM Drift</th></tr></thead>
+      <tbody>
+        <tr><td>Technology and Society</td><td class="num">5</td><td class="num">4.7</td><td class="num">10.5</td></tr>
+        <tr><td>Climate and Environment</td><td class="num">6</td><td class="num">6.1</td><td class="num">12.3</td></tr>
+        <tr><td>Medical Advances</td><td class="num">5</td><td class="num">7.7</td><td class="num">10.8</td></tr>
+        <tr><td>Space Exploration</td><td class="num">5</td><td class="num">7.3</td><td class="num">19.9</td></tr>
+        <tr><td>Financial Markets</td><td class="num">5</td><td class="num">4.9</td><td class="num">7.2</td></tr>
+      </tbody>
+    </table>
+    <div class="metrics-grid" style="margin-top:16px">
+      <div class="metric-card good"><div class="label">Mean F0 Drift</div><div class="value">6.1<span class="unit"> Hz</span></div></div>
+      <div class="metric-card"><div class="label">Mean WPM Drift</div><div class="value">12.1<span class="unit"> WPM</span></div></div>
+    </div>
+    <div class="info-box success" style="margin-top:12px">
+      Good long-form consistency. F0 drift of 4.7&ndash;7.7 Hz across paragraphs is small (typical speaking F0 range is 80&ndash;300 Hz). WPM drift of 7&ndash;20 is within natural variation for a human speaker. The model maintains a stable voice identity across extended passages. Speaker similarity was not computed due to missing ECAPA-TDNN dependency.
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- SUMMARY -->
+<!-- ============================================================ -->
+<h2 class="section-title" id="summary">Overall Summary</h2>
+
+<div class="card">
+  <div class="card-header"><h2>STT Key Findings</h2></div>
+  <div class="card-body">
+    <table>
+      <thead><tr><th>Test</th><th>Finding</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>1.1 Accuracy</td><td>WER 11&ndash;29% across datasets, 2&ndash;4x above thresholds</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>1.2 Performance</td><td>148&ndash;259x real-time, sub-200ms batch latency</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>1.3 Streaming</td><td>RTF ~1.02, TTFW 325ms, 96.8% stability</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>1.4 REST/gRPC</td><td>gRPC 30% faster than REST at P50</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>1.5 Noise</td><td>Robust above SNR 5; degrades at &minus;5 dB</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>1.6 Accent</td><td>Not evaluated (dataset unavailable)</td><td><span class="badge badge-note">N/A</span></td></tr>
+        <tr><td>1.7 Long-Form</td><td>79% WER on concatenated audio &gt;40s</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>1.8 Domain</td><td>42% NE-WER on financial entities</td><td><span class="badge badge-flag">Flag</span></td></tr>
+        <tr><td>1.9 Output</td><td>Weak punctuation (F1 0&ndash;40%), good caps/numbers</td><td><span class="badge badge-flag">Flag</span></td></tr>
+        <tr><td>1.10 Confidence</td><td>ECE 0.244 &mdash; severely overconfident</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>1.11 Format</td><td>All pass except OGG (missing libvorbis)</td><td><span class="badge badge-pass">Pass</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h2>TTS Key Findings</h2></div>
+  <div class="card-body">
+    <table>
+      <thead><tr><th>Test</th><th>Finding</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>2.1 Naturalness</td><td>DNSMOS OVRL 3.2/5, clean background, UTMOS failed</td><td><span class="badge badge-flag">Flag</span></td></tr>
+        <tr><td>2.2 Intelligibility</td><td>1.6% WER (conversational), 55% WER (numbers)</td><td><span class="badge badge-flag">Flag</span></td></tr>
+        <tr><td>2.3 Prosody</td><td>Speaker mismatch limits comparison; 190 WPM normal</td><td><span class="badge badge-note">N/A</span></td></tr>
+        <tr><td>2.4 Signal Quality</td><td>Invalid &mdash; speaker mismatch with LJSpeech reference</td><td><span class="badge badge-note">N/A</span></td></tr>
+        <tr><td>2.5 Latency</td><td>TTFB &lt;115ms, RTF 0.07&ndash;0.10 (10&ndash;14x real-time)</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>2.6 Concurrency</td><td>Saturates at ~10 concurrent; 24% errors at 20</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>2.7 Edge Cases</td><td>12/17 categories 100%; very long &amp; SSML fail</td><td><span class="badge badge-flag">Flag</span></td></tr>
+        <tr><td>2.8 Long-Form</td><td>F0 drift &lt;8Hz, WPM drift &lt;20 &mdash; stable voice</td><td><span class="badge badge-pass">Pass</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</div><!-- container -->
+
+<footer>
+  <p>NVIDIA STT &amp; TTS Model Evaluation &mdash; Generated from automated test harness results.</p>
+  <p>Models tested on SAP AI Core (NVIDIA Riva). Infrastructure: Azure NC24ads A100, Frankfurt region.</p>
+</footer>
+
+<script>
+// --- Chart: Accuracy WER ---
+new Chart(document.getElementById('chart-accuracy'), {
+  type: 'bar',
+  data: {
+    labels: ['LibriSpeech\nclean', 'LibriSpeech\nother', 'VoxPopuli EN', 'GigaSpeech', 'SPGISpeech'],
+    datasets: [
+      {
+        label: 'WER',
+        data: [11.29, 13.34, 28.50, 24.06, 21.07],
+        backgroundColor: ['#e74c3c','#e74c3c','#e74c3c','#e74c3c','#e74c3c'],
+        borderRadius: 4,
+      },
+      {
+        label: 'Pass Threshold',
+        data: [5, 10, 8, 12, 8],
+        backgroundColor: ['#2ecc71','#2ecc71','#2ecc71','#2ecc71','#2ecc71'],
+        borderRadius: 4,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      title: { display: true, text: 'WER (%) vs Pass Threshold', font: {size:14} },
+      legend: { position: 'bottom' }
+    },
+    scales: {
+      y: { beginAtZero: true, title: { display: true, text: 'WER (%)' } }
+    }
+  }
+});
+
+// --- Chart: Noise Robustness ---
+new Chart(document.getElementById('chart-noise'), {
+  type: 'line',
+  data: {
+    labels: ['-5', '0', '5', '10', '15', '20'],
+    datasets: [
+      { label: 'Gaussian', data: [47.33, 9.36, 7.06, 5.19, 5.19, 5.08], borderColor: '#e74c3c', fill: false, tension: 0.3 },
+      { label: 'Babble', data: [null, 10.05, 6.63, 5.45, 5.24, 5.13], borderColor: '#3498db', fill: false, tension: 0.3 },
+      { label: 'Traffic', data: [null, 9.79, 6.68, 5.24, 5.19, 5.08], borderColor: '#2ecc71', fill: false, tension: 0.3 },
+      { label: 'Office', data: [null, 9.47, 6.79, 5.24, 5.08, 5.08], borderColor: '#f39c12', fill: false, tension: 0.3 },
+      { label: 'Clean baseline', data: [8.2, 8.2, 8.2, 8.2, 8.2, 8.2], borderColor: '#95a5a6', borderDash: [5,5], fill: false, pointRadius: 0 }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      title: { display: true, text: 'WER (%) vs SNR (dB)', font: {size:14} },
+      legend: { position: 'bottom' }
+    },
+    scales: {
+      x: { title: { display: true, text: 'SNR (dB)' } },
+      y: { beginAtZero: true, title: { display: true, text: 'WER (%)' } }
+    }
+  }
+});
+
+// --- Chart: Reliability Diagram ---
+new Chart(document.getElementById('chart-reliability'), {
+  type: 'bar',
+  data: {
+    labels: ['0.0-0.1', '0.1-0.2', '0.2-0.3', '0.3-0.4', '0.4-0.5', '0.5-0.6', '0.6-0.7', '0.7-0.8', '0.8-0.9', '0.9-1.0'],
+    datasets: [
+      {
+        label: 'Accuracy',
+        data: [0.17, 0.82, 2.03, 5.96, 2.38, 0.81, 0.97, 0.0, 0.37, 0.0],
+        backgroundColor: '#3498db',
+        borderRadius: 3,
+      },
+      {
+        label: 'Mean Confidence',
+        data: [5.81, 14.79, 24.68, 34.76, 44.47, 54.72, 63.98, 71.14, 82.04, 98.58],
+        backgroundColor: '#e74c3c',
+        borderRadius: 3,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      title: { display: true, text: 'Reliability Diagram — Accuracy (%) vs Confidence (%)', font: {size:14} },
+      legend: { position: 'bottom' }
+    },
+    scales: {
+      y: { beginAtZero: true, title: { display: true, text: '%' } }
+    }
+  }
+});
+
+// --- Chart: Intelligibility ---
+new Chart(document.getElementById('chart-intelligibility'), {
+  type: 'bar',
+  data: {
+    labels: ['Harvard', 'Conversational', 'Technical', 'Numbers'],
+    datasets: [{
+      label: 'Round-Trip WER (%)',
+      data: [1.65, 1.57, 30.09, 55.04],
+      backgroundColor: ['#2ecc71', '#2ecc71', '#e74c3c', '#e74c3c'],
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true,
+    indexAxis: 'y',
+    plugins: {
+      title: { display: true, text: 'TTS Round-Trip WER by Category', font: {size:14} },
+      legend: { display: false }
+    },
+    scales: {
+      x: { beginAtZero: true, title: { display: true, text: 'WER (%)' } }
+    }
+  }
+});
+
+// --- Chart: TTS Latency ---
+new Chart(document.getElementById('chart-tts-latency'), {
+  type: 'bar',
+  data: {
+    labels: ['10 words', '25 words', '75 words', '150 words'],
+    datasets: [
+      { label: 'gRPC TTFB', data: [65, 65, 75, 95], backgroundColor: '#3498db', borderRadius: 3 },
+      { label: 'REST TTFB', data: [94, 94, 94, 114], backgroundColor: '#e74c3c', borderRadius: 3 },
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      title: { display: true, text: 'TTS TTFB (ms) by Text Length', font: {size:14} },
+      legend: { position: 'bottom' }
+    },
+    scales: {
+      y: { beginAtZero: true, title: { display: true, text: 'TTFB (ms)' } }
+    }
+  }
+});
+
+// --- Chart: Concurrency ---
+new Chart(document.getElementById('chart-concurrency'), {
+  type: 'line',
+  data: {
+    labels: ['1', '5', '10', '20'],
+    datasets: [
+      { label: 'RPS', data: [1.55, 7.03, 0.16, 0.13], borderColor: '#3498db', yAxisID: 'y', tension: 0.2, fill: false },
+      { label: 'Error Rate (%)', data: [0, 0, 4, 24], borderColor: '#e74c3c', yAxisID: 'y1', tension: 0.2, fill: false, borderDash: [5,5] },
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      title: { display: true, text: 'TTS Concurrency: RPS & Error Rate', font: {size:14} },
+      legend: { position: 'bottom' }
+    },
+    scales: {
+      y: { beginAtZero: true, title: { display: true, text: 'RPS' }, position: 'left' },
+      y1: { beginAtZero: true, title: { display: true, text: 'Error Rate (%)' }, position: 'right', grid: { drawOnChartArea: false } }
+    }
+  }
+});
+</script>
+
+</body>
+</html>

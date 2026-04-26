@@ -119,7 +119,7 @@ def run(config: Config) -> dict:
 
     # Use punctuated/cased datasets
     datasets_to_test = [
-        ("spgispeech", ("kensho/spgispeech", "S"), "SPGISpeech", "val"),
+        ("spgispeech", ("kensho/spgispeech", "S"), "SPGISpeech", "validation"),
         # revdotcom/earnings22 removed — builder downloads from dead third-party URLs
     ]
 

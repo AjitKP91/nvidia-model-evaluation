@@ -37,8 +37,8 @@ DATASETS = {
     "spgispeech": {
         "hf_path": "kensho/spgispeech",
         "hf_name": None,
-        "split": "val",
-        "description": "SPGISpeech val (financial calls)",
+        "split": "validation",
+        "description": "SPGISpeech validation (financial calls)",
     },
     # revdotcom/earnings22 removed — builder downloads from dead third-party URLs
     # edinburghcst/ami removed — dataset not on HF Hub

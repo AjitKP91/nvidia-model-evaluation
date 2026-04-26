@@ -1,6 +1,7 @@
 """Test 1.6 — Accent & Dialect Robustness."""
 from __future__ import annotations
 
+import json
 import logging
 import os
 from collections import defaultdict
@@ -18,13 +19,13 @@ logger = logging.getLogger("eval.stt.accent")
 
 _HF_DATASET = "westbrook/English_Accent_DataSet"
 _MAX_PER_ACCENT = 150
-_MAX_ITER = 30_000   # cap to avoid streaming the full 53k if all groups fill early
+_MAX_ITER = 30_000
 MIN_UTTERANCES_PER_GROUP = 50
 
 
 def _load_accent_groups() -> dict[str, list]:
     """Stream westbrook/English_Accent_DataSet and bucket by accent, max 150 each."""
-    from datasets import load_dataset  # local import — heavy dep
+    from datasets import load_dataset
 
     logger.info("Streaming %s (up to %d rows)…", _HF_DATASET, _MAX_ITER)
     ds = load_dataset(
@@ -54,6 +55,38 @@ def _load_accent_groups() -> dict[str, list]:
     return groups
 
 
+def _reconstruct_from_jsonl(jsonl_path: Path) -> dict[str, dict]:
+    """Read completed results from calls.jsonl, grouped by accent.
+
+    Returns {accent: {"refs": [...], "hyps": [...], "wers": [...]}}
+    Only includes groups where all entries have ref/hyp/wer fields (i.e. fully
+    written rows, not partial failures).
+    """
+    if not jsonl_path.exists():
+        return {}
+
+    groups: dict[str, dict] = defaultdict(lambda: {"refs": [], "hyps": [], "wers": []})
+    with jsonl_path.open() as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            accent = row.get("accent")
+            ref = row.get("reference", "")
+            hyp = row.get("hypothesis", "")
+            wer = row.get("wer")
+            if accent and ref and hyp is not None and wer is not None:
+                groups[str(accent)]["refs"].append(ref)
+                groups[str(accent)]["hyps"].append(hyp)
+                groups[str(accent)]["wers"].append(wer)
+
+    return dict(groups)
+
+
 def run(config: Config) -> dict:
     results_dir = Path(config.evaluation.results_dir) / "stt" / "accent"
     results_dir.mkdir(parents=True, exist_ok=True)
@@ -76,6 +109,14 @@ def run(config: Config) -> dict:
         len(accent_groups), MIN_UTTERANCES_PER_GROUP,
     )
 
+    # Pre-load any results already written to the JSONL (from a prior interrupted run)
+    jsonl_cache = _reconstruct_from_jsonl(jsonl_path)
+    if jsonl_cache:
+        logger.info(
+            "Found %d accent groups already in calls.jsonl — will reuse their results",
+            len(jsonl_cache),
+        )
+
     summary_rows = []
     group_wers = {}
     completed = get_completed_ids(jsonl_path)
@@ -83,6 +124,14 @@ def run(config: Config) -> dict:
     for accent, items in accent_groups.items():
         logger.info("Processing accent: %s (%d utterances)", accent, len(items))
         refs, hyps, per_utt_wers = [], [], []
+
+        # Seed from JSONL cache so previously completed groups are included
+        if accent in jsonl_cache:
+            cached = jsonl_cache[accent]
+            refs.extend(cached["refs"])
+            hyps.extend(cached["hyps"])
+            per_utt_wers.extend(cached["wers"])
+            logger.info("  Loaded %d cached results from JSONL for accent %s", len(refs), accent)
 
         for item_id, ex in tqdm(items, desc=accent):
             if item_id in completed:
@@ -130,12 +179,13 @@ def run(config: Config) -> dict:
                 "accent": accent,
                 "n_utterances": len(refs),
                 "wer": round(agg_wer, 4),
+                "mean_wer": round(mean_wer, 4),
                 "wer_ci_lo": round(ci_lo, 4),
                 "wer_ci_hi": round(ci_hi, 4),
             })
             logger.info(
-                "  %s: WER=%.2f%% [%.2f%%–%.2f%%]",
-                accent, agg_wer * 100, ci_lo * 100, ci_hi * 100,
+                "  %s: WER=%.2f%% (mean=%.2f%% [%.2f%%–%.2f%%])",
+                accent, agg_wer * 100, mean_wer * 100, ci_lo * 100, ci_hi * 100,
             )
 
     if group_wers:

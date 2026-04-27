@@ -18,39 +18,60 @@ from eval.utils import NORMALIZE_FOR_WER, NORMALIZE_FOR_WER_AGG, bootstrap_ci, g
 
 logger = logging.getLogger("eval.stt.accent")
 
-_HF_DATASET = "CSTR-Edinburgh/vctk"
+_VCTK_DATASET = "CSTR-Edinburgh/vctk"
+_L2ARCTIC_DATASET = "KoelLabs/L2Arctic"
 _TARGET_SR = 16_000
 _MAX_PER_ACCENT = 150
-_MAX_ITER = 50_000
 MIN_UTTERANCES_PER_GROUP = 20
 
 
-def _load_accent_groups() -> dict[str, list]:
-    """Load CSTR-Edinburgh/vctk and bucket by accent, max 150 each."""
+def _load_vctk_groups() -> dict[str, list]:
+    """Load CSTR-Edinburgh/vctk, bucket by accent (skip Unknown), max 150 each."""
     import itertools
     from datasets import load_dataset
 
-    logger.info("Loading %s (non-streaming — downloads to HF cache on first run)…", _HF_DATASET)
+    logger.info("Loading %s…", _VCTK_DATASET)
     ds = load_dataset(
-        _HF_DATASET,
+        _VCTK_DATASET,
         split="train",
         token=os.environ.get("HF_TOKEN") or None,
         trust_remote_code=True,
     )
 
     groups: dict[str, list] = defaultdict(list)
-    for i, ex in enumerate(itertools.islice(ds, _MAX_ITER)):
-        accent = (ex.get("accent") or "").strip() or "unknown"
-        if accent == "unknown":
+    for i, ex in enumerate(itertools.islice(ds, 50_000)):
+        accent = (ex.get("accent") or "").strip()
+        if not accent or accent.lower() == "unknown":
             continue
         if len(groups[accent]) < _MAX_PER_ACCENT:
             groups[accent].append((f"vctk_{accent}_{i}", ex))
 
-    logger.info(
-        "Collected %d accent groups, %d total utterances",
-        len(groups),
-        sum(len(v) for v in groups.values()),
+    logger.info("VCTK: %d groups, %d utterances", len(groups), sum(len(v) for v in groups.values()))
+    return groups
+
+
+def _load_l2arctic_groups() -> dict[str, list]:
+    """Load KoelLabs/L2Arctic scripted split, bucket by native_language, max 150 each."""
+    import itertools
+    from datasets import load_dataset
+
+    logger.info("Loading %s…", _L2ARCTIC_DATASET)
+    ds = load_dataset(
+        _L2ARCTIC_DATASET,
+        split="scripted",
+        token=os.environ.get("HF_TOKEN") or None,
+        trust_remote_code=True,
     )
+
+    groups: dict[str, list] = defaultdict(list)
+    for i, ex in enumerate(itertools.islice(ds, 10_000)):
+        accent = (ex.get("native_language") or "").strip()
+        if not accent or accent.lower() == "unknown":
+            continue
+        if len(groups[accent]) < _MAX_PER_ACCENT:
+            groups[accent].append((f"l2arctic_{accent}_{i}", ex))
+
+    logger.info("L2-Arctic: %d groups, %d utterances", len(groups), sum(len(v) for v in groups.values()))
     return groups
 
 
@@ -81,6 +102,14 @@ def _reconstruct_from_jsonl(jsonl_path: Path) -> dict[str, dict]:
     return dict(groups)
 
 
+def _get_audio_and_ref(ex: dict) -> tuple[np.ndarray, int, str]:
+    audio = ex["audio"]
+    array = np.array(audio["array"], dtype=np.float32)
+    sr = audio["sampling_rate"]
+    ref = (ex.get("text") or ex.get("sentence") or "").strip()
+    return array, sr, ref
+
+
 def run(config: Config) -> dict:
     results_dir = Path(config.evaluation.results_dir) / "stt" / "accent"
     results_dir.mkdir(parents=True, exist_ok=True)
@@ -90,22 +119,29 @@ def run(config: Config) -> dict:
 
     logger.info("=== Test 1.6: Accent & Dialect Robustness ===")
 
-    accent_groups = _load_accent_groups()
+    # Load both datasets and merge accent groups
+    vctk_groups = _load_vctk_groups()
+    l2arctic_groups = _load_l2arctic_groups()
 
+    accent_groups: dict[str, list] = {}
+    accent_groups.update(vctk_groups)
+    accent_groups.update(l2arctic_groups)
+
+    # Filter groups with too few samples
     accent_groups = {
         k: v for k, v in accent_groups.items()
         if len(v) >= MIN_UTTERANCES_PER_GROUP
     }
 
     logger.info(
-        "Using %d accent groups with >= %d utterances",
+        "Using %d accent groups with >= %d utterances (VCTK + L2-Arctic)",
         len(accent_groups), MIN_UTTERANCES_PER_GROUP,
     )
 
     jsonl_cache = _reconstruct_from_jsonl(jsonl_path)
     if jsonl_cache:
         logger.info(
-            "Found %d accent groups already in calls.jsonl — will reuse their results",
+            "Found %d accent groups already in calls.jsonl — reusing cached results",
             len(jsonl_cache),
         )
 
@@ -114,7 +150,8 @@ def run(config: Config) -> dict:
     completed = get_completed_ids(jsonl_path)
 
     for accent, items in accent_groups.items():
-        logger.info("Processing accent: %s (%d utterances)", accent, len(items))
+        source = "VCTK" if items[0][0].startswith("vctk_") else "L2-Arctic"
+        logger.info("Processing accent: %s [%s] (%d utterances)", accent, source, len(items))
         refs, hyps, per_utt_wers = [], [], []
 
         if accent in jsonl_cache:
@@ -122,24 +159,20 @@ def run(config: Config) -> dict:
             refs.extend(cached["refs"])
             hyps.extend(cached["hyps"])
             per_utt_wers.extend(cached["wers"])
-            logger.info("  Loaded %d cached results from JSONL for accent %s", len(refs), accent)
+            logger.info("  Loaded %d cached results from JSONL", len(refs))
 
-        for item_id, ex in tqdm(items, desc=accent):
+        for item_id, ex in tqdm(items, desc=f"{accent} ({source})"):
             if item_id in completed:
                 continue
 
-            audio = ex["audio"]
-            audio_array = np.array(audio["array"], dtype=np.float32)
-            sr = audio["sampling_rate"]
+            audio_array, sr, ref = _get_audio_and_ref(ex)
+            if not ref:
+                continue
 
-            # VCTK is 48 kHz — resample to 16 kHz for Parakeet
+            # Resample to 16 kHz if needed (VCTK is 48 kHz; L2-Arctic is already 16 kHz)
             if sr != _TARGET_SR:
                 audio_array = librosa.resample(audio_array, orig_sr=sr, target_sr=_TARGET_SR)
                 sr = _TARGET_SR
-
-            ref = (ex.get("text") or ex.get("sentence") or "").strip()
-            if not ref:
-                continue
 
             audio_bytes = (audio_array * 32768).astype(np.int16).tobytes()
 
@@ -157,7 +190,7 @@ def run(config: Config) -> dict:
                 per_utt_wers.append(utt_wer)
 
                 write_jsonl(jsonl_path, {
-                    "id": item_id, "accent": accent,
+                    "id": item_id, "accent": accent, "source": source,
                     "reference": ref, "hypothesis": hyp, "wer": utt_wer,
                 })
             except Exception as e:
@@ -174,6 +207,7 @@ def run(config: Config) -> dict:
 
             summary_rows.append({
                 "accent": accent,
+                "source": source,
                 "n_utterances": len(refs),
                 "wer": round(agg_wer, 4),
                 "mean_wer": round(mean_wer, 4),

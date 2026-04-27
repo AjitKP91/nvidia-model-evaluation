@@ -896,15 +896,21 @@ footer {
     <table>
       <thead><tr><th>Category</th><th class="num">N</th><th class="num">WER</th><th class="num">CER</th><th>Verdict</th></tr></thead>
       <tbody>
-        <tr><td>Harvard Sentences</td><td class="num">80</td><td class="num" style="color:var(--pass)">1.65%</td><td class="num">1.65%</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>Conversational</td><td class="num">50</td><td class="num" style="color:var(--pass)">1.57%</td><td class="num">1.57%</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>Technical</td><td class="num">50</td><td class="num" style="color:var(--fail)">30.09%</td><td class="num">30.09%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Numbers &amp; Figures</td><td class="num">50</td><td class="num" style="color:var(--fail)">55.04%</td><td class="num">55.04%</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>Harvard Sentences</td><td class="num">80</td><td class="num" style="color:var(--pass)">1.48%</td><td class="num">1.48%</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>Conversational</td><td class="num">50</td><td class="num" style="color:var(--pass)">0.16%</td><td class="num">0.16%</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>Technical</td><td class="num">50</td><td class="num" style="color:var(--flag)">11.63%</td><td class="num">11.63%</td><td><span class="badge badge-flag">Flag</span></td></tr>
+        <tr><td>Numbers &amp; Figures</td><td class="num">50</td><td class="num" style="color:var(--flag)">17.18%</td><td class="num">17.18%</td><td><span class="badge badge-flag">Flag</span></td></tr>
       </tbody>
     </table>
     <div class="chart-container"><canvas id="chart-intelligibility"></canvas></div>
     <div class="info-box warn" style="margin-top:12px">
-      Everyday speech and Harvard sentences are highly intelligible (&lt;2% WER). However, <strong>technical terms</strong> (30% WER) and <strong>numbers/figures</strong> (55% WER) are poorly rendered &mdash; the TTS model struggles to pronounce domain-specific words, monetary amounts, percentages, and mixed alphanumeric strings clearly enough for a second ASR system to recover.
+      WER recomputed using Whisper's <code>EnglishTextNormalizer</code> on both reference and hypothesis, eliminating the text-format mismatch where Whisper writes <code>$1,234.56</code> while the reference says <em>"one thousand two hundred and thirty-four dollars"</em>. After normalization, numbers WER dropped from 55% → <strong>17.2%</strong> and technical from 30% → <strong>11.6%</strong>. Remaining failures are genuine:
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>Acronyms mispronounced:</strong> <code>HTTPS</code> → heard as <em>"hits"/"tips"</em> &bull; <code>SSL</code> → heard as <em>"CES-L"/"SLSL"</em></li>
+        <li><strong>IP address format:</strong> <code>255.255.255.0</code> spoken digit-by-digit confuses Whisper (&ldquo;two five five point…&rdquo;)</li>
+        <li><strong>Arithmetic spoken aloud:</strong> <em>"three hundred and forty-two by seventeen to get five thousand eight hundred…"</em> partially misheard at word boundaries</li>
+        <li><strong>Phone numbers:</strong> <em>"one eight hundred five five five zero one two three"</em> → <code>1-800-555-0123</code> (some residual mismatch)</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -1128,7 +1134,7 @@ footer {
       <thead><tr><th>Test</th><th>Finding</th><th>Verdict</th></tr></thead>
       <tbody>
         <tr><td>2.1 Naturalness</td><td>UTMOS 3.96/5 (p50 3.99), DNSMOS OVRL 3.20/5, BAK 4.05/5</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>2.2 Intelligibility</td><td>1.6% WER (conversational), 55% WER (numbers)</td><td><span class="badge badge-flag">Flag</span></td></tr>
+        <tr><td>2.2 Intelligibility</td><td>1.48% WER (Harvard), 0.16% (conversational); 11.6% (technical), 17.2% (numbers) after normalization fix</td><td><span class="badge badge-flag">Flag</span></td></tr>
         <tr><td>2.3 Prosody</td><td>Speaker mismatch limits comparison; 190 WPM normal</td><td><span class="badge badge-note">N/A</span></td></tr>
         <tr><td>2.4 Signal Quality</td><td>Invalid &mdash; speaker mismatch with LJSpeech reference</td><td><span class="badge badge-note">N/A</span></td></tr>
         <tr><td>2.5 Latency</td><td>TTFB &lt;115ms, RTF 0.07&ndash;0.10 (10&ndash;14x real-time)</td><td><span class="badge badge-pass">Pass</span></td></tr>
@@ -1245,8 +1251,8 @@ new Chart(document.getElementById('chart-intelligibility'), {
     labels: ['Harvard', 'Conversational', 'Technical', 'Numbers'],
     datasets: [{
       label: 'Round-Trip WER (%)',
-      data: [1.65, 1.57, 30.09, 55.04],
-      backgroundColor: ['#2ecc71', '#2ecc71', '#e74c3c', '#e74c3c'],
+      data: [1.48, 0.16, 11.63, 17.18],
+      backgroundColor: ['#2ecc71', '#2ecc71', '#f39c12', '#f39c12'],
       borderRadius: 4,
     }]
   },

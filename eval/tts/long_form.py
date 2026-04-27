@@ -21,7 +21,10 @@ logger = logging.getLogger("eval.tts.long_form")
 def _compute_speaker_embeddings(audio_paths: list[str]) -> np.ndarray:
     """Compute ECAPA-TDNN speaker embeddings for each audio file."""
     try:
-        from speechbrain.pretrained import EncoderClassifier
+        try:
+            from speechbrain.inference.classifiers import EncoderClassifier  # >= 1.0
+        except ImportError:
+            from speechbrain.pretrained import EncoderClassifier  # type: ignore  # < 1.0
         import torch
 
         classifier = EncoderClassifier.from_hparams(

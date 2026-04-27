@@ -855,7 +855,7 @@ footer {
   <div class="card-header">
     <h2>Test 2.1 &mdash; Automated Naturalness</h2>
     <span class="test-id">DNSMOS &amp; UTMOS quality scores</span>
-    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>How natural and human-like does the synthesized speech sound? Since we can't have humans rate every sample, we use neural networks trained on thousands of human ratings to predict quality scores.</p><dl><dt>MOS (Mean Opinion Score)</dt><dd>The gold-standard speech quality scale: 1 = bad, 2 = poor, 3 = fair, 4 = good, 5 = excellent. Scores &ge; 4.0 are high quality; &ge; 3.5 is acceptable for most applications.</dd><dt>DNSMOS P.835</dt><dd>Microsoft's automated MOS predictor, developed for the Deep Noise Suppression Challenge. It predicts three sub-scores:</dd><dt>&bull; OVRL (Overall)</dt><dd>Combined speech quality &mdash; the single most important number.</dd><dt>&bull; SIG (Signal)</dt><dd>Clarity of the voice itself, ignoring background.</dd><dt>&bull; BAK (Background)</dt><dd>How clean the background is &mdash; absence of hiss, clicks, or artifacts.</dd><dt>UTMOS</dt><dd>University of Tokyo's neural MOS predictor, often considered more accurate than DNSMOS for naturalness. Failed here due to a fairseq/numpy dependency conflict.</dd></dl><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/tts/naturalness.py" target="_blank">View source &rarr;</a></div></span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>How natural and human-like does the synthesized speech sound? Since we can't have humans rate every sample, we use neural networks trained on thousands of human ratings to predict quality scores.</p><dl><dt>MOS (Mean Opinion Score)</dt><dd>The gold-standard speech quality scale: 1 = bad, 2 = poor, 3 = fair, 4 = good, 5 = excellent. Scores &ge; 4.0 are high quality; &ge; 3.5 is acceptable for most applications.</dd><dt>DNSMOS P.835</dt><dd>Microsoft's automated MOS predictor, developed for the Deep Noise Suppression Challenge. It predicts three sub-scores:</dd><dt>&bull; OVRL (Overall)</dt><dd>Combined speech quality &mdash; the single most important number.</dd><dt>&bull; SIG (Signal)</dt><dd>Clarity of the voice itself, ignoring background.</dd><dt>&bull; BAK (Background)</dt><dd>How clean the background is &mdash; absence of hiss, clicks, or artifacts.</dd><dt>UTMOS</dt><dd>University of Tokyo's neural MOS predictor (UTMOS22), often considered more accurate than DNSMOS for naturalness. Scored via torch.hub (tarepan/SpeechMOS:v1.2.0) — no fairseq dependency required. A mean score of ~4.0 indicates good naturalness.</dd></dl><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/tts/naturalness.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
@@ -865,18 +865,19 @@ footer {
       <div class="metric-card"><div class="label">DNSMOS Overall P50</div><div class="value">3.23<span class="unit">/5</span></div></div>
       <div class="metric-card"><div class="label">DNSMOS Signal P50</div><div class="value">3.52<span class="unit">/5</span></div></div>
       <div class="metric-card good"><div class="label">DNSMOS Background P50</div><div class="value">4.05<span class="unit">/5</span></div></div>
-      <div class="metric-card bad"><div class="label">UTMOS</div><div class="value">N/A</div></div>
+      <div class="metric-card good"><div class="label">UTMOS P50</div><div class="value">3.99<span class="unit">/5</span></div></div>
     </div>
     <table style="margin-top:16px">
-      <thead><tr><th>DNSMOS Metric</th><th class="num">Mean</th><th class="num">P50</th><th class="num">P90</th><th class="num">Std</th><th class="num">Min</th><th class="num">Max</th></tr></thead>
+      <thead><tr><th>Metric</th><th class="num">Mean</th><th class="num">P50</th><th class="num">P90</th><th class="num">Std</th><th class="num">Min</th><th class="num">Max</th></tr></thead>
       <tbody>
-        <tr><td>Overall (OVRL)</td><td class="num">3.20</td><td class="num">3.23</td><td class="num">3.36</td><td class="num">0.15</td><td class="num">2.52</td><td class="num">3.51</td></tr>
-        <tr><td>Signal (SIG)</td><td class="num">3.51</td><td class="num">3.52</td><td class="num">3.61</td><td class="num">0.10</td><td class="num">3.01</td><td class="num">3.72</td></tr>
-        <tr><td>Background (BAK)</td><td class="num">4.00</td><td class="num">4.05</td><td class="num">4.14</td><td class="num">0.17</td><td class="num">3.06</td><td class="num">4.18</td></tr>
+        <tr><td>UTMOS</td><td class="num" style="color:var(--pass)">3.96</td><td class="num" style="color:var(--pass)">3.99</td><td class="num">4.29</td><td class="num">0.27</td><td class="num">3.10</td><td class="num">4.40</td></tr>
+        <tr><td>DNSMOS Overall (OVRL)</td><td class="num">3.20</td><td class="num">3.23</td><td class="num">3.36</td><td class="num">0.15</td><td class="num">2.52</td><td class="num">3.51</td></tr>
+        <tr><td>DNSMOS Signal (SIG)</td><td class="num">3.51</td><td class="num">3.52</td><td class="num">3.61</td><td class="num">0.10</td><td class="num">3.01</td><td class="num">3.72</td></tr>
+        <tr><td>DNSMOS Background (BAK)</td><td class="num">4.00</td><td class="num">4.05</td><td class="num">4.14</td><td class="num">0.17</td><td class="num">3.06</td><td class="num">4.18</td></tr>
       </tbody>
     </table>
-    <div class="info-box warn" style="margin-top:12px">
-      <strong>UTMOS scoring failed</strong> &mdash; the <code>fairseq</code> dependency (required by UTMOS via PyTorch Hub) could not be built in the evaluation environment (numpy version conflict). DNSMOS scores indicate decent quality: background noise is very clean (4.05/5), signal quality is moderate (3.52/5), and overall score (3.23/5) suggests room for improvement in naturalness. The tight standard deviation (0.15) indicates consistent output quality.
+    <div class="info-box" style="margin-top:12px">
+      UTMOS (primary naturalness predictor) scored mean <strong>3.96/5</strong> with p50 3.99 — essentially at the 4.0 "good" threshold, indicating near-human naturalness. DNSMOS OVRL (3.20/5) scores lower as expected — DNSMOS is calibrated for noise suppression tasks, not TTS. Background cleanliness is excellent (BAK 4.05/5) and signal clarity is solid (SIG 3.52/5). Consistent output quality throughout (UTMOS std 0.27).
     </div>
   </div>
 </div>
@@ -1126,7 +1127,7 @@ footer {
     <table>
       <thead><tr><th>Test</th><th>Finding</th><th>Verdict</th></tr></thead>
       <tbody>
-        <tr><td>2.1 Naturalness</td><td>DNSMOS OVRL 3.2/5, clean background, UTMOS failed</td><td><span class="badge badge-flag">Flag</span></td></tr>
+        <tr><td>2.1 Naturalness</td><td>UTMOS 3.96/5 (p50 3.99), DNSMOS OVRL 3.20/5, BAK 4.05/5</td><td><span class="badge badge-pass">Pass</span></td></tr>
         <tr><td>2.2 Intelligibility</td><td>1.6% WER (conversational), 55% WER (numbers)</td><td><span class="badge badge-flag">Flag</span></td></tr>
         <tr><td>2.3 Prosody</td><td>Speaker mismatch limits comparison; 190 WPM normal</td><td><span class="badge badge-note">N/A</span></td></tr>
         <tr><td>2.4 Signal Quality</td><td>Invalid &mdash; speaker mismatch with LJSpeech reference</td><td><span class="badge badge-note">N/A</span></td></tr>

@@ -128,7 +128,19 @@ def run(config: Config) -> dict:
         grpc_results, grpc_wall, grpc_timeout_hit = _run_concurrent_grpc(tts_client, n_concurrent, n_total_per_level)
         grpc_latencies = [r["elapsed_s"] for r in grpc_results if r["status"] == 200]
         grpc_errors = sum(1 for r in grpc_results if r["status"] != 200)
-        grpc_rps = (len(grpc_latencies) / grpc_wall) if (grpc_wall > 0 and not grpc_timeout_hit) else None
+
+        if not grpc_timeout_hit and grpc_wall > 0:
+            grpc_rps = len(grpc_latencies) / grpc_wall
+            grpc_rps_method = "measured"
+        elif grpc_latencies:
+            # Wall clock contaminated by hung requests — use Little's Law on successful requests only.
+            # Effective concurrency weighted by success rate; mean latency from successful requests.
+            effective_conc = (len(grpc_latencies) / len(grpc_results)) * n_concurrent
+            grpc_rps = effective_conc / np.mean(grpc_latencies)
+            grpc_rps_method = "estimated"
+        else:
+            grpc_rps = None
+            grpc_rps_method = "n/a"
 
         if grpc_latencies:
             grpc_stats = compute_percentiles(grpc_latencies)
@@ -139,7 +151,8 @@ def run(config: Config) -> dict:
                 "n_success": len(grpc_latencies),
                 "n_errors": grpc_errors,
                 "error_rate": round(grpc_errors / len(grpc_results), 4),
-                "rps": round(grpc_rps, 2),
+                "rps": round(grpc_rps, 2) if grpc_rps is not None else None,
+                "rps_method": grpc_rps_method,
                 **{f"latency_{k}": round(v, 3) for k, v in grpc_stats.items()},
             }
             summary_rows.append(row)

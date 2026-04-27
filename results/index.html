@@ -990,13 +990,14 @@ footer {
       <tbody>
         <tr><td class="num">1</td><td class="num">50</td><td class="num">0</td><td class="num" style="color:var(--pass)">0%</td><td class="num">1.55</td><td class="num">640 ms</td><td class="num">698 ms</td></tr>
         <tr><td class="num">5</td><td class="num">50</td><td class="num">0</td><td class="num" style="color:var(--pass)">0%</td><td class="num" style="color:var(--pass)">7.03</td><td class="num">710 ms</td><td class="num">746 ms</td></tr>
-        <tr><td class="num">10</td><td class="num">48</td><td class="num">2</td><td class="num" style="color:var(--flag)">4%</td><td class="num" style="color:var(--text-muted)" title="Unreliable: wall-clock contaminated by hung requests hitting the 5-min safety timeout">&mdash;</td><td class="num">801 ms</td><td class="num">1,380 ms</td></tr>
-        <tr><td class="num">20</td><td class="num">38</td><td class="num">12</td><td class="num" style="color:var(--fail)">24%</td><td class="num" style="color:var(--text-muted)" title="Unreliable: wall-clock contaminated by hung requests hitting the 5-min safety timeout">&mdash;</td><td class="num">837 ms</td><td class="num">2,328 ms</td></tr>
+        <tr><td class="num">10</td><td class="num">48</td><td class="num">2</td><td class="num" style="color:var(--flag)">4%</td><td class="num" style="color:var(--flag)" title="Estimated via Little's Law (concurrency / mean latency of successful requests). Wall-clock time is unreliable due to hung requests.">~11.7 *</td><td class="num">801 ms</td><td class="num">1,380 ms</td></tr>
+        <tr><td class="num">20</td><td class="num">38</td><td class="num">12</td><td class="num" style="color:var(--fail)">24%</td><td class="num" style="color:var(--flag)" title="Estimated via Little's Law (concurrency / mean latency of successful requests). Wall-clock time is unreliable due to hung requests.">~14.5 *</td><td class="num">837 ms</td><td class="num">2,328 ms</td></tr>
       </tbody>
     </table>
+    <p style="font-size:0.8rem; color:var(--text-muted); margin:4px 0 12px">* Estimated via Little&rsquo;s Law (effective concurrency &divide; mean latency of successful requests). Wall-clock time is unreliable when hung requests trigger the 5-min safety timeout.</p>
     <div class="chart-container"><canvas id="chart-concurrency"></canvas></div>
     <div class="info-box error" style="margin-top:12px">
-      <strong>Server saturates at concurrency &ge;10.</strong> At N=1 and N=5 the system scales cleanly (1.55 &rarr; 7.03 RPS, 0% errors). At N=10 the error rate rises to 4% and P99 nearly doubles to 1,380 ms &mdash; first signs of saturation. At N=20, 24% of requests fail outright. RPS at N&ge;10 is not reported: a 5-minute safety timeout was triggered by hung requests, contaminating the wall-clock measurement. The meaningful signal is the error rate: the server can sustain ~5 concurrent TTS streams reliably; beyond that, requests begin to hang or fail. For production workloads needing &gt;5 concurrent users, horizontal scaling or request queuing is required.
+      <strong>Server saturates at concurrency &ge;10.</strong> At N=1 and N=5 the system scales cleanly (1.55 &rarr; 7.03 RPS, 0% errors). At N=10 the estimated RPS continues rising to ~11.7, but 4% of requests start hanging and P99 nearly doubles to 1,380 ms &mdash; first signs of saturation. At N=20 throughput reaches ~14.5 RPS for successful requests, but 24% fail outright. The server can sustain ~5 concurrent TTS streams reliably; beyond that, requests begin to hang or fail. For production workloads needing &gt;5 concurrent users, horizontal scaling or request queuing is required.
     </div>
   </div>
 </div>
@@ -1273,7 +1274,8 @@ new Chart(document.getElementById('chart-concurrency'), {
   data: {
     labels: ['1', '5', '10', '20'],
     datasets: [
-      { label: 'RPS', data: [1.55, 7.03, null, null], borderColor: '#3498db', yAxisID: 'y', tension: 0.2, fill: false },
+      { label: 'RPS (measured)', data: [1.55, 7.03, null, null], borderColor: '#3498db', yAxisID: 'y', tension: 0.2, fill: false },
+      { label: 'RPS (estimated *)', data: [null, null, 11.7, 14.5], borderColor: '#3498db', borderDash: [5,4], yAxisID: 'y', tension: 0.2, fill: false },
       { label: 'Error Rate (%)', data: [0, 0, 4, 24], borderColor: '#e74c3c', yAxisID: 'y1', tension: 0.2, fill: false, borderDash: [5,5] },
     ]
   },

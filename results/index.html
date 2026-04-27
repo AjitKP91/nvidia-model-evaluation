@@ -1046,28 +1046,30 @@ footer {
   <div class="card-header">
     <h2>Test 2.8 &mdash; Long-Form Consistency</h2>
     <span class="test-id">Voice stability across multi-paragraph synthesis</span>
-    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>When synthesizing a long document paragraph by paragraph, does the voice stay consistent? This matters for audiobooks, email narration, documentation, and IVR systems.</p><dl><dt>F0 Drift</dt><dd>Variation in average pitch across paragraphs. Large drift (&gt;10 Hz) means the voice sounds noticeably different between sections. Under 8 Hz is considered stable.</dd><dt>WPM Drift</dt><dd>Variation in speaking rate across paragraphs. Drift above 30 WPM would sound like the speaker rushes through some sections and drags through others.</dd><dt>Speaker Similarity (planned)</dt><dd>Uses ECAPA-TDNN neural speaker embeddings to compute a "voice fingerprint" for each paragraph, then checks cosine similarity between them. Not computed here due to missing dependency.</dd><dt>Cosine Similarity</dt><dd>A measure of how alike two voice fingerprints are. 1.0 = identical voice, 0.0 = completely different. Above 0.85 is typically same-speaker.</dd></dl><p>A 10-paragraph email should sound like one consistent speaker throughout. Voice inconsistency breaks the listening experience and feels unprofessional.</p><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/tts/long_form.py" target="_blank">View source &rarr;</a></div></span>
+    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>When synthesizing a long document paragraph by paragraph, does the voice stay consistent? This matters for audiobooks, email narration, documentation, and IVR systems.</p><dl><dt>F0 Drift</dt><dd>Variation in average pitch across paragraphs. Large drift (&gt;10 Hz) means the voice sounds noticeably different between sections. Under 8 Hz is considered stable.</dd><dt>WPM Drift</dt><dd>Variation in speaking rate across paragraphs. Drift above 30 WPM would sound like the speaker rushes through some sections and drags through others.</dd><dt>Speaker Similarity (ECAPA-TDNN)</dt><dd>A neural network trained on thousands of speakers computes a 192-dimensional "voice fingerprint" for each paragraph. Pairwise cosine similarity between all paragraph fingerprints is averaged. Score of 1.0 = identical voice, 0.0 = completely different. Above 0.85 is the typical same-speaker threshold.</dd><dt>Cosine Similarity</dt><dd>A measure of how alike two voice fingerprints are. It ignores absolute magnitude and measures the angle between two vectors — 1.0 means they point in the same direction (same voice), 0.0 means no relationship.</dd></dl><p>A 10-paragraph email should sound like one consistent speaker throughout. Voice inconsistency breaks the listening experience and feels unprofessional.</p><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/tts/long_form.py" target="_blank">View source &rarr;</a></div></span>
   </div>
   <div class="card-body">
     <div class="methodology">
-      <strong>Methodology:</strong> 5 passages of 5&ndash;6 paragraphs each, synthesized paragraph-by-paragraph. F0 drift = max&minus;min paragraph mean F0. WPM drift = max&minus;min paragraph speaking rate. Speaker similarity planned via ECAPA-TDNN embeddings but not computed (dependency issue).
+      <strong>Methodology:</strong> 5 passages of 5&ndash;6 paragraphs each, synthesized paragraph-by-paragraph. F0 drift = std of paragraph mean F0. WPM drift = std of paragraph speaking rate. Speaker similarity via ECAPA-TDNN embeddings (SpeechBrain, VoxCeleb-trained) — pairwise cosine similarity averaged across all paragraph pairs per passage.
     </div>
     <table>
-      <thead><tr><th>Passage</th><th class="num">Paragraphs</th><th class="num">F0 Drift (Hz)</th><th class="num">WPM Drift</th></tr></thead>
+      <thead><tr><th>Passage</th><th class="num">Paragraphs</th><th class="num">F0 Drift (Hz)</th><th class="num">WPM Drift</th><th class="num">Speaker Sim</th></tr></thead>
       <tbody>
-        <tr><td>Technology and Society</td><td class="num">5</td><td class="num">4.7</td><td class="num">10.5</td></tr>
-        <tr><td>Climate and Environment</td><td class="num">6</td><td class="num">6.1</td><td class="num">12.3</td></tr>
-        <tr><td>Medical Advances</td><td class="num">5</td><td class="num">7.7</td><td class="num">10.8</td></tr>
-        <tr><td>Space Exploration</td><td class="num">5</td><td class="num">7.3</td><td class="num">19.9</td></tr>
-        <tr><td>Financial Markets</td><td class="num">5</td><td class="num">4.9</td><td class="num">7.2</td></tr>
+        <tr><td>Technology and Society</td><td class="num">5</td><td class="num">4.7</td><td class="num">10.5</td><td class="num" style="color:var(--pass)">0.9487</td></tr>
+        <tr><td>Climate and Environment</td><td class="num">6</td><td class="num">6.1</td><td class="num">12.3</td><td class="num" style="color:var(--pass)">0.9391</td></tr>
+        <tr><td>Medical Advances</td><td class="num">5</td><td class="num">7.7</td><td class="num">10.8</td><td class="num" style="color:var(--pass)">0.9465</td></tr>
+        <tr><td>Space Exploration</td><td class="num">5</td><td class="num">7.3</td><td class="num">19.9</td><td class="num" style="color:var(--pass)">0.9382</td></tr>
+        <tr><td>Financial Markets</td><td class="num">5</td><td class="num">4.9</td><td class="num">7.2</td><td class="num" style="color:var(--pass)">0.9385</td></tr>
       </tbody>
     </table>
     <div class="metrics-grid" style="margin-top:16px">
       <div class="metric-card good"><div class="label">Mean F0 Drift</div><div class="value">6.1<span class="unit"> Hz</span></div></div>
-      <div class="metric-card"><div class="label">Mean WPM Drift</div><div class="value">12.1<span class="unit"> WPM</span></div></div>
+      <div class="metric-card good"><div class="label">Mean WPM Drift</div><div class="value">12.1<span class="unit"> WPM</span></div></div>
+      <div class="metric-card good"><div class="label">Speaker Sim (mean)</div><div class="value">0.942</div></div>
+      <div class="metric-card good"><div class="label">Speaker Sim (min)</div><div class="value">0.938</div></div>
     </div>
     <div class="info-box success" style="margin-top:12px">
-      Good long-form consistency. F0 drift of 4.7&ndash;7.7 Hz across paragraphs is small (typical speaking F0 range is 80&ndash;300 Hz). WPM drift of 7&ndash;20 is within natural variation for a human speaker. The model maintains a stable voice identity across extended passages. Speaker similarity was not computed due to missing ECAPA-TDNN dependency.
+      <strong>Excellent long-form consistency.</strong> F0 drift of 4.7&ndash;7.7 Hz across paragraphs is small (typical speaking F0 range is 80&ndash;300 Hz). WPM drift of 7&ndash;20 is within natural variation. Speaker similarity of 0.938&ndash;0.949 across all passages is well above the 0.85 same-speaker threshold — confirming the voice identity stays stable across independent synthesis calls. No passage shows any sign of voice drift.
     </div>
   </div>
 </div>
@@ -1117,7 +1119,7 @@ footer {
         <tr><td>2.5 Latency</td><td>TTFB &lt;115ms, RTF 0.07&ndash;0.10 (10&ndash;14x real-time)</td><td><span class="badge badge-pass">Pass</span></td></tr>
         <tr><td>2.6 Concurrency</td><td>Saturates at ~10 concurrent; 24% errors at 20</td><td><span class="badge badge-fail">Fail</span></td></tr>
         <tr><td>2.7 Edge Cases</td><td>12/17 categories 100%; very long &amp; SSML fail</td><td><span class="badge badge-flag">Flag</span></td></tr>
-        <tr><td>2.8 Long-Form</td><td>F0 drift &lt;8Hz, WPM drift &lt;20 &mdash; stable voice</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>2.8 Long-Form</td><td>F0 drift &lt;8 Hz, WPM drift &lt;20, speaker sim 0.938&ndash;0.949 (well above 0.85 threshold)</td><td><span class="badge badge-pass">Pass</span></td></tr>
       </tbody>
     </table>
   </div>

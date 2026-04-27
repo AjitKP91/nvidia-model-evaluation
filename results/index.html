@@ -670,30 +670,30 @@ footer {
       <strong>Methodology:</strong> Uses <a href="https://huggingface.co/datasets/westbrook/English_Accent_DataSet" target="_blank">westbrook/English_Accent_DataSet</a> (HuggingFace) &mdash; 23 English accents, ~79 hours, ~53k utterances with transcripts and accent labels. Up to 150 utterances sampled per accent; groups with fewer than 50 utterances are excluded. WER is computed per accent group and a fairness delta (max&minus;min WER) is reported.
     </div>
     <div class="info-box" style="margin-bottom:16px;">
-      <strong>12 accent groups evaluated</strong> (groups with &lt;50 utterances excluded). Accent labels are integer-encoded in the source dataset &mdash; see the <a href="https://huggingface.co/datasets/westbrook/English_Accent_DataSet" target="_blank">dataset card</a> for the full mapping.
+      <strong>12 accent groups evaluated</strong> (groups with &lt;50 utterances excluded). Numbers in parentheses are the dataset's internal label IDs.
     </div>
 
     <table>
       <thead><tr><th>Accent Group</th><th class="num">Utterances</th><th class="num">Agg. WER</th><th class="num">Per-utt. mean 95% CI</th><th>Verdict</th></tr></thead>
       <tbody>
-        <tr><td>Group 20</td><td class="num">150</td><td class="num" style="color:var(--fail)">87.85%</td><td class="num">73.87%–81.11%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Group 16</td><td class="num">150</td><td class="num" style="color:var(--fail)">72.24%</td><td class="num">54.36%–65.33%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Group 10</td><td class="num">150</td><td class="num" style="color:var(--fail)">71.53%</td><td class="num">50.66%–61.95%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Group 4</td><td class="num">53</td><td class="num" style="color:var(--fail)">61.36%</td><td class="num">31.63%–51.28%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Group 9</td><td class="num">150</td><td class="num" style="color:var(--fail)">61.25%</td><td class="num">43.25%–53.30%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Group 3</td><td class="num">50</td><td class="num" style="color:var(--fail)">57.40%</td><td class="num">40.16%–56.93%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Group 17</td><td class="num">150</td><td class="num" style="color:var(--fail)">56.20%</td><td class="num">41.34%–50.95%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Group 7</td><td class="num">93</td><td class="num" style="color:var(--fail)">51.45%</td><td class="num">39.58%–52.22%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Group 15</td><td class="num">150</td><td class="num" style="color:var(--fail)">48.46%</td><td class="num">34.68%–44.92%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Group 19</td><td class="num">150</td><td class="num" style="color:var(--fail)">46.41%</td><td class="num">39.30%–49.46%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Group 22</td><td class="num">150</td><td class="num" style="color:var(--fail)">43.27%</td><td class="num">15.72%–25.62%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Group 18</td><td class="num">150</td><td class="num" style="color:var(--pass)">1.59%</td><td class="num">0.87%–3.06%</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>Vietnamese (20)</td><td class="num">150</td><td class="num" style="color:var(--fail)">87.85%</td><td class="num">73.87%–81.11%</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>Scottish (16)</td><td class="num">150</td><td class="num" style="color:var(--fail)">72.24%</td><td class="num">54.36%–65.33%</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>Italian (10)</td><td class="num">150</td><td class="num" style="color:var(--fail)">71.53%</td><td class="num">50.66%–61.95%</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>French (4)</td><td class="num">53</td><td class="num" style="color:var(--fail)">61.36%</td><td class="num">31.63%–51.28%</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>Spanish (9)</td><td class="num">150</td><td class="num" style="color:var(--fail)">61.25%</td><td class="num">43.25%–53.30%</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>Polish (3)</td><td class="num">50</td><td class="num" style="color:var(--fail)">57.40%</td><td class="num">40.16%–56.93%</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>Irish (17)</td><td class="num">150</td><td class="num" style="color:var(--fail)">56.20%</td><td class="num">41.34%–50.95%</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>Romanian (7)</td><td class="num">93</td><td class="num" style="color:var(--fail)">51.45%</td><td class="num">39.58%–52.22%</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>English (15)</td><td class="num">150</td><td class="num" style="color:var(--fail)">48.46%</td><td class="num">34.68%–44.92%</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>Indian (19)</td><td class="num">150</td><td class="num" style="color:var(--fail)">46.41%</td><td class="num">39.30%–49.46%</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>American (22)</td><td class="num">150</td><td class="num" style="color:var(--fail)">43.27%</td><td class="num">15.72%–25.62%</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>Northern Irish (18)</td><td class="num">150</td><td class="num" style="color:var(--pass)">1.59%</td><td class="num">0.87%–3.06%</td><td><span class="badge badge-pass">Pass</span></td></tr>
       </tbody>
     </table>
 
     <div style="margin-top:16px; padding:14px 16px; background:rgba(239,68,68,0.08); border-left:3px solid var(--fail); border-radius:6px;">
       <strong>Fairness delta: 86.25 pp</strong> (target &lt;10 pp) &mdash; <span style="color:var(--fail)">Fail</span><br>
-      <span style="font-size:0.85rem; color:var(--text-muted)">Best: Group 18 at 1.59% WER &nbsp;|&nbsp; Worst: Group 20 at 87.85% WER. The model is highly inconsistent across accents — 11 of 12 groups exceed 40% WER while one group achieves near-perfect accuracy. Accent label mapping (integer → accent name) not yet resolved from dataset card.</span>
+      <span style="font-size:0.85rem; color:var(--text-muted)">Best: Northern Irish at 1.59% WER &nbsp;|&nbsp; Worst: Vietnamese at 87.85% WER. The model is highly inconsistent across accents — 11 of 12 accents exceed 40% WER. Only Northern Irish achieves near-perfect accuracy. Non-native English accents (Vietnamese, Italian, French, Spanish, Polish) and regional British Isles accents (Scottish, Irish) all score poorly.</span>
     </div>
   </div>
 </div>
@@ -1110,7 +1110,7 @@ footer {
         <tr><td>1.3 Streaming</td><td>RTF ~1.02, TTFW 325ms, 96.8% stability</td><td><span class="badge badge-pass">Pass</span></td></tr>
         <tr><td>1.4 REST/gRPC</td><td>gRPC 30% faster than REST at P50</td><td><span class="badge badge-pass">Pass</span></td></tr>
         <tr><td>1.5 Noise</td><td>Robust above SNR 5; degrades at &minus;5 dB</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>1.6 Accent</td><td>Fairness delta 86.25 pp (target &lt;10 pp); best group 1.59% WER, worst 87.85% WER — 11/12 groups &gt;40% WER</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>1.6 Accent</td><td>Fairness delta 86.25 pp (target &lt;10 pp); Northern Irish 1.59% WER, Vietnamese 87.85% WER — 11/12 accents &gt;40% WER</td><td><span class="badge badge-fail">Fail</span></td></tr>
         <tr><td>1.7 Long-Form</td><td>79% WER on concatenated audio &gt;40s</td><td><span class="badge badge-fail">Fail</span></td></tr>
         <tr><td>1.8 Domain</td><td>42% NE-WER on financial entities</td><td><span class="badge badge-flag">Flag</span></td></tr>
         <tr><td>1.9 Output</td><td>Weak punctuation (F1 0&ndash;40%), good caps/numbers</td><td><span class="badge badge-flag">Flag</span></td></tr>

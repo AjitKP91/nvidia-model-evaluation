@@ -49,7 +49,7 @@ def _compute_speaker_embeddings(audio_paths: list[str]) -> np.ndarray:
         for path in audio_paths:
             wav, sr = sf.read(path, dtype="float32")
             wav_tensor = torch.tensor(wav).unsqueeze(0)
-            emb = classifier.encode_batch(wav_tensor).squeeze().detach().numpy()
+            emb = classifier.encode_batch(wav_tensor).squeeze().cpu().detach().numpy()
             embeddings.append(emb)
 
         return np.array(embeddings)

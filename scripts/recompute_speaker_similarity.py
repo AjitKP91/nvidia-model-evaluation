@@ -69,7 +69,7 @@ def embed(encoder, wav_path: str) -> np.ndarray:
     if wav.ndim > 1:
         wav = wav.mean(axis=1)
     wav_t = torch.tensor(wav).unsqueeze(0)
-    emb = encoder.encode_batch(wav_t).squeeze().detach().numpy()
+    emb = encoder.encode_batch(wav_t).squeeze().cpu().detach().numpy()
     return emb
 
 

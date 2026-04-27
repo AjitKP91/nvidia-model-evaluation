@@ -68,10 +68,16 @@ async def _run_concurrent_rest(config: Config, n_concurrent: int, n_total: int) 
     ]
 
 
-def _run_concurrent_grpc(tts_client: TTSClient, n_concurrent: int, n_total: int) -> tuple[list[dict], float]:
-    """Returns (results, wall_elapsed_s). Abandons after _LEVEL_WALL_TIMEOUT_S."""
+def _run_concurrent_grpc(tts_client: TTSClient, n_concurrent: int, n_total: int) -> tuple[list[dict], float, bool]:
+    """Returns (results, wall_elapsed_s, wall_timeout_hit).
+
+    wall_timeout_hit=True means some futures were abandoned at _LEVEL_WALL_TIMEOUT_S.
+    In that case wall_elapsed_s is unreliable as an RPS denominator and callers
+    should not compute RPS from it.
+    """
     results: list[dict] = []
     wall_start = time.perf_counter()
+    wall_timeout_hit = False
 
     def _call(_):
         return tts_client.synthesize_batch(TEST_TEXT)
@@ -89,6 +95,7 @@ def _run_concurrent_grpc(tts_client: TTSClient, n_concurrent: int, n_total: int)
                 results.append({"elapsed_s": 0, "status": -1, "error": str(e)})
 
         if not_done:
+            wall_timeout_hit = True
             logger.warning("  gRPC N=%d: %d futures timed out after %ds, moving on",
                            n_concurrent, len(not_done), _LEVEL_WALL_TIMEOUT_S)
             for f in not_done:
@@ -98,7 +105,7 @@ def _run_concurrent_grpc(tts_client: TTSClient, n_concurrent: int, n_total: int)
         executor.shutdown(wait=False, cancel_futures=True)
 
     wall_elapsed = time.perf_counter() - wall_start
-    return results, wall_elapsed
+    return results, wall_elapsed, wall_timeout_hit
 
 
 def run(config: Config) -> dict:
@@ -118,10 +125,10 @@ def run(config: Config) -> dict:
 
         # gRPC concurrency
         logger.info("  gRPC...")
-        grpc_results, grpc_wall = _run_concurrent_grpc(tts_client, n_concurrent, n_total_per_level)
+        grpc_results, grpc_wall, grpc_timeout_hit = _run_concurrent_grpc(tts_client, n_concurrent, n_total_per_level)
         grpc_latencies = [r["elapsed_s"] for r in grpc_results if r["status"] == 200]
         grpc_errors = sum(1 for r in grpc_results if r["status"] != 200)
-        grpc_rps = len(grpc_latencies) / grpc_wall if grpc_wall > 0 else 0
+        grpc_rps = (len(grpc_latencies) / grpc_wall) if (grpc_wall > 0 and not grpc_timeout_hit) else None
 
         if grpc_latencies:
             grpc_stats = compute_percentiles(grpc_latencies)

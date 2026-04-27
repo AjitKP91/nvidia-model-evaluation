@@ -520,7 +520,14 @@ footer {
       </tbody>
     </table>
     <div class="info-box warn" style="margin-top:16px">
-      <strong>Analysis:</strong> WER is 2&ndash;4x above pass thresholds on all datasets. WER &asymp; CER throughout suggests character-level errors rather than isolated word substitutions. The high SER (36&ndash;76%) indicates errors are distributed across many utterances rather than concentrated in a few. VoxPopuli (European Parliament) and GigaSpeech (YouTube) are the hardest domains. Possible causes: CTC model's lack of language model rescoring, domain mismatch with Riva's Parakeet training data, or suboptimal beam search parameters.
+      <strong>Analysis:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>WER is 2&ndash;4&times; above pass thresholds</strong> on all five datasets &mdash; the model underperforms against production requirements across the board.</li>
+        <li><strong>WER &asymp; CER on every dataset</strong> &mdash; error rates are nearly identical at word and character level, pointing to systematic word substitutions rather than isolated insertions or deletions.</li>
+        <li><strong>High SER (36&ndash;76%)</strong> &mdash; errors are spread broadly across utterances, not concentrated in a few difficult clips.</li>
+        <li><strong>Hardest domains:</strong> VoxPopuli (European Parliament speeches, 28.5%) and GigaSpeech (YouTube, 24.1%) &mdash; both differ substantially from typical conversational English ASR training data.</li>
+        <li><strong>Possible causes:</strong> CTC decoding without a language-model rescoring step; domain mismatch between Riva&rsquo;s Parakeet training corpus and the benchmark datasets; or suboptimal beam-search parameters.</li>
+      </ul>
     </div>
     <div class="chart-container"><canvas id="chart-accuracy"></canvas></div>
   </div>
@@ -599,7 +606,11 @@ footer {
       </tbody>
     </table>
     <div class="info-box info" style="margin-top:12px">
-      Streaming RTF of ~1.02 means the system can just barely keep up with real-time audio. Streaming WER is only +1.23 percentage points worse than batch. Stability rate of 96.8% means partial results rarely "jump" to a different hypothesis.
+      <ul style="margin:4px 0 0 16px; line-height:1.8">
+        <li><strong>Streaming RTF 1.02</strong> &mdash; barely keeps pace with real-time audio (threshold is &le;1.0); may lag slightly on very long recordings. Monitoring for drift over extended sessions is advisable.</li>
+        <li><strong>Streaming WER only +1.23 pp worse than batch</strong> &mdash; the accuracy cost of processing audio in real time is minimal, making streaming viable for live transcription.</li>
+        <li><strong>Stability rate 96.8%</strong> &mdash; partial transcripts rarely change once a word appears on screen, keeping the live display steady and readable.</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -626,7 +637,11 @@ footer {
       </tbody>
     </table>
     <div class="info-box info" style="margin-top:12px">
-      gRPC batch is ~30% faster than REST (108 ms vs 157 ms at P50). Both interfaces show tight P50&ndash;P99 spread, indicating consistent performance. gRPC streaming adds ~427 ms TTFW overhead for the initial partial result.
+      <ul style="margin:4px 0 0 16px; line-height:1.8">
+        <li><strong>gRPC batch is ~30% faster than REST</strong> &mdash; 108 ms vs 157 ms P50 latency. The overhead comes from REST&rsquo;s JSON encoding and the SAP AI Core HTTP proxy layer.</li>
+        <li><strong>Both interfaces are consistent</strong> &mdash; tight P50&ndash;P99 spread on both gRPC and REST means performance is predictable with very few slow outliers.</li>
+        <li><strong>gRPC streaming TTFW is 427 ms</strong> &mdash; the time until the first word appears on screen in live-streaming mode. This is expected: the model needs approximately 4 &times; 100 ms audio chunks before it has enough context to produce the first prediction.</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -653,7 +668,11 @@ footer {
     </table>
     <div class="chart-container"><canvas id="chart-noise"></canvas></div>
     <div class="info-box success" style="margin-top:12px">
-      The model is remarkably robust: WER at SNR 5+ is actually <em>better</em> than the clean baseline (5.1% vs 8.2%). This is common in neural ASR when the noise-subset baseline differs from the full clean-test baseline. Gaussian at &minus;5 dB is the only truly degraded condition (47.3%). Real-world noise types (babble, traffic, office) are handled similarly at each SNR level.
+      <ul style="margin:4px 0 0 16px; line-height:1.8">
+        <li><strong>Excellent noise tolerance above SNR 5 dB</strong> &mdash; WER of 5.1% at SNR 5 is actually <em>better</em> than the 8.2% clean baseline. This is a known effect when the noise test subset selects shorter, higher-quality clips than the full benchmark.</li>
+        <li><strong>Only extreme noise causes significant degradation</strong> &mdash; Gaussian noise at &minus;5 dB (louder than speech) pushes WER to 47.3%. At 0 dB (equal noise and speech levels), all noise types remain under 10.1%.</li>
+        <li><strong>Real-world noise is handled uniformly</strong> &mdash; babble, traffic, and office noise produce nearly identical WER curves at every SNR level, confirming the model has no acoustic bias toward any particular environment.</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -720,7 +739,13 @@ footer {
       <div class="metric-card warn"><div class="label">Mean Hallucination</div><div class="value">54<span class="unit">%</span></div></div>
     </div>
     <div class="info-box error" style="margin-top:12px">
-      <strong>Critical finding:</strong> The model severely degrades on concatenated audio longer than ~40 seconds, with WER reaching 79&ndash;94%. Individual short segments are fine (median 6.5% WER). This likely indicates the CTC model's attention window or context length limitation. For production use, audio should be chunked into &lt;30-second segments.
+      <strong>Critical finding:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>Short segments perform well</strong> &mdash; median WER of 6.5% on individual 1&ndash;22s clips, with 18 out of 50 producing a perfect transcript.</li>
+        <li><strong>Long audio fails severely</strong> &mdash; concatenated sequences of 42&ndash;92s produce mean WER of 79% (max 94%), making the output unusable without intervention.</li>
+        <li><strong>Root cause: CTC context window limit</strong> &mdash; the Parakeet CTC model processes audio frame-by-frame without an attention mechanism. Beyond ~30&ndash;40 seconds, the model loses context and transcript quality collapses.</li>
+        <li><strong>Mitigation required for production:</strong> split all audio into segments &lt;30 seconds before sending to the API. This adds pipeline complexity but fully preserves accuracy.</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -783,7 +808,11 @@ footer {
       </tbody>
     </table>
     <div class="info-box warn" style="margin-top:12px">
-      Punctuation recovery is weak &mdash; the model's CTC output has limited punctuation capability. Periods (F1 40%) and commas (F1 22%) are partially recovered; question marks and exclamation points are effectively absent. Capitalisation and number formatting are strong (&gt;89%), suggesting the model handles casing and numerals well even without post-processing.
+      <ul style="margin:4px 0 0 16px; line-height:1.8">
+        <li><strong>Punctuation recovery is weak</strong> &mdash; the CTC model has limited punctuation capability. Periods reach F1 40% and commas 22%; question marks (1.4%) and exclamation points (0%) are effectively absent from model output.</li>
+        <li><strong>Post-processing is required for readable text</strong> &mdash; applications producing meeting minutes, captions, or documents will need a separate punctuation restoration step (e.g., a fine-tuned punctuation model).</li>
+        <li><strong>Capitalisation and number formatting are strong</strong> &mdash; both score above 89%, meaning sentence-initial words and numerals are handled correctly without any extra processing.</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -809,7 +838,13 @@ footer {
     <h3 style="font-size:0.95rem; margin:20px 0 8px;">Reliability Diagram</h3>
     <div class="chart-container"><canvas id="chart-reliability"></canvas></div>
     <div class="info-box error" style="margin-top:12px">
-      <strong>Severely overconfident.</strong> Confidence scores are not calibrated: the model reports high confidence even on incorrect words. For example, in the 0.7&ndash;0.8 bin, accuracy is 0% despite mean confidence of 71%. ECE of 0.244 is far above the acceptable threshold of 0.05. AUROC of 0.643 provides only slightly better than random discrimination. Confidence scores should not be used for downstream decision-making without recalibration.
+      <strong>Severely overconfident.</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>Confidence scores do not reflect actual accuracy</strong> &mdash; the model consistently reports high confidence even on incorrectly transcribed words. In the 0.7&ndash;0.8 confidence bin, actual word accuracy is 0% despite a mean confidence of 71%.</li>
+        <li><strong>ECE of 0.244</strong> &mdash; far above the acceptable threshold of 0.05. The reliability diagram shows accuracy does not track the expected diagonal, confirming systematic miscalibration.</li>
+        <li><strong>AUROC of 0.643</strong> &mdash; only marginally better than a random coin flip (0.5) at separating correct words from incorrect ones using the confidence score.</li>
+        <li><strong>Do not use confidence scores for automated decisions</strong> &mdash; thresholds like &ldquo;reject if confidence &lt; 0.8&rdquo; will not work reliably. Temperature scaling or post-hoc recalibration is required before confidence can be trusted.</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -877,7 +912,12 @@ footer {
       </tbody>
     </table>
     <div class="info-box success" style="margin-top:12px">
-      UTMOS (primary naturalness predictor) scored mean <strong>3.96/5</strong> with p50 3.99 — essentially at the 4.0 "good" threshold, indicating near-human naturalness. DNSMOS OVRL (3.20/5) scores lower as expected — DNSMOS is calibrated for noise suppression tasks, not TTS. Background cleanliness is excellent (BAK 4.05/5) and signal clarity is solid (SIG 3.52/5). Consistent output quality throughout (UTMOS std 0.27).
+      <ul style="margin:4px 0 0 16px; line-height:1.8">
+        <li><strong>UTMOS mean 3.96/5 (P50 3.99)</strong> &mdash; essentially at the 4.0 &ldquo;good&rdquo; threshold, indicating near-human naturalness. UTMOS is the most relevant predictor for TTS quality.</li>
+        <li><strong>DNSMOS Overall 3.20/5</strong> &mdash; lower than UTMOS, but expected: DNSMOS is calibrated for noise-suppression evaluation and systematically under-rates clean, artifact-free TTS audio.</li>
+        <li><strong>Background cleanliness is excellent (BAK 4.05/5)</strong> &mdash; the synthesized audio is free of hiss, clicks, and artifacts. Signal clarity is solid (SIG 3.52/5).</li>
+        <li><strong>Consistent output quality</strong> &mdash; UTMOS std dev of 0.27 across 200 sentences shows the model produces reliably high-quality audio rather than occasionally spiking or degrading on certain inputs.</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -934,7 +974,13 @@ footer {
       <div class="metric-card good"><div class="label">Rate Std Dev</div><div class="value">30.5<span class="unit"> WPM</span></div></div>
     </div>
     <div class="info-box success" style="margin-top:12px">
-      <strong>Normal prosodic profile.</strong> F0 mean of 192.5 Hz is typical for American English female speech (expected range 150&ndash;250 Hz). F0 std dev of 16 Hz confirms the voice is not monotone &mdash; pitch varies naturally across sentence types. Speaking rate of 190 WPM with 30.5 WPM std dev is within the conversational range (150&ndash;200 WPM) and shows natural pacing variation. No prosodic anomalies detected.
+      <strong>Normal prosodic profile.</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>F0 mean 192.5 Hz</strong> &mdash; firmly within the expected 150&ndash;250 Hz range for American English female speech, confirming appropriate pitch register.</li>
+        <li><strong>F0 std dev 16 Hz</strong> &mdash; the voice is not monotone; pitch varies naturally across different sentence types (statements, questions, emphasis).</li>
+        <li><strong>Speaking rate 190 WPM</strong> &mdash; within the natural conversational range of 150&ndash;200 WPM. Std dev of 30.5 WPM shows the model varies its pace naturally rather than speaking at a fixed rate.</li>
+        <li><strong>No prosodic anomalies detected</strong> &mdash; no pitch breaks, rate spikes, or prosodic artifacts across 50 synthesized sentences.</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -967,7 +1013,13 @@ footer {
     </table>
     <div class="chart-container"><canvas id="chart-tts-latency"></canvas></div>
     <div class="info-box success" style="margin-top:12px">
-      <strong>Fast synthesis.</strong> TTFB stays under 115 ms regardless of text length. RTF improves with longer text (0.10 at 10 words &rarr; 0.074 at 150 words), meaning the model synthesizes audio 10&ndash;14x faster than real-time. gRPC has a consistent ~30 ms TTFB advantage over REST. Total latency scales linearly with text length as expected.
+      <strong>Fast synthesis.</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>TTFB under 115 ms for all text lengths</strong> &mdash; the first audio byte arrives quickly regardless of input size, making the system suitable for voice assistants where the audible pause before speech matters most.</li>
+        <li><strong>RTF improves with longer text</strong> &mdash; 0.10 for 10 words, falling to 0.074 for 150 words (10&ndash;14&times; faster than real-time). Longer inputs spread the synthesis overhead over more audio, improving efficiency.</li>
+        <li><strong>gRPC is consistently ~30 ms faster than REST</strong> &mdash; due to native binary streaming vs REST&rsquo;s HTTP buffering layer via the SAP AI Core proxy.</li>
+        <li><strong>Total latency scales linearly with text length</strong> &mdash; end-to-end time grows predictably, making capacity planning and SLA estimation straightforward.</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -997,7 +1049,14 @@ footer {
     <p style="font-size:0.8rem; color:var(--text-muted); margin:4px 0 12px">* Estimated via Little&rsquo;s Law (effective concurrency &divide; mean latency of successful requests). Wall-clock time is unreliable when hung requests trigger the 5-min safety timeout.</p>
     <div class="chart-container"><canvas id="chart-concurrency"></canvas></div>
     <div class="info-box error" style="margin-top:12px">
-      <strong>Server saturates at concurrency &ge;10.</strong> At N=1 and N=5 the system scales cleanly (1.55 &rarr; 7.03 RPS, 0% errors). At N=10, 2 out of 50 requests hung indefinitely &mdash; they never returned a response and were abandoned after a 5-minute safety timeout; estimated RPS for the remaining 48 is ~11.7, but P99 nearly doubles to 1,380 ms. At N=20, 12 out of 50 requests hung (24% hang/fail rate); the server is clearly over capacity. The server can sustain ~5 concurrent TTS streams reliably; beyond that, requests begin to stall on the server side. For production workloads needing &gt;5 concurrent users, horizontal scaling or request queuing is required.
+      <strong>Server saturates at concurrency &ge;10.</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>N=1 and N=5 scale cleanly</strong> &mdash; throughput rises from 1.55 to 7.03 RPS with 0% errors, showing near-linear scaling within the safe operating range.</li>
+        <li><strong>N=10: first signs of saturation</strong> &mdash; 2 out of 50 requests hung indefinitely (abandoned after a 5-min safety timeout). P99 latency nearly doubles to 1,380 ms. Estimated RPS ~11.7 for the 48 successful requests.</li>
+        <li><strong>N=20: over capacity</strong> &mdash; 12 out of 50 requests (24%) hung or failed. P99 climbs to 2,328 ms. The server is clearly unable to sustain this concurrency level reliably.</li>
+        <li><strong>Safe operating limit is ~5 concurrent streams</strong> &mdash; beyond this, the GPU cannot process new requests fast enough and they begin stalling server-side.</li>
+        <li><strong>Production recommendation:</strong> for workloads requiring &gt;5 concurrent users, add horizontal scaling (multiple Riva replicas behind a load balancer) or a request queue to cap in-flight requests within the safe zone.</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -1036,7 +1095,12 @@ footer {
       </tbody>
     </table>
     <div class="info-box warn" style="margin-top:12px">
-      12 of 17 categories pass at 100%. Key failures: <strong>Very long text</strong> (0% &mdash; both test cases fail, likely hitting a server-side text length limit), <strong>SSML markup</strong> (40% &mdash; only basic SSML tags work; complex markup like phonemes or emphasis is not supported), and <strong>punctuation-heavy input</strong> (70% &mdash; unusual punctuation patterns cause garbled output).
+      <strong>12 of 17 categories pass at 100%.</strong> Three areas require attention:
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>Very long text &mdash; 0% pass rate:</strong> Both test cases failed, likely hitting a server-side input length limit. Applications that need to synthesize documents or lengthy passages must split input into shorter chunks before sending to the API.</li>
+        <li><strong>SSML markup &mdash; 40% pass rate:</strong> Only basic SSML tags (e.g., <code>&lt;break&gt;</code> for pauses) work correctly. Advanced markup such as <code>&lt;phoneme&gt;</code> (custom pronunciation) and <code>&lt;emphasis&gt;</code> (stress control) is not reliably supported by this Riva deployment.</li>
+        <li><strong>Punctuation-heavy input &mdash; 70% pass rate:</strong> Unusual punctuation patterns (em-dashes, nested quotes, excessive ellipses) cause garbled or missing audio output. Standard prose punctuation is unaffected.</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -1069,7 +1133,13 @@ footer {
       <div class="metric-card good"><div class="label">Speaker Sim (min)</div><div class="value">0.938</div></div>
     </div>
     <div class="info-box success" style="margin-top:12px">
-      <strong>Excellent long-form consistency.</strong> F0 drift of 4.7&ndash;7.7 Hz across paragraphs is small (typical speaking F0 range is 80&ndash;300 Hz). WPM drift of 7&ndash;20 is within natural variation. Speaker similarity of 0.938&ndash;0.949 across all passages is well above the 0.85 same-speaker threshold — confirming the voice identity stays stable across independent synthesis calls. No passage shows any sign of voice drift.
+      <strong>Excellent long-form consistency.</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>F0 drift 4.7&ndash;7.7 Hz</strong> &mdash; well within natural variation (typical speaking pitch spans 80&ndash;300 Hz). Paragraph-to-paragraph pitch remains essentially stable throughout each passage.</li>
+        <li><strong>WPM drift 7&ndash;20</strong> &mdash; speaking rate variation is within the range of natural human pacing. No passage sounds rushed or unnaturally slow in any section.</li>
+        <li><strong>Speaker similarity 0.938&ndash;0.949</strong> &mdash; all passages score well above the 0.85 same-speaker threshold, confirming the voice identity (ECAPA-TDNN embedding) stays consistent across independent synthesis calls.</li>
+        <li><strong>No voice drift detected</strong> in any of the 5 passages &mdash; the model does not gradually shift pitch, speed, or voice character over the course of a multi-paragraph document.</li>
+      </ul>
     </div>
   </div>
 </div>

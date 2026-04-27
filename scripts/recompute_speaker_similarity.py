@@ -23,16 +23,19 @@ import soundfile as sf
 # torch.cuda.amp and doesn't accept a device_type argument.
 import torch
 if not hasattr(torch.amp, "custom_fwd"):
-    def _custom_fwd_compat(fn=None, *, device_type=None):
+    def _custom_fwd_compat(fn=None, *, device_type=None, **kwargs):
+        # device_type is new-API only — drop it; forward everything else to old API
         if fn is not None:
-            return torch.cuda.amp.custom_fwd(fn)  # type: ignore[attr-defined]
-        return torch.cuda.amp.custom_fwd           # type: ignore[attr-defined]
-    def _custom_bwd_compat(fn=None):
+            return torch.cuda.amp.custom_fwd(fn, **kwargs)   # type: ignore[attr-defined]
+        if kwargs:
+            return torch.cuda.amp.custom_fwd(**kwargs)        # type: ignore[attr-defined]
+        return torch.cuda.amp.custom_fwd                      # type: ignore[attr-defined]
+    def _custom_bwd_compat(fn=None, **kwargs):
         if fn is not None:
-            return torch.cuda.amp.custom_bwd(fn)  # type: ignore[attr-defined]
-        return torch.cuda.amp.custom_bwd           # type: ignore[attr-defined]
-    torch.amp.custom_fwd = _custom_fwd_compat      # type: ignore[attr-defined]
-    torch.amp.custom_bwd = _custom_bwd_compat      # type: ignore[attr-defined]
+            return torch.cuda.amp.custom_bwd(fn, **kwargs)   # type: ignore[attr-defined]
+        return torch.cuda.amp.custom_bwd                      # type: ignore[attr-defined]
+    torch.amp.custom_fwd = _custom_fwd_compat                 # type: ignore[attr-defined]
+    torch.amp.custom_bwd = _custom_bwd_compat                 # type: ignore[attr-defined]
 
 from eval.config import load_config
 from eval.data.tts_test_sets import get_long_form_passages

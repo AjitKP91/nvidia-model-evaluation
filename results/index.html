@@ -669,31 +669,33 @@ footer {
     <div class="methodology">
       <strong>Methodology:</strong> Uses <a href="https://huggingface.co/datasets/westbrook/English_Accent_DataSet" target="_blank">westbrook/English_Accent_DataSet</a> (HuggingFace) &mdash; 23 English accents, ~79 hours, ~53k utterances with transcripts and accent labels. Up to 150 utterances sampled per accent; groups with fewer than 50 utterances are excluded. WER is computed per accent group and a fairness delta (max&minus;min WER) is reported.
     </div>
-    <div class="info-box" style="margin-bottom:16px;">
-      <strong>12 accent groups evaluated</strong> (groups with &lt;50 utterances excluded). Numbers in parentheses are the dataset's internal label IDs.
+
+    <div class="info-box error" style="margin-bottom:16px;">
+      <strong>Data quality issue detected &mdash; results for 11 of 12 accents are not reliable.</strong><br>
+      Post-run inspection revealed that 11 accents are sourced from <strong>EDACC</strong> (conversational speech), where the <code>raw_text</code> field contains the <em>full conversation transcript</em> rather than the transcript of each individual audio clip. The model correctly transcribes the short clip (e.g. <em>"Okay."</em>) but WER inflates massively because it is compared against a 20–30 word reference. Only <strong>Northern Irish</strong> is sourced from <strong>VoxPopuli</strong> (read speech with properly aligned transcripts) and produces a valid WER measurement. The fairness delta and per-accent WERs below should not be used to draw conclusions about model quality across accents. A re-run with a dataset that has per-segment transcript alignment is required.
     </div>
 
     <table>
-      <thead><tr><th>Accent Group</th><th class="num">Utterances</th><th class="num">Agg. WER</th><th class="num">Per-utt. mean 95% CI</th><th>Verdict</th></tr></thead>
+      <thead><tr><th>Accent</th><th class="num">Utterances</th><th class="num">Agg. WER</th><th class="num">Per-utt. mean 95% CI</th><th>Data Source</th><th>Verdict</th></tr></thead>
       <tbody>
-        <tr><td>Vietnamese (20)</td><td class="num">150</td><td class="num" style="color:var(--fail)">87.85%</td><td class="num">73.87%–81.11%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Scottish (16)</td><td class="num">150</td><td class="num" style="color:var(--fail)">72.24%</td><td class="num">54.36%–65.33%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Italian (10)</td><td class="num">150</td><td class="num" style="color:var(--fail)">71.53%</td><td class="num">50.66%–61.95%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>French (4)</td><td class="num">53</td><td class="num" style="color:var(--fail)">61.36%</td><td class="num">31.63%–51.28%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Spanish (9)</td><td class="num">150</td><td class="num" style="color:var(--fail)">61.25%</td><td class="num">43.25%–53.30%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Polish (3)</td><td class="num">50</td><td class="num" style="color:var(--fail)">57.40%</td><td class="num">40.16%–56.93%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Irish (17)</td><td class="num">150</td><td class="num" style="color:var(--fail)">56.20%</td><td class="num">41.34%–50.95%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Romanian (7)</td><td class="num">93</td><td class="num" style="color:var(--fail)">51.45%</td><td class="num">39.58%–52.22%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>English (15)</td><td class="num">150</td><td class="num" style="color:var(--fail)">48.46%</td><td class="num">34.68%–44.92%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Indian (19)</td><td class="num">150</td><td class="num" style="color:var(--fail)">46.41%</td><td class="num">39.30%–49.46%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>American (22)</td><td class="num">150</td><td class="num" style="color:var(--fail)">43.27%</td><td class="num">15.72%–25.62%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Northern Irish (18)</td><td class="num">150</td><td class="num" style="color:var(--pass)">1.59%</td><td class="num">0.87%–3.06%</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr style="opacity:0.5"><td>Vietnamese (20)</td><td class="num">150</td><td class="num">87.85%</td><td class="num">73.87%–81.11%</td><td><span class="badge badge-note">EDACC ⚠</span></td><td><span class="badge badge-note">Invalid</span></td></tr>
+        <tr style="opacity:0.5"><td>Scottish (16)</td><td class="num">150</td><td class="num">72.24%</td><td class="num">54.36%–65.33%</td><td><span class="badge badge-note">EDACC ⚠</span></td><td><span class="badge badge-note">Invalid</span></td></tr>
+        <tr style="opacity:0.5"><td>Italian (10)</td><td class="num">150</td><td class="num">71.53%</td><td class="num">50.66%–61.95%</td><td><span class="badge badge-note">EDACC ⚠</span></td><td><span class="badge badge-note">Invalid</span></td></tr>
+        <tr style="opacity:0.5"><td>French (4)</td><td class="num">53</td><td class="num">61.36%</td><td class="num">31.63%–51.28%</td><td><span class="badge badge-note">EDACC ⚠</span></td><td><span class="badge badge-note">Invalid</span></td></tr>
+        <tr style="opacity:0.5"><td>Spanish (9)</td><td class="num">150</td><td class="num">61.25%</td><td class="num">43.25%–53.30%</td><td><span class="badge badge-note">EDACC ⚠</span></td><td><span class="badge badge-note">Invalid</span></td></tr>
+        <tr style="opacity:0.5"><td>Polish (3)</td><td class="num">50</td><td class="num">57.40%</td><td class="num">40.16%–56.93%</td><td><span class="badge badge-note">EDACC ⚠</span></td><td><span class="badge badge-note">Invalid</span></td></tr>
+        <tr style="opacity:0.5"><td>Irish (17)</td><td class="num">150</td><td class="num">56.20%</td><td class="num">41.34%–50.95%</td><td><span class="badge badge-note">EDACC ⚠</span></td><td><span class="badge badge-note">Invalid</span></td></tr>
+        <tr style="opacity:0.5"><td>Romanian (7)</td><td class="num">93</td><td class="num">51.45%</td><td class="num">39.58%–52.22%</td><td><span class="badge badge-note">EDACC ⚠</span></td><td><span class="badge badge-note">Invalid</span></td></tr>
+        <tr style="opacity:0.5"><td>English (15)</td><td class="num">150</td><td class="num">48.46%</td><td class="num">34.68%–44.92%</td><td><span class="badge badge-note">EDACC ⚠</span></td><td><span class="badge badge-note">Invalid</span></td></tr>
+        <tr style="opacity:0.5"><td>Indian (19)</td><td class="num">150</td><td class="num">46.41%</td><td class="num">39.30%–49.46%</td><td><span class="badge badge-note">EDACC ⚠</span></td><td><span class="badge badge-note">Invalid</span></td></tr>
+        <tr style="opacity:0.5"><td>American (22)</td><td class="num">150</td><td class="num">43.27%</td><td class="num">15.72%–25.62%</td><td><span class="badge badge-note">EDACC ⚠</span></td><td><span class="badge badge-note">Invalid</span></td></tr>
+        <tr><td><strong>Northern Irish (18)</strong></td><td class="num">150</td><td class="num" style="color:var(--pass)"><strong>1.59%</strong></td><td class="num">0.87%–3.06%</td><td><span class="badge badge-pass">VoxPopuli ✓</span></td><td><span class="badge badge-pass">Pass</span></td></tr>
       </tbody>
     </table>
 
-    <div style="margin-top:16px; padding:14px 16px; background:rgba(239,68,68,0.08); border-left:3px solid var(--fail); border-radius:6px;">
-      <strong>Fairness delta: 86.25 pp</strong> (target &lt;10 pp) &mdash; <span style="color:var(--fail)">Fail</span><br>
-      <span style="font-size:0.85rem; color:var(--text-muted)">Best: Northern Irish at 1.59% WER &nbsp;|&nbsp; Worst: Vietnamese at 87.85% WER. The model is highly inconsistent across accents — 11 of 12 accents exceed 40% WER. Only Northern Irish achieves near-perfect accuracy. Non-native English accents (Vietnamese, Italian, French, Spanish, Polish) and regional British Isles accents (Scottish, Irish) all score poorly.</span>
+    <div style="margin-top:16px; padding:14px 16px; background:rgba(234,179,8,0.08); border-left:3px solid var(--flag); border-radius:6px;">
+      <strong>Only 1 valid data point</strong> &mdash; Northern Irish (VoxPopuli): <strong>1.59% WER</strong>.<br>
+      <span style="font-size:0.85rem; color:var(--text-muted)">Fairness delta cannot be meaningfully computed. Re-run required with a dataset that provides per-segment aligned transcripts (e.g. L2-ARCTIC, VCTK directly, or a filtered subset of this dataset using only VoxPopuli-sourced rows).</span>
     </div>
   </div>
 </div>
@@ -1110,7 +1112,7 @@ footer {
         <tr><td>1.3 Streaming</td><td>RTF ~1.02, TTFW 325ms, 96.8% stability</td><td><span class="badge badge-pass">Pass</span></td></tr>
         <tr><td>1.4 REST/gRPC</td><td>gRPC 30% faster than REST at P50</td><td><span class="badge badge-pass">Pass</span></td></tr>
         <tr><td>1.5 Noise</td><td>Robust above SNR 5; degrades at &minus;5 dB</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>1.6 Accent</td><td>Fairness delta 86.25 pp (target &lt;10 pp); Northern Irish 1.59% WER, Vietnamese 87.85% WER — 11/12 accents &gt;40% WER</td><td><span class="badge badge-fail">Fail</span></td></tr>
+        <tr><td>1.6 Accent</td><td>Dataset alignment issue (EDACC conversational transcripts not per-segment) — only Northern Irish valid at 1.59% WER; re-run needed</td><td><span class="badge badge-note">Invalid</span></td></tr>
         <tr><td>1.7 Long-Form</td><td>79% WER on concatenated audio &gt;40s</td><td><span class="badge badge-fail">Fail</span></td></tr>
         <tr><td>1.8 Domain</td><td>42% NE-WER on financial entities</td><td><span class="badge badge-flag">Flag</span></td></tr>
         <tr><td>1.9 Output</td><td>Weak punctuation (F1 0&ndash;40%), good caps/numbers</td><td><span class="badge badge-flag">Flag</span></td></tr>

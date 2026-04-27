@@ -18,6 +18,13 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
+# Compatibility patch: SpeechBrain uses torch.amp.custom_fwd which only exists
+# in PyTorch >= 2.4. On older versions it lives under torch.cuda.amp.
+import torch
+if not hasattr(torch.amp, "custom_fwd"):
+    torch.amp.custom_fwd = torch.cuda.amp.custom_fwd  # type: ignore[attr-defined]
+    torch.amp.custom_bwd = torch.cuda.amp.custom_bwd  # type: ignore[attr-defined]
+
 from eval.config import load_config
 from eval.data.tts_test_sets import get_long_form_passages
 from eval.tts.client import TTSClient

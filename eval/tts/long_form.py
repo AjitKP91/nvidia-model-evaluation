@@ -21,11 +21,14 @@ logger = logging.getLogger("eval.tts.long_form")
 def _compute_speaker_embeddings(audio_paths: list[str]) -> np.ndarray:
     """Compute ECAPA-TDNN speaker embeddings for each audio file."""
     try:
+        import torch
+        if not hasattr(torch.amp, "custom_fwd"):
+            torch.amp.custom_fwd = torch.cuda.amp.custom_fwd  # type: ignore[attr-defined]
+            torch.amp.custom_bwd = torch.cuda.amp.custom_bwd  # type: ignore[attr-defined]
         try:
             from speechbrain.inference.classifiers import EncoderClassifier  # >= 1.0
         except ImportError:
             from speechbrain.pretrained import EncoderClassifier  # type: ignore  # < 1.0
-        import torch
 
         classifier = EncoderClassifier.from_hparams(
             source="speechbrain/spkrec-ecapa-voxceleb",

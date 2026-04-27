@@ -23,8 +23,16 @@ def _compute_speaker_embeddings(audio_paths: list[str]) -> np.ndarray:
     try:
         import torch
         if not hasattr(torch.amp, "custom_fwd"):
-            torch.amp.custom_fwd = torch.cuda.amp.custom_fwd  # type: ignore[attr-defined]
-            torch.amp.custom_bwd = torch.cuda.amp.custom_bwd  # type: ignore[attr-defined]
+            def _custom_fwd_compat(fn=None, *, device_type=None):
+                if fn is not None:
+                    return torch.cuda.amp.custom_fwd(fn)  # type: ignore[attr-defined]
+                return torch.cuda.amp.custom_fwd           # type: ignore[attr-defined]
+            def _custom_bwd_compat(fn=None):
+                if fn is not None:
+                    return torch.cuda.amp.custom_bwd(fn)  # type: ignore[attr-defined]
+                return torch.cuda.amp.custom_bwd           # type: ignore[attr-defined]
+            torch.amp.custom_fwd = _custom_fwd_compat      # type: ignore[attr-defined]
+            torch.amp.custom_bwd = _custom_bwd_compat      # type: ignore[attr-defined]
         try:
             from speechbrain.inference.classifiers import EncoderClassifier  # >= 1.0
         except ImportError:

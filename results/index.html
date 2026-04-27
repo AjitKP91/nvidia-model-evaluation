@@ -368,7 +368,7 @@ footer {
         <a href="#tts-naturalness">2.1 Naturalness</a>
         <a href="#tts-intelligibility">2.2 Intelligibility</a>
         <a href="#tts-prosody">2.3 Prosody Analysis</a>
-        <a href="#tts-signal">2.4 Signal Quality</a>
+
         <a href="#tts-latency">2.5 Streaming Latency</a>
         <a href="#tts-concurrency">2.6 Concurrency</a>
         <a href="#tts-edge">2.7 Edge Cases</a>
@@ -939,31 +939,6 @@ footer {
   </div>
 </div>
 
-<!-- 2.4 Signal Quality -->
-<div class="card" id="tts-signal">
-  <div class="card-header">
-    <h2>Test 2.4 &mdash; Audio Signal Quality</h2>
-    <span class="test-id">PESQ, STOI, MCD vs reference</span>
-    <span class="info-tip" tabindex="0">?<div class="info-tip-content"><button class="tip-close">&times;</button><div class="tip-title">Understanding This Test</div><p>Standard audio engineering metrics that compare two waveforms sample-by-sample. These are the same metrics used by telecom companies to grade phone call quality.</p><dl><dt>PESQ (Perceptual Evaluation of Speech Quality)</dt><dd>An ITU international standard (P.862) that models how the human ear perceives speech quality. Scale: &minus;0.5 to 4.5. Above 3.0 = acceptable, above 4.0 = excellent.</dd><dt>STOI (Short-Time Objective Intelligibility)</dt><dd>Predicts how much of the speech a human listener would understand. Scale: 0 to 1. Above 0.6 = generally intelligible.</dd><dt>MCD (Mel Cepstral Distortion)</dt><dd>Measures spectral (frequency) difference between two audio signals. Lower is better. Under 8 dB is considered good for TTS.</dd><dt>DTW (Dynamic Time Warping)</dt><dd>An algorithm that aligns two audio signals of different lengths before comparing them, so small timing differences don't dominate the score.</dd></dl><p><strong>Why results are invalid here:</strong> All three metrics require same-speaker reference audio (same voice saying the same words). LJSpeech uses a different speaker than the TTS model (Magpie Aria), so the extreme scores reflect voice identity differences, not synthesis quality.</p><a class="tip-src" href="https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/eval/tts/signal_quality.py" target="_blank">View source &rarr;</a></div></span>
-  </div>
-  <div class="card-body">
-    <div class="methodology">
-      <strong>Methodology:</strong> 50 sentences compared against <a href="https://keithito.com/LJ-Speech-Dataset/">LJSpeech</a> reference. PESQ (Perceptual Evaluation of Speech Quality), STOI (Short-Time Objective Intelligibility), and MCD (Mel Cepstral Distortion) computed after alignment.
-    </div>
-    <div class="info-box error">
-      <strong>Speaker mismatch invalidates these metrics.</strong> LJSpeech is a single female speaker, while Magpie Aria uses a different voice. The scores below reflect voice difference, not synthesis quality.
-    </div>
-    <div class="metrics-grid" style="margin-top:12px">
-      <div class="metric-card bad"><div class="label">PESQ</div><div class="value">1.07<span class="unit">/4.5</span></div></div>
-      <div class="metric-card bad"><div class="label">STOI</div><div class="value">0.023</div></div>
-      <div class="metric-card bad"><div class="label">MCD</div><div class="value">1027<span class="unit"> dB</span></div></div>
-    </div>
-    <div class="info-box info" style="margin-top:12px">
-      These numbers are not actionable. PESQ ~1.0 is the absolute minimum (random noise level), STOI ~0.02 is near-zero, and MCD of 1027 dB is orders of magnitude above normal (&lt;8 dB is good). All three metrics require matched-speaker reference audio to be meaningful. A proper evaluation would need ground-truth audio from the same Magpie Aria voice.
-    </div>
-  </div>
-</div>
-
 <!-- 2.5 Latency -->
 <div class="card" id="tts-latency">
   <div class="card-header">
@@ -1137,7 +1112,7 @@ footer {
         <tr><td>2.1 Naturalness</td><td>UTMOS 3.96/5 (p50 3.99), DNSMOS OVRL 3.20/5, BAK 4.05/5</td><td><span class="badge badge-pass">Pass</span></td></tr>
         <tr><td>2.2 Intelligibility</td><td>1.48% WER (Harvard), 0.16% (conversational); 11.6% (technical), 17.2% (numbers) after normalization fix</td><td><span class="badge badge-flag">Flag</span></td></tr>
         <tr><td>2.3 Prosody</td><td>F0 192.5 Hz, std 16 Hz (not monotone); 190 WPM natural pacing</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>2.4 Signal Quality</td><td>Invalid &mdash; speaker mismatch with LJSpeech reference</td><td><span class="badge badge-note">N/A</span></td></tr>
+        <tr><td>2.4 Signal Quality</td><td>Removed &mdash; PESQ/STOI/MCD require matched-speaker reference; covered by DNSMOS in Test 2.1</td><td><span class="badge badge-note">N/A</span></td></tr>
         <tr><td>2.5 Latency</td><td>TTFB &lt;115ms, RTF 0.07&ndash;0.10 (10&ndash;14x real-time)</td><td><span class="badge badge-pass">Pass</span></td></tr>
         <tr><td>2.6 Concurrency</td><td>Saturates at ~10 concurrent; 24% errors at 20</td><td><span class="badge badge-fail">Fail</span></td></tr>
         <tr><td>2.7 Edge Cases</td><td>12/17 categories 100%; very long &amp; SSML fail</td><td><span class="badge badge-flag">Flag</span></td></tr>

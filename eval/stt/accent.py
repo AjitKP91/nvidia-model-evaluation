@@ -65,7 +65,7 @@ def _load_l2arctic_groups() -> dict[str, list]:
 
     groups: dict[str, list] = defaultdict(list)
     for i, ex in enumerate(itertools.islice(ds, 10_000)):
-        accent = (ex.get("native_language") or "").strip()
+        accent = (ex.get("speaker_native_language") or "").strip()
         if not accent or accent.lower() == "unknown":
             continue
         if len(groups[accent]) < _MAX_PER_ACCENT:

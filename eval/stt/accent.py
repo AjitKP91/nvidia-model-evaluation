@@ -8,6 +8,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import jiwer
+import librosa
 import numpy as np
 from tqdm import tqdm
 
@@ -17,35 +18,35 @@ from eval.utils import NORMALIZE_FOR_WER, NORMALIZE_FOR_WER_AGG, bootstrap_ci, g
 
 logger = logging.getLogger("eval.stt.accent")
 
-_HF_DATASET = "westbrook/English_Accent_DataSet"
+_HF_DATASET = "CSTR-Edinburgh/vctk"
+_TARGET_SR = 16_000
 _MAX_PER_ACCENT = 150
-_MAX_ITER = 30_000
-MIN_UTTERANCES_PER_GROUP = 50
+_MAX_ITER = 50_000
+MIN_UTTERANCES_PER_GROUP = 20
 
 
 def _load_accent_groups() -> dict[str, list]:
-    """Stream westbrook/English_Accent_DataSet and bucket by accent, max 150 each."""
+    """Load CSTR-Edinburgh/vctk and bucket by accent, max 150 each."""
     from datasets import load_dataset
 
-    logger.info("Streaming %s (up to %d rows)…", _HF_DATASET, _MAX_ITER)
+    logger.info("Loading %s…", _HF_DATASET)
     ds = load_dataset(
         _HF_DATASET,
         split="train",
         streaming=True,
         token=os.environ.get("HF_TOKEN") or None,
+        trust_remote_code=True,
     )
 
     groups: dict[str, list] = defaultdict(list)
     for i, ex in enumerate(ds):
         if i >= _MAX_ITER:
             break
-        accent_raw = ex.get("accent")
-        accent = str(accent_raw).strip() if accent_raw is not None else "unknown"
-        accent = accent or "unknown"
+        accent = (ex.get("accent") or "").strip() or "unknown"
         if accent == "unknown":
             continue
         if len(groups[accent]) < _MAX_PER_ACCENT:
-            groups[accent].append((f"accent_{accent}_{i}", ex))
+            groups[accent].append((f"vctk_{accent}_{i}", ex))
 
     logger.info(
         "Collected %d accent groups, %d total utterances",
@@ -56,12 +57,7 @@ def _load_accent_groups() -> dict[str, list]:
 
 
 def _reconstruct_from_jsonl(jsonl_path: Path) -> dict[str, dict]:
-    """Read completed results from calls.jsonl, grouped by accent.
-
-    Returns {accent: {"refs": [...], "hyps": [...], "wers": [...]}}
-    Only includes groups where all entries have ref/hyp/wer fields (i.e. fully
-    written rows, not partial failures).
-    """
+    """Read completed results from calls.jsonl, grouped by accent."""
     if not jsonl_path.exists():
         return {}
 
@@ -98,7 +94,6 @@ def run(config: Config) -> dict:
 
     accent_groups = _load_accent_groups()
 
-    # Filter groups without enough samples
     accent_groups = {
         k: v for k, v in accent_groups.items()
         if len(v) >= MIN_UTTERANCES_PER_GROUP
@@ -109,7 +104,6 @@ def run(config: Config) -> dict:
         len(accent_groups), MIN_UTTERANCES_PER_GROUP,
     )
 
-    # Pre-load any results already written to the JSONL (from a prior interrupted run)
     jsonl_cache = _reconstruct_from_jsonl(jsonl_path)
     if jsonl_cache:
         logger.info(
@@ -125,7 +119,6 @@ def run(config: Config) -> dict:
         logger.info("Processing accent: %s (%d utterances)", accent, len(items))
         refs, hyps, per_utt_wers = [], [], []
 
-        # Seed from JSONL cache so previously completed groups are included
         if accent in jsonl_cache:
             cached = jsonl_cache[accent]
             refs.extend(cached["refs"])
@@ -140,7 +133,13 @@ def run(config: Config) -> dict:
             audio = ex["audio"]
             audio_array = np.array(audio["array"], dtype=np.float32)
             sr = audio["sampling_rate"]
-            ref = (ex.get("raw_text") or ex.get("text") or ex.get("sentence") or "").strip()
+
+            # VCTK is 48 kHz — resample to 16 kHz for Parakeet
+            if sr != _TARGET_SR:
+                audio_array = librosa.resample(audio_array, orig_sr=sr, target_sr=_TARGET_SR)
+                sr = _TARGET_SR
+
+            ref = (ex.get("text") or ex.get("sentence") or "").strip()
             if not ref:
                 continue
 

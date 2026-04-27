@@ -27,21 +27,19 @@ MIN_UTTERANCES_PER_GROUP = 20
 
 def _load_accent_groups() -> dict[str, list]:
     """Load CSTR-Edinburgh/vctk and bucket by accent, max 150 each."""
+    import itertools
     from datasets import load_dataset
 
-    logger.info("Loading %s…", _HF_DATASET)
+    logger.info("Loading %s (non-streaming — downloads to HF cache on first run)…", _HF_DATASET)
     ds = load_dataset(
         _HF_DATASET,
         split="train",
-        streaming=True,
         token=os.environ.get("HF_TOKEN") or None,
         trust_remote_code=True,
     )
 
     groups: dict[str, list] = defaultdict(list)
-    for i, ex in enumerate(ds):
-        if i >= _MAX_ITER:
-            break
+    for i, ex in enumerate(itertools.islice(ds, _MAX_ITER)):
         accent = (ex.get("accent") or "").strip() or "unknown"
         if accent == "unknown":
             continue

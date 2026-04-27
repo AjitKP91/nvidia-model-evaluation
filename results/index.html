@@ -985,7 +985,7 @@ footer {
     </div>
     <table>
       <thead>
-        <tr><th class="num">Concurrency</th><th class="num">Success</th><th class="num">Errors</th><th class="num">Error Rate</th><th class="num">RPS</th><th class="num">P50</th><th class="num">P99</th></tr>
+        <tr><th class="num">Concurrency</th><th class="num">Success</th><th class="num" title="Requests that hung indefinitely and were abandoned after the 5-min safety timeout">Hung / Error</th><th class="num">Error Rate</th><th class="num">RPS</th><th class="num">P50</th><th class="num">P99</th></tr>
       </thead>
       <tbody>
         <tr><td class="num">1</td><td class="num">50</td><td class="num">0</td><td class="num" style="color:var(--pass)">0%</td><td class="num">1.55</td><td class="num">640 ms</td><td class="num">698 ms</td></tr>
@@ -997,7 +997,7 @@ footer {
     <p style="font-size:0.8rem; color:var(--text-muted); margin:4px 0 12px">* Estimated via Little&rsquo;s Law (effective concurrency &divide; mean latency of successful requests). Wall-clock time is unreliable when hung requests trigger the 5-min safety timeout.</p>
     <div class="chart-container"><canvas id="chart-concurrency"></canvas></div>
     <div class="info-box error" style="margin-top:12px">
-      <strong>Server saturates at concurrency &ge;10.</strong> At N=1 and N=5 the system scales cleanly (1.55 &rarr; 7.03 RPS, 0% errors). At N=10 the estimated RPS continues rising to ~11.7, but 4% of requests start hanging and P99 nearly doubles to 1,380 ms &mdash; first signs of saturation. At N=20 throughput reaches ~14.5 RPS for successful requests, but 24% fail outright. The server can sustain ~5 concurrent TTS streams reliably; beyond that, requests begin to hang or fail. For production workloads needing &gt;5 concurrent users, horizontal scaling or request queuing is required.
+      <strong>Server saturates at concurrency &ge;10.</strong> At N=1 and N=5 the system scales cleanly (1.55 &rarr; 7.03 RPS, 0% errors). At N=10, 2 out of 50 requests hung indefinitely &mdash; they never returned a response and were abandoned after a 5-minute safety timeout; estimated RPS for the remaining 48 is ~11.7, but P99 nearly doubles to 1,380 ms. At N=20, 12 out of 50 requests hung (24% hang/fail rate); the server is clearly over capacity. The server can sustain ~5 concurrent TTS streams reliably; beyond that, requests begin to stall on the server side. For production workloads needing &gt;5 concurrent users, horizontal scaling or request queuing is required.
     </div>
   </div>
 </div>

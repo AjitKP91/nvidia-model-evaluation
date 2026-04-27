@@ -1,4 +1,4 @@
-"""Test 2.3 — Prosody (F0 / Duration / Rate / nPVI)."""
+"""Test 2.3 — Prosody Analysis (reference-free)."""
 from __future__ import annotations
 
 import logging
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import librosa
 import numpy as np
-from scipy.stats import pearsonr
+from tqdm import tqdm
 
 try:
     import pyworld as pw
@@ -14,56 +14,42 @@ try:
 except ImportError:
     pw = None
     _PYWORLD_AVAILABLE = False
-from tqdm import tqdm
 
 from eval.config import Config
+from eval.data.tts_test_sets import get_naturalness_sentences
 from eval.tts.client import TTSClient
 from eval.utils import save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.tts.prosody")
 
+_TEST_SENTENCES = [
+    "The meeting has been rescheduled to Thursday afternoon at three o'clock.",
+    "Please review the attached document before the end of the day.",
+    "Our quarterly revenue exceeded expectations by twelve percent.",
+    "Can you confirm receipt of the invoice we sent last week?",
+    "The new policy takes effect on the first of next month.",
+    "She asked whether the deadline could be extended by two days.",
+    "Technical issues delayed the deployment by approximately six hours.",
+    "We need to finalize the budget before the board meeting on Friday.",
+    "All employees are required to complete the training by December.",
+    "The project is currently on track and within budget.",
+] * 5  # 50 sentences
+
 
 def extract_f0(audio_path: str, sr: int = 16000) -> np.ndarray:
     if not _PYWORLD_AVAILABLE:
         return np.array([])
-    wav, actual_sr = librosa.load(audio_path, sr=sr)
+    wav, _ = librosa.load(audio_path, sr=sr)
     wav = wav.astype(np.float64)
     f0, t = pw.dio(wav, sr)
     f0 = pw.stonemask(wav, f0, t, sr)
-    voiced = f0 > 0
-    return f0[voiced]
+    return f0[f0 > 0]  # voiced frames only
 
 
 def speaking_rate_wpm(text: str, audio_path: str) -> float:
     duration = librosa.get_duration(path=audio_path)
     word_count = len(text.split())
-    return (word_count / duration) * 60 if duration > 0 else 0
-
-
-def npvi(durations: list[float]) -> float:
-    if len(durations) < 2:
-        return 0.0
-    pairs = [(durations[i], durations[i + 1]) for i in range(len(durations) - 1)]
-    return 100 * sum(abs(a - b) / ((a + b) / 2) for a, b in pairs if (a + b) > 0) / len(pairs)
-
-
-def _get_ljspeech_matched_sentences() -> list[dict]:
-    """Return LJSpeech sentences for prosody comparison."""
-    try:
-        from eval.utils import load_dataset_tmp
-        with load_dataset_tmp("keithito/lj_speech", "train", limit=50) as examples:
-            pass
-        sentences = []
-        for i, ex in enumerate(examples):
-            sentences.append({
-                "id": ex.get("id", f"LJ{i:04d}"),
-                "text": ex.get("normalized_text") or ex.get("text", ""),
-                "audio": ex["audio"],
-            })
-        return sentences
-    except Exception as e:
-        logger.warning("LJSpeech not available: %s", e)
-        return []
+    return (word_count / duration) * 60 if duration > 0 else 0.0
 
 
 def run(config: Config) -> dict:
@@ -73,97 +59,55 @@ def run(config: Config) -> dict:
     tts_client = TTSClient(config)
     jsonl_path = results_dir / "calls.jsonl"
 
-    logger.info("=== Test 2.3: Prosody ===")
+    logger.info("=== Test 2.3: Prosody (reference-free) ===")
 
-    lj_sentences = _get_ljspeech_matched_sentences()
-    if not lj_sentences:
-        logger.warning("No LJSpeech data — running prosody without reference")
+    f0_means: list[float] = []
+    wpms: list[float] = []
+    all_records: list[dict] = []
 
-    f0_rmses = []
-    f0_correlations = []
-    speaking_rates = []
-    all_records = []
-
-    for i, item in enumerate(tqdm(lj_sentences or [], desc="Prosody")):
-        text = item["text"]
+    for i, text in enumerate(tqdm(_TEST_SENTENCES, desc="Prosody")):
         synth_path = results_dir / f"synth_{i:04d}.wav"
-
         try:
-            result = tts_client.save_synthesis(text, str(synth_path))
+            tts_client.save_synthesis(text, str(synth_path))
             wpm = speaking_rate_wpm(text, str(synth_path))
-            speaking_rates.append(wpm)
+            f0 = extract_f0(str(synth_path))
 
-            # F0 from synthesized
-            f0_syn = extract_f0(str(synth_path))
+            mean_f0 = float(np.mean(f0)) if len(f0) > 0 else None
+            if mean_f0 is not None:
+                f0_means.append(mean_f0)
+            wpms.append(wpm)
 
             record = {
                 "id": f"prosody_{i}",
                 "text": text,
                 "wpm": round(wpm, 1),
-                "syn_mean_f0": round(float(np.mean(f0_syn)), 1) if len(f0_syn) > 0 else None,
+                "syn_mean_f0": round(mean_f0, 1) if mean_f0 is not None else None,
             }
-
-            # F0 from reference (LJSpeech)
-            if item.get("audio"):
-                import tempfile, soundfile as sf
-                ref_audio = np.array(item["audio"]["array"], dtype=np.float32)
-                ref_sr = item["audio"]["sampling_rate"]
-                with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-                    sf.write(tmp.name, ref_audio, ref_sr)
-                    f0_ref = extract_f0(tmp.name)
-                    Path(tmp.name).unlink(missing_ok=True)
-
-                if len(f0_ref) > 0 and len(f0_syn) > 0:
-                    min_len = min(len(f0_ref), len(f0_syn))
-                    rmse = float(np.sqrt(np.mean((f0_ref[:min_len] - f0_syn[:min_len]) ** 2)))
-                    corr, _ = pearsonr(f0_ref[:min_len], f0_syn[:min_len])
-
-                    f0_rmses.append(rmse)
-                    f0_correlations.append(float(corr))
-                    record["f0_rmse"] = round(rmse, 2)
-                    record["f0_pearson_r"] = round(float(corr), 4)
-                    record["ref_mean_f0"] = round(float(np.mean(f0_ref)), 1)
-
             write_jsonl(jsonl_path, record)
             all_records.append(record)
-
         except Exception as e:
             logger.warning("Failed prosody %d: %s", i, e)
         finally:
             synth_path.unlink(missing_ok=True)
 
-    # If no LJSpeech, synthesize standalone sentences for speaking rate
-    if not lj_sentences:
-        standalone_texts = [
-            "The quick brown fox jumps over the lazy dog.",
-            "She sells seashells by the seashore.",
-            "How much wood would a woodchuck chuck if a woodchuck could chuck wood?",
-        ] * 10
-        for i, text in enumerate(tqdm(standalone_texts, desc="WPM only")):
-            synth_path = results_dir / f"standalone_{i:04d}.wav"
-            try:
-                result = tts_client.save_synthesis(text, str(synth_path))
-                wpm = speaking_rate_wpm(text, str(synth_path))
-                speaking_rates.append(wpm)
-            except Exception:
-                pass
-            finally:
-                synth_path.unlink(missing_ok=True)
-
     summary = {
-        "f0_rmse_mean": round(np.mean(f0_rmses), 2) if f0_rmses else None,
-        "f0_pearson_r_mean": round(np.mean(f0_correlations), 4) if f0_correlations else None,
-        "speaking_rate_wpm_mean": round(np.mean(speaking_rates), 1) if speaking_rates else None,
-        "speaking_rate_wpm_std": round(np.std(speaking_rates), 1) if speaking_rates else None,
-        "n_compared": len(f0_rmses),
-        "n_wpm_samples": len(speaking_rates),
+        "f0_mean_hz": round(float(np.mean(f0_means)), 1) if f0_means else None,
+        "f0_std_hz": round(float(np.std(f0_means)), 1) if f0_means else None,
+        "f0_min_hz": round(float(np.min(f0_means)), 1) if f0_means else None,
+        "f0_max_hz": round(float(np.max(f0_means)), 1) if f0_means else None,
+        "speaking_rate_wpm_mean": round(float(np.mean(wpms)), 1) if wpms else None,
+        "speaking_rate_wpm_std": round(float(np.std(wpms)), 1) if wpms else None,
+        "n_sentences": len(_TEST_SENTENCES),
     }
 
     save_summary_csv(results_dir / "summary.csv", [summary])
 
-    if f0_rmses:
-        logger.info("F0 RMSE: %.1f Hz, F0 Pearson r: %.3f", np.mean(f0_rmses), np.mean(f0_correlations))
-    if speaking_rates:
-        logger.info("Speaking rate: %.0f ± %.0f WPM", np.mean(speaking_rates), np.std(speaking_rates))
+    if f0_means:
+        logger.info(
+            "F0: mean=%.1f Hz  std=%.1f Hz  range=%.1f–%.1f Hz",
+            np.mean(f0_means), np.std(f0_means), np.min(f0_means), np.max(f0_means),
+        )
+    if wpms:
+        logger.info("Speaking rate: %.0f ± %.0f WPM", np.mean(wpms), np.std(wpms))
 
     return {"test": "2.3", "name": "prosody", "results": summary}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import concurrent.futures
 import io
 import logging
 import struct
@@ -22,6 +23,13 @@ logger = logging.getLogger("eval.tts.client")
 # "Input sentence is longer than maximum sequence length: N > 400")
 TTS_MAX_SEQUENCE_TOKENS = 400
 
+# Reusable thread pool so gRPC calls run with a hard wall-clock deadline.
+# riva.client doesn't expose a per-call deadline and the underlying channel
+# can block on dead connections forever — we wrap with a timeout instead.
+_GRPC_DEADLINE_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+    max_workers=4, thread_name_prefix="tts-grpc-deadline"
+)
+
 
 def _is_permanent_tts_error(exc: Exception) -> bool:
     """Return True for errors that will never succeed on retry."""
@@ -32,7 +40,40 @@ def _is_permanent_tts_error(exc: Exception) -> bool:
     except AttributeError:
         pass
     msg = " ".join(candidates)
-    return "longer than maximum sequence length" in msg or "Input sentence is longer" in msg
+    permanent_markers = (
+        "longer than maximum sequence length",
+        "Input sentence is longer",
+        # Magpie SSML parser refuses anything not rooted at <speak>. These calls
+        # have hung indefinitely in production — fail fast instead of retrying.
+        "did not have `speak` as the root element",
+        "did not have 'speak' as the root element",
+        "speak as the root element",
+        # Empty / pure-whitespace inputs are also unrecoverable.
+        "Input is empty",
+        "Empty input",
+    )
+    return any(m in msg for m in permanent_markers)
+
+
+def _call_with_deadline(fn, timeout_s: float):
+    """Run a blocking gRPC call with a hard wall-clock timeout.
+
+    riva.client does not honour per-call deadlines, so a server-side hang or a
+    half-closed stream pins the calling thread forever. Wrapping in a worker
+    future lets the test loop move on instead of getting stuck for hours.
+    """
+    future = _GRPC_DEADLINE_EXECUTOR.submit(fn)
+    try:
+        return future.result(timeout=timeout_s)
+    except concurrent.futures.TimeoutError as e:
+        # The underlying gRPC call keeps running on the worker thread until the
+        # channel decides to give up; we cancel the future so the result, if it
+        # arrives, is discarded. Re-raising as TimeoutError lets the retry
+        # decorator treat it like any other transient failure.
+        future.cancel()
+        raise TimeoutError(
+            f"gRPC TTS call exceeded {timeout_s:.0f}s deadline"
+        ) from e
 
 
 class TTSClient:
@@ -58,11 +99,17 @@ class TTSClient:
     @retry_with_backoff(reraise_if=_is_permanent_tts_error)
     def synthesize_batch(self, text: str) -> dict[str, Any]:
         start = time.perf_counter()
-        response = self.tts_service.synthesize(
-            text,
-            voice_name=self.tts_cfg.voice_name,
-            language_code=self.tts_cfg.language_code,
-            sample_rate_hz=self.sample_rate,
+        # Hard deadline: riva.client doesn't honour per-call timeouts, so we
+        # bound the wall-clock here. A hung server/stream raises TimeoutError
+        # instead of pinning the test loop forever.
+        response = _call_with_deadline(
+            lambda: self.tts_service.synthesize(
+                text,
+                voice_name=self.tts_cfg.voice_name,
+                language_code=self.tts_cfg.language_code,
+                sample_rate_hz=self.sample_rate,
+            ),
+            timeout_s=self.tts_cfg.request_timeout_s,
         )
         elapsed = time.perf_counter() - start
 
@@ -124,23 +171,35 @@ class TTSClient:
     @retry_with_backoff(reraise_if=_is_permanent_tts_error)
     def synthesize_stream(self, text: str) -> dict[str, Any]:
         start = time.perf_counter()
-        first_chunk_time = None
-        all_chunks: list[bytes] = []
-        chunk_times: list[float] = []
 
-        responses = self.tts_service.synthesize_online(
-            text,
-            voice_name=self.tts_cfg.voice_name,
-            language_code=self.tts_cfg.language_code,
-            sample_rate_hz=self.sample_rate,
-        )
+        def _consume() -> dict[str, Any]:
+            first_chunk_time = None
+            all_chunks: list[bytes] = []
+            chunk_times: list[float] = []
+            responses = self.tts_service.synthesize_online(
+                text,
+                voice_name=self.tts_cfg.voice_name,
+                language_code=self.tts_cfg.language_code,
+                sample_rate_hz=self.sample_rate,
+            )
+            for resp in responses:
+                recv_t = time.perf_counter()
+                if first_chunk_time is None:
+                    first_chunk_time = recv_t
+                all_chunks.append(resp.audio)
+                chunk_times.append(recv_t)
+            return {
+                "first_chunk_time": first_chunk_time,
+                "all_chunks": all_chunks,
+                "chunk_times": chunk_times,
+            }
 
-        for resp in responses:
-            recv_t = time.perf_counter()
-            if first_chunk_time is None:
-                first_chunk_time = recv_t
-            all_chunks.append(resp.audio)
-            chunk_times.append(recv_t)
+        # Hard deadline covers both the initial call and the chunk iterator —
+        # a stream that opens but never closes used to pin the loop forever.
+        consumed = _call_with_deadline(_consume, timeout_s=self.tts_cfg.request_timeout_s)
+        first_chunk_time = consumed["first_chunk_time"]
+        all_chunks = consumed["all_chunks"]
+        chunk_times = consumed["chunk_times"]
 
         total_elapsed = time.perf_counter() - start
         audio_bytes = b"".join(all_chunks)

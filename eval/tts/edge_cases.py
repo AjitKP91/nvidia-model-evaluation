@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from pathlib import Path
 
 import jiwer
@@ -14,6 +15,11 @@ from eval.tts.utmos import score_utmos
 from eval.utils import NORMALIZE_FOR_WER, get_completed_ids, save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.tts.edge_cases")
+
+# Edge cases stress-test the engine; some inputs make the gRPC server hang
+# instead of returning an error. The TTSClient wraps each call in a wall-clock
+# deadline (config.tts.request_timeout_s, default 60 s) so a single bad case
+# can no longer freeze the whole test for hours.
 
 
 def _round_trip_wer(text: str, audio_path: str) -> float | None:
@@ -75,6 +81,12 @@ def run(config: Config) -> dict:
             else:
                 record["status"] = "degraded"
                 record["error"] = "audio too short"
+        except TimeoutError as e:
+            # gRPC deadline exceeded — server hung on this input. Log loudly so
+            # we notice in run.log, but keep moving so the test completes.
+            record["status"] = "timeout"
+            record["error"] = str(e)
+            logger.warning("Edge case %d (%s) timed out: %s", i, category, e)
         except Exception as e:
             record["status"] = "fail"
             record["error"] = str(e)
@@ -89,7 +101,7 @@ def run(config: Config) -> dict:
     for row in summary_rows:
         cat = row["category"]
         if cat not in category_summary:
-            category_summary[cat] = {"total": 0, "pass": 0, "fail": 0, "degraded": 0}
+            category_summary[cat] = {"total": 0, "pass": 0, "fail": 0, "degraded": 0, "timeout": 0}
         category_summary[cat]["total"] += 1
         category_summary[cat][row["status"] or "fail"] += 1
 
@@ -106,6 +118,7 @@ def run(config: Config) -> dict:
     total = len(summary_rows)
     passed = sum(1 for r in summary_rows if r["status"] == "pass")
     failed = sum(1 for r in summary_rows if r["status"] == "fail")
-    logger.info("Edge cases: %d/%d passed, %d failed", passed, total, failed)
+    timed_out = sum(1 for r in summary_rows if r["status"] == "timeout")
+    logger.info("Edge cases: %d/%d passed, %d failed, %d timed out", passed, total, failed, timed_out)
 
     return {"test": "2.7", "name": "edge_cases", "results": agg_rows}

@@ -39,7 +39,7 @@ def run(config: Config) -> dict:
 
     logger.info("=== Test 1.2: Batch Processing Performance ===")
 
-    with load_dataset_tmp("librispeech_asr", "test", name="clean") as examples:
+    with load_dataset_tmp("openslr/librispeech_asr", "test", name="clean") as examples:
         pass
 
     all_results = []

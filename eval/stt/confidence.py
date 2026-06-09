@@ -48,7 +48,7 @@ def run(config: Config) -> dict:
     logger.info("=== Test 1.10: Confidence Score Calibration ===")
 
     # Load 1000+ utterances from LibriSpeech + GigaSpeech
-    with load_dataset_tmp("librispeech_asr", "test", name="clean", limit=700) as ls_subset:
+    with load_dataset_tmp("openslr/librispeech_asr", "test", name="clean", limit=700) as ls_subset:
         pass
 
     try:

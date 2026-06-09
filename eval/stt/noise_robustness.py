@@ -58,7 +58,7 @@ def run(config: Config) -> dict:
 
     logger.info("=== Test 1.5: Noise Robustness ===")
 
-    with load_dataset_tmp("librispeech_asr", "test", name="clean", limit=N_UTTERANCES) as subset:
+    with load_dataset_tmp("openslr/librispeech_asr", "test", name="clean", limit=N_UTTERANCES) as subset:
         pass
 
     noise_base = Path(config.evaluation.data_dir) / "noise"

@@ -11,13 +11,13 @@ logger = logging.getLogger("eval.data")
 DATASETS = {
     # ---- STT datasets (HuggingFace) ----
     "librispeech_clean": {
-        "hf_path": "librispeech_asr",
+        "hf_path": "openslr/librispeech_asr",
         "hf_name": "clean",
         "split": "test",
         "description": "LibriSpeech test-clean (5.4 h narrated audiobooks)",
     },
     "librispeech_other": {
-        "hf_path": "librispeech_asr",
+        "hf_path": "openslr/librispeech_asr",
         "hf_name": "other",
         "split": "test",
         "description": "LibriSpeech test-other (5.4 h challenging narration)",

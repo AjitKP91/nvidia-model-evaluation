@@ -204,7 +204,7 @@ def load_dataset_tmp(path: str, split: str, name=None, limit: int | None = None,
     """Download a HF dataset to a temp dir, convert to an in-memory list, delete cache.
 
     Usage:
-        with load_dataset_tmp("librispeech_asr", "test", name="clean") as examples:
+        with load_dataset_tmp("openslr/librispeech_asr", "test", name="clean") as examples:
             for ex in examples: ...
     """
     import itertools

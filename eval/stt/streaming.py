@@ -67,7 +67,7 @@ def run(config: Config) -> dict:
     logger.info("=== Test 1.3: Streaming Performance ===")
 
     # Load datasets
-    with load_dataset_tmp("librispeech_asr", "test", name="clean", limit=200) as ls_subset:
+    with load_dataset_tmp("openslr/librispeech_asr", "test", name="clean", limit=200) as ls_subset:
         pass
     try:
         with load_dataset_tmp("facebook/voxpopuli", "test", name="en", limit=100) as vp_subset:

@@ -87,7 +87,7 @@ def run(config: Config) -> dict:
 
     # Also create concatenated LibriSpeech files
     try:
-        with load_dataset_tmp("librispeech_asr", "test", name="clean", limit=100) as ls_examples:
+        with load_dataset_tmp("openslr/librispeech_asr", "test", name="clean", limit=100) as ls_examples:
             pass
         concat_groups = [ls_examples[i:i+10] for i in range(0, len(ls_examples), 10)]
     except Exception:

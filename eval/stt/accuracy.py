@@ -28,8 +28,8 @@ from eval.utils import (
 logger = logging.getLogger("eval.stt.accuracy")
 
 DATASETS = [
-    {"name": "librispeech_clean", "hf": ("librispeech_asr", "clean"), "split": "test", "label": "LibriSpeech clean"},
-    {"name": "librispeech_other", "hf": ("librispeech_asr", "other"), "split": "test", "label": "LibriSpeech other"},
+    {"name": "librispeech_clean", "hf": ("openslr/librispeech_asr", "clean"), "split": "test", "label": "LibriSpeech clean"},
+    {"name": "librispeech_other", "hf": ("openslr/librispeech_asr", "other"), "split": "test", "label": "LibriSpeech other"},
     {"name": "voxpopuli_en", "hf": ("facebook/voxpopuli", "en"), "split": "test", "label": "VoxPopuli EN"},
     {"name": "gigaspeech", "hf": ("speechcolab/gigaspeech", "xs"), "split": "test", "label": "GigaSpeech"},
     {"name": "spgispeech", "hf": ("kensho/spgispeech", "S"), "split": "validation", "label": "SPGISpeech"},

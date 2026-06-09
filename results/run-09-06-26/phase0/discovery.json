@@ -1,0 +1,92 @@
+{
+  "connectivity": {
+    "grpc_stt": {
+      "status": "ok",
+      "latency_s": 0.2649956289997135,
+      "transcript_len": 0
+    },
+    "grpc_tts": {
+      "status": "ok",
+      "latency_s": 0.27907686699973056,
+      "audio_len_bytes": 88064
+    },
+    "rest_stt": {
+      "status": "ok",
+      "latency_s": 0.10395953799979907
+    },
+    "rest_tts": {
+      "status": "ok",
+      "latency_s": 0.23058057500020368
+    },
+    "network_rtt_s": null
+  },
+  "stt_schema": {
+    "has_transcript": false,
+    "has_confidence": true,
+    "has_words": false,
+    "word_fields": [],
+    "sample_transcript": "",
+    "batch_latency_s": 0.03760538599999563
+  },
+  "stt_streaming_schema": {
+    "has_partials": false,
+    "num_partials": 0,
+    "has_finals": false,
+    "has_stability": false,
+    "ttfw": null,
+    "finalization_latency": null,
+    "streaming_rtf": 1.0155314250000629,
+    "final_transcript": ""
+  },
+  "tts_schema": {
+    "batch_audio_bytes": 67584,
+    "batch_audio_duration_s": 1.5325170068027212,
+    "batch_latency_s": 0.1773520470001131,
+    "sample_rate": 22050,
+    "stream_ttfb": 0.06348215999969398,
+    "stream_n_chunks": 15,
+    "stream_audio_duration_s": 1.7182766439909296,
+    "stream_total_latency_s": 0.17150432300013563,
+    "sample_saved": "results/phase0/tts_sample.wav"
+  },
+  "parameters": {
+    "stt_sample_rates": {
+      "8000": "ok",
+      "16000": "ok",
+      "22050": "ok",
+      "44100": "ok",
+      "48000": "ok"
+    },
+    "tts_ssml": "supported"
+  },
+  "smoke_tests": {
+    "stt_10s": {
+      "status": "pass",
+      "latency_s": 0.049350437999692076
+    },
+    "stt_60s": {
+      "status": "pass",
+      "latency_s": 0.18289155700040283
+    },
+    "tts_rest": {
+      "status": "pass",
+      "audio_duration_s": 5.061950113378685
+    },
+    "tts_grpc_stream": {
+      "status": "pass",
+      "ttfb_s": 0.06935275100022409
+    }
+  },
+  "cold_start": {
+    "stt": {
+      "t_first_s": 0.054183553000257234,
+      "t_warm_mean_s": 0.04843553389996487,
+      "cold_ratio": 1.1186735984404321
+    },
+    "tts": {
+      "t_first_s": 0.29106883900021785,
+      "t_warm_mean_s": 0.29124086600004373,
+      "cold_ratio": 0.9994093308326248
+    }
+  }
+}

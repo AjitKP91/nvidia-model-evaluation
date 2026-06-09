@@ -1,0 +1,40 @@
+test,value,status,error,transcript
+sample_rate,8000,pass,,
+sample_rate,16000,pass,,
+sample_rate,22050,pass,,
+sample_rate,44100,pass,,
+sample_rate,48000,pass,,
+format,wav,pass,,
+format,flac,pass,,
+format,mp3,pass,,
+format,ogg,fail,"Encoding failed. ffmpeg/avlib returned error code: 1
+
+Command:['ffmpeg', '-y', '-f', 'wav', '-i', '/tmp/tmpiaaf3inl', '-acodec', 'libvorbis', '-f', 'ogg', '/tmp/tmpd0dbd95p']
+
+Output from ffmpeg/avlib:
+
+ffmpeg version 4.3 Copyright (c) 2000-2020 the FFmpeg developers
+  built with gcc 7.3.0 (crosstool-NG 1.23.0.449-a04d0)
+  configuration: --prefix=/anaconda/envs/py38_default --cc=/opt/conda/conda-bld/ffmpeg_1597178665428/_build_env/bin/x86_64-conda_cos6-linux-gnu-cc --disable-doc --disable-openssl --enable-avresample --enable-gnutls --enable-hardcoded-tables --enable-libfreetype --enable-libopenh264 --enable-pic --enable-pthreads --enable-shared --disable-static --enable-version3 --enable-zlib --enable-libmp3lame
+  libavutil      56. 51.100 / 56. 51.100
+  libavcodec     58. 91.100 / 58. 91.100
+  libavformat    58. 45.100 / 58. 45.100
+  libavdevice    58. 10.100 / 58. 10.100
+  libavfilter     7. 85.100 /  7. 85.100
+  libavresample   4.  0.  0 /  4.  0.  0
+  libswscale      5.  7.100 /  5.  7.100
+  libswresample   3.  7.100 /  3.  7.100
+Guessed Channel Layout for Input Stream #0.0 : mono
+Input #0, wav, from '/tmp/tmpiaaf3inl':
+  Duration: 00:00:05.00, bitrate: 256 kb/s
+    Stream #0:0: Audio: pcm_s16le ([1][0][0][0] / 0x0001), 16000 Hz, mono, s16, 256 kb/s
+Unknown encoder 'libvorbis'
+",
+channels,1,pass,,
+channels,2,pass,,
+duration,0.5,pass,,
+duration,5,pass,,
+duration,60,pass,,
+duration,600,pass,,
+edge_case,silence,pass,,
+edge_case,white_noise,pass,,

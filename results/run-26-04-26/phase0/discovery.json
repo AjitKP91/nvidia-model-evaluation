@@ -1,0 +1,92 @@
+{
+  "connectivity": {
+    "grpc_stt": {
+      "status": "ok",
+      "latency_s": 0.12747868600126822,
+      "transcript_len": 0
+    },
+    "grpc_tts": {
+      "status": "ok",
+      "latency_s": 0.3015836890117498,
+      "audio_len_bytes": 83968
+    },
+    "rest_stt": {
+      "status": "ok",
+      "latency_s": 0.13479008499416523
+    },
+    "rest_tts": {
+      "status": "ok",
+      "latency_s": 0.2501710210053716
+    },
+    "network_rtt_s": 0.04192760298610665
+  },
+  "stt_schema": {
+    "has_transcript": false,
+    "has_confidence": true,
+    "has_words": false,
+    "word_fields": [],
+    "sample_transcript": "",
+    "batch_latency_s": 0.03941698800190352
+  },
+  "stt_streaming_schema": {
+    "has_partials": false,
+    "num_partials": 0,
+    "has_finals": false,
+    "has_stability": false,
+    "ttfw": null,
+    "finalization_latency": null,
+    "streaming_rtf": 1.0165684765015612,
+    "final_transcript": ""
+  },
+  "tts_schema": {
+    "batch_audio_bytes": 86016,
+    "batch_audio_duration_s": 1.9504761904761905,
+    "batch_latency_s": 0.22417826199671254,
+    "sample_rate": 22050,
+    "stream_ttfb": 0.05362745300226379,
+    "stream_n_chunks": 15,
+    "stream_audio_duration_s": 1.5325170068027212,
+    "stream_total_latency_s": 0.16493759899458382,
+    "sample_saved": "results/phase0/tts_sample.wav"
+  },
+  "parameters": {
+    "stt_sample_rates": {
+      "8000": "ok",
+      "16000": "ok",
+      "22050": "ok",
+      "44100": "ok",
+      "48000": "ok"
+    },
+    "tts_ssml": "supported"
+  },
+  "smoke_tests": {
+    "stt_10s": {
+      "status": "pass",
+      "latency_s": 0.05188850800914224
+    },
+    "stt_60s": {
+      "status": "pass",
+      "latency_s": 0.18445356799929868
+    },
+    "tts_rest": {
+      "status": "pass",
+      "audio_duration_s": 5.061950113378685
+    },
+    "tts_grpc_stream": {
+      "status": "pass",
+      "ttfb_s": 0.06560968099802267
+    }
+  },
+  "cold_start": {
+    "stt": {
+      "t_first_s": 0.055993753994698636,
+      "t_warm_mean_s": 0.05175521390046924,
+      "cold_ratio": 1.081895905258561
+    },
+    "tts": {
+      "t_first_s": 0.30430142900149804,
+      "t_warm_mean_s": 0.29190820839867226,
+      "cold_ratio": 1.0424558825214665
+    }
+  }
+}

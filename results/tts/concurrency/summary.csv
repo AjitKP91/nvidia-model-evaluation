@@ -1,5 +1,0 @@
-interface,concurrency,n_calls,n_success,n_errors,error_rate,rps,latency_p50,latency_p90,latency_p95,latency_p99,latency_mean,latency_std,latency_min,latency_max
-grpc,1,50,50,0,0.0,1.55,0.64,0.665,0.67,0.698,0.643,0.018,0.606,0.722
-grpc,5,50,50,0,0.0,7.03,0.71,0.736,0.744,0.746,0.708,0.022,0.65,0.746
-grpc,10,50,48,2,0.04,0.16,0.801,0.838,0.856,1.38,0.818,0.123,0.648,1.475
-grpc,20,50,38,12,0.24,0.13,0.837,1.807,2.292,2.328,1.048,0.488,0.663,2.328

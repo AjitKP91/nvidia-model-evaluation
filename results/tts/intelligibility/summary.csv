@@ -1,5 +1,0 @@
-category,n_sentences,round_trip_wer,round_trip_cer
-harvard,80,0.0148,0.0148
-technical,50,0.1163,0.1163
-numbers,50,0.1718,0.1718
-conversational,50,0.0016,0.0016

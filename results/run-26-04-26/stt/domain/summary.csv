@@ -1,0 +1,2 @@
+dataset,n_utterances,domain_wer,krr_mean,ne_wer_mean,top_misrecognised
+SPGISpeech (financial),500,0.2328,0.7954,0.4233,"[('the first quarter', 12), ('first', 5), ('Akorn', 5), ('2', 4), ('U.S.', 4), ('second', 4), ('first quarter', 3), ('OMV', 3), ('QSCAP', 3), ('the first half of the year', 2), ('3', 2), ('5', 2), ('First', 2), ('last year', 2), ('Q2', 2), ('this year', 2), ('third', 2), ('September', 2), ('Neal Shah', 1), ('the mid-2020s', 1)]"

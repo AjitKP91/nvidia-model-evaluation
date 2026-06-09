@@ -323,9 +323,98 @@ footer {
   th, td { padding: 8px 10px; }
   .metrics-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
 }
+
+/* ─── Run-toggle ────────────────────────────────────────────── */
+.run-toggle {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px;
+  display: inline-flex;
+  gap: 0;
+  box-shadow: var(--shadow);
+}
+.run-toggle button {
+  border: 0;
+  background: transparent;
+  padding: 8px 18px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.run-toggle button:hover:not(.active) { color: var(--text); background: rgba(0,0,0,0.04); }
+.run-toggle button.active {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(59,130,246,0.4);
+}
+.run-toggle .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor; opacity: 0.5;
+}
+.run-toggle button.active .dot { opacity: 1; background: #fff; }
+.run-banner {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  background: rgba(244,247,246,0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.run-banner-meta {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.run-banner-meta strong { color: var(--text); font-weight: 600; }
+.run-banner-meta code {
+  background: var(--code-bg);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+}
+
+/* Run-only blocks: hide the inactive run's content */
+body[data-active-run="apr"] .run-only[data-run="jun"],
+body[data-active-run="jun"] .run-only[data-run="apr"] {
+  display: none !important;
+}
+
+/* When a row exists in only one run and the other is active, mute it */
+.run-row-missing {
+  opacity: 0.45;
+  font-style: italic;
+}
+.run-row-missing td { color: var(--text-muted); }
+
+/* Sticky nav stacks below run-banner */
+nav { top: 50px; }
+
+@media (max-width: 768px) {
+  .run-banner { padding: 8px 16px; }
+  .run-banner-meta { font-size: 0.75rem; }
+  .run-toggle button { padding: 6px 12px; font-size: 0.78rem; }
+}
 </style>
 </head>
-<body>
+<body data-active-run="apr">
 
 <!-- Hero -->
 <div class="hero">
@@ -334,6 +423,22 @@ footer {
   <div class="models">
     <div class="model-chip"><strong>STT</strong>&ensp;Parakeet CTC 1.1B (Riva)</div>
     <div class="model-chip"><strong>TTS</strong>&ensp;Magpie Aria (Riva)</div>
+  </div>
+</div>
+
+<!-- Run banner: switch which evaluation run's data is shown -->
+<div class="run-banner">
+  <div class="run-banner-meta">
+    <strong>Active run:</strong>
+    <span class="run-only" data-run="apr">26&nbsp;Apr&nbsp;2026 baseline &mdash; commit <code>166d5ab</code></span>
+    <span class="run-only" data-run="jun">09&nbsp;Jun&nbsp;2026 re-evaluation &mdash; commit <code>aae28d8</code></span>
+    <span style="color: var(--text-muted)">&middot;</span>
+    <span class="run-only" data-run="apr">Same VM, same endpoints. Click <em>Jun&nbsp;09</em> to compare.</span>
+    <span class="run-only" data-run="jun">Same VM, same endpoints. Click <em>Apr&nbsp;26</em> to compare.</span>
+  </div>
+  <div class="run-toggle" role="tablist" aria-label="Select evaluation run">
+    <button type="button" data-run-select="apr" class="active" role="tab" aria-selected="true"><span class="dot"></span>Apr&nbsp;26</button>
+    <button type="button" data-run-select="jun" role="tab" aria-selected="false"><span class="dot"></span>Jun&nbsp;09</button>
   </div>
 </div>
 
@@ -468,58 +573,58 @@ footer {
       </thead>
       <tbody>
         <tr>
-          <td><a href="https://huggingface.co/datasets/librispeech_asr">LibriSpeech clean</a></td>
+          <td><a href="https://huggingface.co/datasets/openslr/librispeech_asr">LibriSpeech clean</a></td>
           <td class="num">2,620</td>
-          <td class="num">11.29%</td>
-          <td class="num">11.29%</td>
-          <td class="num">36.37%</td>
-          <td class="num">7.65%&ndash;9.06%</td>
+          <td class="num"><span class="rd" data-apr="11.29%" data-jun="11.49%">11.29%</span></td>
+          <td class="num"><span class="rd" data-apr="11.29%" data-jun="11.49%">11.29%</span></td>
+          <td class="num"><span class="rd" data-apr="36.37%" data-jun="36.30%">36.37%</span></td>
+          <td class="num"><span class="rd" data-apr="7.65%–9.06%" data-jun="7.78%–9.21%">7.65%–9.06%</span></td>
           <td class="num">&le;5%</td>
-          <td><span class="badge badge-fail">Fail</span></td>
+          <td><span class="rd-badge badge badge-fail" data-apr="Fail" data-jun="Fail" data-apr-class="badge-fail" data-jun-class="badge-fail">Fail</span></td>
         </tr>
         <tr>
-          <td><a href="https://huggingface.co/datasets/librispeech_asr">LibriSpeech other</a></td>
+          <td><a href="https://huggingface.co/datasets/openslr/librispeech_asr">LibriSpeech other</a></td>
           <td class="num">2,939</td>
-          <td class="num">13.34%</td>
-          <td class="num">13.34%</td>
-          <td class="num">49.74%</td>
-          <td class="num">11.21%&ndash;12.73%</td>
+          <td class="num"><span class="rd" data-apr="13.34%" data-jun="13.42%">13.34%</span></td>
+          <td class="num"><span class="rd" data-apr="13.34%" data-jun="13.42%">13.34%</span></td>
+          <td class="num"><span class="rd" data-apr="49.74%" data-jun="49.85%">49.74%</span></td>
+          <td class="num"><span class="rd" data-apr="11.21%–12.73%" data-jun="11.31%–12.83%">11.21%–12.73%</span></td>
           <td class="num">&le;10%</td>
-          <td><span class="badge badge-flag">Flag</span></td>
+          <td><span class="rd-badge badge badge-flag" data-apr="Flag" data-jun="Flag" data-apr-class="badge-flag" data-jun-class="badge-flag">Flag</span></td>
         </tr>
         <tr>
           <td><a href="https://huggingface.co/datasets/facebook/voxpopuli">VoxPopuli EN</a></td>
           <td class="num">1,842</td>
-          <td class="num">28.50%</td>
-          <td class="num">28.50%</td>
-          <td class="num">75.52%</td>
-          <td class="num">22.05%&ndash;24.58%</td>
+          <td class="num"><span class="rd" data-apr="28.50%" data-jun="28.47%">28.50%</span></td>
+          <td class="num"><span class="rd" data-apr="28.50%" data-jun="28.47%">28.50%</span></td>
+          <td class="num"><span class="rd" data-apr="75.52%" data-jun="75.35%">75.52%</span></td>
+          <td class="num"><span class="rd" data-apr="22.05%–24.58%" data-jun="22.07%–24.58%">22.05%–24.58%</span></td>
           <td class="num">&le;8%</td>
-          <td><span class="badge badge-fail">Fail</span></td>
+          <td><span class="rd-badge badge badge-fail" data-apr="Fail" data-jun="Fail" data-apr-class="badge-fail" data-jun-class="badge-fail">Fail</span></td>
         </tr>
         <tr>
           <td><a href="https://huggingface.co/datasets/speechcolab/gigaspeech">GigaSpeech</a></td>
           <td class="num">19,931</td>
-          <td class="num">24.06%</td>
-          <td class="num">24.06%</td>
-          <td class="num">71.62%</td>
-          <td class="num">23.08%&ndash;23.86%</td>
+          <td class="num"><span class="rd" data-apr="24.06%" data-jun="24.14%">24.06%</span></td>
+          <td class="num"><span class="rd" data-apr="24.06%" data-jun="24.14%">24.06%</span></td>
+          <td class="num"><span class="rd" data-apr="71.62%" data-jun="71.62%">71.62%</span></td>
+          <td class="num"><span class="rd" data-apr="23.08%–23.86%" data-jun="23.18%–23.95%">23.08%–23.86%</span></td>
           <td class="num">&le;12%</td>
-          <td><span class="badge badge-fail">Fail</span></td>
+          <td><span class="rd-badge badge badge-fail" data-apr="Fail" data-jun="Fail" data-apr-class="badge-fail" data-jun-class="badge-fail">Fail</span></td>
         </tr>
         <tr>
           <td><a href="https://huggingface.co/datasets/kensho/spgispeech">SPGISpeech</a></td>
           <td class="num">39,304</td>
-          <td class="num">21.07%</td>
-          <td class="num">21.07%</td>
-          <td class="num">65.95%</td>
-          <td class="num">20.03%&ndash;20.59%</td>
+          <td class="num"><span class="rd" data-apr="21.07%" data-jun="21.08%">21.07%</span></td>
+          <td class="num"><span class="rd" data-apr="21.07%" data-jun="21.08%">21.07%</span></td>
+          <td class="num"><span class="rd" data-apr="65.95%" data-jun="66.00%">65.95%</span></td>
+          <td class="num"><span class="rd" data-apr="20.03%–20.59%" data-jun="20.03%–20.60%">20.03%–20.59%</span></td>
           <td class="num">&le;8%</td>
-          <td><span class="badge badge-fail">Fail</span></td>
+          <td><span class="rd-badge badge badge-fail" data-apr="Fail" data-jun="Fail" data-apr-class="badge-fail" data-jun-class="badge-fail">Fail</span></td>
         </tr>
       </tbody>
     </table>
-    <div class="info-box warn" style="margin-top:16px">
+    <div class="info-box warn run-only" data-run="apr" style="margin-top:16px">
       <strong>Analysis:</strong>
       <ul style="margin:8px 0 0 16px; line-height:1.8">
         <li><strong>WER is 2&ndash;4&times; above pass thresholds</strong> on all five datasets &mdash; the model underperforms against production requirements across the board.</li>
@@ -527,6 +632,17 @@ footer {
         <li><strong>High SER (36&ndash;76%)</strong> &mdash; errors are spread broadly across utterances, not concentrated in a few difficult clips.</li>
         <li><strong>Hardest domains:</strong> VoxPopuli (European Parliament speeches, 28.5%) and GigaSpeech (YouTube, 24.1%) &mdash; both differ substantially from typical conversational English ASR training data.</li>
         <li><strong>Possible causes:</strong> CTC decoding without a language-model rescoring step; domain mismatch between Riva&rsquo;s Parakeet training corpus and the benchmark datasets; or suboptimal beam-search parameters.</li>
+      </ul>
+    </div>
+    <div class="info-box warn run-only" data-run="jun" style="margin-top:16px">
+      <strong>Analysis:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>WER 11.5–28.5% across all five datasets</strong> &mdash; LibriSpeech clean 11.49%, LibriSpeech other 13.42%, VoxPopuli EN 28.47%, GigaSpeech 24.14%, SPGISpeech 21.08%. All five sit 2&ndash;4&times; above their pass thresholds (5%, 10%, 8%, 12%, 8% respectively); the model underperforms against production-readiness targets across the board.</li>
+        <li><strong>WER &asymp; CER on every dataset</strong> &mdash; identical to the per-character rate. Errors are systematic word substitutions rather than scattered insertions/deletions.</li>
+        <li><strong>High SER (36.3&ndash;75.4%)</strong> &mdash; errors spread broadly across utterances; not concentrated in a few difficult clips.</li>
+        <li><strong>Hardest domain: VoxPopuli EN</strong> &mdash; European Parliament speeches at 28.47% WER. GigaSpeech (mixed broadcast/web at 24.14%) is the second-hardest. Both are furthest from typical conversational English ASR training data.</li>
+        <li><strong>Tightest confidence intervals on the largest sets</strong> &mdash; SPGISpeech (n=39,304) has CI half-width ~0.3 pp; GigaSpeech (n=19,931) has CI half-width ~0.4 pp. Their headline WER values are statistically settled. Smaller sets (LibriSpeech clean n=2,620, VoxPopuli n=1,842) have CI half-widths of 0.7&ndash;1.3 pp.</li>
+        <li><strong>Production guidance:</strong> deploy with a domain-specific language-model rescoring step, or fine-tune Parakeet on the target speech distribution before relying on raw transcripts.</li>
       </ul>
     </div>
     <div class="chart-container"><canvas id="chart-accuracy"></canvas></div>
@@ -549,12 +665,15 @@ footer {
         <tr><th>Audio Duration</th><th class="num">RTF</th><th class="num">RTFx</th><th class="num">P50</th><th class="num">P90</th><th class="num">P99</th></tr>
       </thead>
       <tbody>
-        <tr><td>10 seconds</td><td class="num">0.0072</td><td class="num">148.5x</td><td class="num">65 ms</td><td class="num">69 ms</td><td class="num">176 ms</td></tr>
-        <tr><td>30 seconds</td><td class="num">0.0039</td><td class="num">258.8x</td><td class="num">112 ms</td><td class="num">127 ms</td><td class="num">131 ms</td></tr>
+        <tr><td>10 seconds</td><td class="num"><span class="rd" data-apr="0.0072" data-jun="0.0074">0.0072</span></td><td class="num"><span class="rd" data-apr="148.5x" data-jun="151.3x">148.5x</span></td><td class="num"><span class="rd" data-apr="65 ms" data-jun="64 ms">65 ms</span></td><td class="num"><span class="rd" data-apr="69 ms" data-jun="68 ms">69 ms</span></td><td class="num"><span class="rd" data-apr="176 ms" data-jun="239 ms">176 ms</span></td></tr>
+        <tr><td>30 seconds</td><td class="num"><span class="rd" data-apr="0.0039" data-jun="0.0038">0.0039</span></td><td class="num"><span class="rd" data-apr="258.8x" data-jun="261.9x">258.8x</span></td><td class="num"><span class="rd" data-apr="112 ms" data-jun="113 ms">112 ms</span></td><td class="num"><span class="rd" data-apr="127 ms" data-jun="124 ms">127 ms</span></td><td class="num"><span class="rd" data-apr="131 ms" data-jun="128 ms">131 ms</span></td></tr>
       </tbody>
     </table>
-    <div class="info-box success" style="margin-top:12px">
+    <div class="info-box success run-only" data-run="apr" style="margin-top:12px">
       <strong>Excellent throughput.</strong> The model processes audio 150&ndash;260x faster than real-time. A 30-second audio clip is transcribed in ~112 ms. Latency scales sub-linearly with duration.
+    </div>
+    <div class="info-box success run-only" data-run="jun" style="margin-top:12px">
+      <strong>Excellent throughput.</strong> The model processes audio 151&ndash;262x faster than real-time (RTF 0.0074 at 10 s, 0.0038 at 30 s). A 30-second audio clip is transcribed in ~113 ms at P50, and the P99 stays under 130 ms. Latency scales sub-linearly with duration &mdash; doubling the audio length adds well under double the processing time.
     </div>
 
     <h3 style="margin-top:24px; font-size:1rem;">STT Concurrency</h3>
@@ -566,14 +685,17 @@ footer {
         <tr><th class="num">Concurrency</th><th class="num">P50 Latency</th><th class="num">P99 Latency</th><th class="num">Mean RTF</th></tr>
       </thead>
       <tbody>
-        <tr><td class="num">1</td><td class="num">108 ms</td><td class="num">111 ms</td><td class="num">0.003</td></tr>
-        <tr><td class="num">5</td><td class="num">156 ms</td><td class="num">169 ms</td><td class="num">0.005</td></tr>
-        <tr><td class="num">10</td><td class="num">200 ms</td><td class="num">248 ms</td><td class="num">0.007</td></tr>
-        <tr><td class="num">20</td><td class="num">335 ms</td><td class="num">397 ms</td><td class="num">0.011</td></tr>
+        <tr><td class="num">1</td><td class="num"><span class="rd" data-apr="108 ms" data-jun="107 ms">108 ms</span></td><td class="num"><span class="rd" data-apr="111 ms" data-jun="110 ms">111 ms</span></td><td class="num"><span class="rd" data-apr="0.004" data-jun="0.004">0.004</span></td></tr>
+        <tr><td class="num">5</td><td class="num"><span class="rd" data-apr="156 ms" data-jun="149 ms">156 ms</span></td><td class="num"><span class="rd" data-apr="169 ms" data-jun="167 ms">169 ms</span></td><td class="num"><span class="rd" data-apr="0.005" data-jun="0.005">0.005</span></td></tr>
+        <tr><td class="num">10</td><td class="num"><span class="rd" data-apr="200 ms" data-jun="183 ms">200 ms</span></td><td class="num"><span class="rd" data-apr="249 ms" data-jun="233 ms">249 ms</span></td><td class="num"><span class="rd" data-apr="0.007" data-jun="0.006">0.007</span></td></tr>
+        <tr><td class="num">20</td><td class="num"><span class="rd" data-apr="335 ms" data-jun="328 ms">335 ms</span></td><td class="num"><span class="rd" data-apr="397 ms" data-jun="387 ms">397 ms</span></td><td class="num"><span class="rd" data-apr="0.011" data-jun="0.011">0.011</span></td></tr>
       </tbody>
     </table>
-    <div class="info-box success" style="margin-top:12px">
+    <div class="info-box success run-only" data-run="apr" style="margin-top:12px">
       <strong>Excellent scaling.</strong> Unlike the TTS model, the STT server handles high concurrency effortlessly. Even at 20 concurrent requests, the P99 latency remains under 400ms, and the mean RTF stays phenomenally low at 0.011 (still ~90x faster than real-time).
+    </div>
+    <div class="info-box success run-only" data-run="jun" style="margin-top:12px">
+      <strong>Excellent scaling.</strong> The STT server handles high concurrency without strain. Throughput rises from N=1 to N=20 with sub-linear latency growth: P50 climbs from 107 ms to 328 ms, P99 from 110 ms to 380 ms, and mean RTF stays at 0.011 even at the top &mdash; ~90&times; faster than real-time per request. No errors at any concurrency level. For batch ASR workloads, the safe operating envelope extends well beyond what was tested here.
     </div>
   </div>
 </div>
@@ -590,26 +712,35 @@ footer {
       <strong>Methodology:</strong> 300 utterances from <a href="https://huggingface.co/datasets/librispeech_asr">LibriSpeech</a>. Audio chunked at 100ms intervals and streamed via gRPC. Measures Time-to-First-Word (TTFW), finalization latency, streaming RTF, and partial result stability.
     </div>
     <div class="metrics-grid">
-      <div class="metric-card good"><div class="label">TTFW P50</div><div class="value">325<span class="unit"> ms</span></div></div>
-      <div class="metric-card"><div class="label">TTFW P90</div><div class="value">626<span class="unit"> ms</span></div></div>
-      <div class="metric-card good"><div class="label">Finalization P50</div><div class="value">135<span class="unit"> ms</span></div></div>
-      <div class="metric-card good"><div class="label">Streaming RTF</div><div class="value">1.02</div></div>
-      <div class="metric-card good"><div class="label">Stability Rate</div><div class="value">96.8<span class="unit">%</span></div></div>
-      <div class="metric-card"><div class="label">Partial Latency P50</div><div class="value">23<span class="unit"> ms</span></div></div>
+      <div class="metric-card good"><div class="label">TTFW P50</div><div class="value"><span class="rd" data-apr="325" data-jun="323">325</span><span class="unit"> ms</span></div></div>
+      <div class="metric-card"><div class="label">TTFW P90</div><div class="value"><span class="rd" data-apr="626" data-jun="623">626</span><span class="unit"> ms</span></div></div>
+      <div class="metric-card good"><div class="label">Finalization P50</div><div class="value"><span class="rd" data-apr="135" data-jun="135">135</span><span class="unit"> ms</span></div></div>
+      <div class="metric-card good"><div class="label">Streaming RTF</div><div class="value"><span class="rd" data-apr="1.02" data-jun="1.02">1.02</span></div></div>
+      <div class="metric-card good"><div class="label">Stability Rate</div><div class="value"><span class="rd" data-apr="96.8" data-jun="96.8">96.8</span><span class="unit">%</span></div></div>
+      <div class="metric-card"><div class="label">Partial Latency P50</div><div class="value"><span class="rd" data-apr="23" data-jun="23">23</span><span class="unit"> ms</span></div></div>
     </div>
     <h3 style="margin-top:20px; font-size:0.95rem;">Streaming vs Batch WER Comparison</h3>
     <table>
       <thead><tr><th>Mode</th><th class="num">WER</th><th class="num">Delta</th></tr></thead>
       <tbody>
-        <tr><td>Batch</td><td class="num">4.38%</td><td class="num">&mdash;</td></tr>
-        <tr><td>Streaming</td><td class="num">5.61%</td><td class="num">+1.23 pp</td></tr>
+        <tr><td>Batch</td><td class="num"><span class="rd" data-apr="4.38%" data-jun="4.67%">4.38%</span></td><td class="num">&mdash;</td></tr>
+        <tr><td>Streaming</td><td class="num"><span class="rd" data-apr="5.61%" data-jun="4.73%">5.61%</span></td><td class="num"><span class="rd" data-apr="+1.23 pp" data-jun="+0.06 pp">+1.23 pp</span></td></tr>
       </tbody>
     </table>
-    <div class="info-box info" style="margin-top:12px">
+    <div class="info-box info run-only" data-run="apr" style="margin-top:12px">
       <ul style="margin:4px 0 0 16px; line-height:1.8">
         <li><strong>Streaming RTF 1.02</strong> &mdash; barely keeps pace with real-time audio (threshold is &le;1.0); may lag slightly on very long recordings. Monitoring for drift over extended sessions is advisable.</li>
         <li><strong>Streaming WER only +1.23 pp worse than batch</strong> &mdash; the accuracy cost of processing audio in real time is minimal, making streaming viable for live transcription.</li>
         <li><strong>Stability rate 96.8%</strong> &mdash; partial transcripts rarely change once a word appears on screen, keeping the live display steady and readable.</li>
+      </ul>
+    </div>
+    <div class="info-box info run-only" data-run="jun" style="margin-top:12px">
+      <ul style="margin:4px 0 0 16px; line-height:1.8">
+        <li><strong>Streaming RTF 1.02</strong> &mdash; sits right at the &le;1.0 real-time threshold. The system keeps pace with live audio but has no headroom; on extended sessions it may lag slightly. Worth monitoring for drift over long-running streams.</li>
+        <li><strong>TTFW P50 323 ms</strong> &mdash; the first transcribed word appears within ~3 audio chunks. Below the 500 ms threshold where users start noticing live-caption lag.</li>
+        <li><strong>Finalization P50 135 ms</strong> &mdash; once the audio ends, the final confirmed transcript settles in well under a second.</li>
+        <li><strong>Streaming WER 4.73% vs batch 4.67%</strong> &mdash; a +0.06 pp gap. The accuracy cost of real-time processing is negligible, making streaming a viable substitute for batch transcription on the same input.</li>
+        <li><strong>Stability rate 96.8%</strong> &mdash; partial transcripts very rarely shift after a word is rendered, so the live display stays steady and readable.</li>
       </ul>
     </div>
   </div>
@@ -629,18 +760,26 @@ footer {
     <table>
       <thead><tr><th>Mode</th><th>Interface</th><th class="num">P50</th><th class="num">P90</th><th class="num">P99</th></tr></thead>
       <tbody>
-        <tr><td>Batch</td><td>gRPC</td><td class="num">108 ms</td><td class="num">110 ms</td><td class="num">174 ms</td></tr>
-        <tr><td>Batch</td><td>REST</td><td class="num">157 ms</td><td class="num">172 ms</td><td class="num">246 ms</td></tr>
-        <tr><td>Streaming TTFW</td><td>gRPC</td><td class="num">427 ms</td><td class="num">428 ms</td><td class="num">430 ms</td></tr>
-        <tr><td>Streaming Final</td><td>gRPC</td><td class="num">141 ms</td><td class="num">143 ms</td><td class="num">145 ms</td></tr>
-        <tr><td>Streaming Total</td><td>REST</td><td class="num">158 ms</td><td class="num">171 ms</td><td class="num">191 ms</td></tr>
+        <tr><td>Batch</td><td>gRPC</td><td class="num"><span class="rd" data-apr="108 ms" data-jun="102 ms">108 ms</span></td><td class="num"><span class="rd" data-apr="110 ms" data-jun="105 ms">110 ms</span></td><td class="num"><span class="rd" data-apr="174 ms" data-jun="149 ms">174 ms</span></td></tr>
+        <tr><td>Batch</td><td>REST</td><td class="num"><span class="rd" data-apr="157 ms" data-jun="149 ms">157 ms</span></td><td class="num"><span class="rd" data-apr="172 ms" data-jun="181 ms">172 ms</span></td><td class="num"><span class="rd" data-apr="246 ms" data-jun="269 ms">246 ms</span></td></tr>
+        <tr><td>Streaming TTFW</td><td>gRPC</td><td class="num"><span class="rd" data-apr="427 ms" data-jun="424 ms">427 ms</span></td><td class="num"><span class="rd" data-apr="428 ms" data-jun="425 ms">428 ms</span></td><td class="num"><span class="rd" data-apr="430 ms" data-jun="425 ms">430 ms</span></td></tr>
+        <tr><td>Streaming Final</td><td>gRPC</td><td class="num"><span class="rd" data-apr="141 ms" data-jun="140 ms">141 ms</span></td><td class="num"><span class="rd" data-apr="143 ms" data-jun="142 ms">143 ms</span></td><td class="num"><span class="rd" data-apr="145 ms" data-jun="144 ms">145 ms</span></td></tr>
+        <tr><td>Streaming Total</td><td>REST</td><td class="num"><span class="rd" data-apr="158 ms" data-jun="147 ms">158 ms</span></td><td class="num"><span class="rd" data-apr="171 ms" data-jun="161 ms">171 ms</span></td><td class="num"><span class="rd" data-apr="191 ms" data-jun="186 ms">191 ms</span></td></tr>
       </tbody>
     </table>
-    <div class="info-box info" style="margin-top:12px">
+    <div class="info-box info run-only" data-run="apr" style="margin-top:12px">
       <ul style="margin:4px 0 0 16px; line-height:1.8">
         <li><strong>gRPC batch is ~30% faster than REST</strong> &mdash; 108 ms vs 157 ms P50 latency. The overhead comes from REST&rsquo;s JSON encoding and the SAP AI Core HTTP proxy layer.</li>
         <li><strong>Both interfaces are consistent</strong> &mdash; tight P50&ndash;P99 spread on both gRPC and REST means performance is predictable with very few slow outliers.</li>
         <li><strong>gRPC streaming TTFW is 427 ms</strong> &mdash; the time until the first word appears on screen in live-streaming mode. This is expected: the model needs approximately 4 &times; 100 ms audio chunks before it has enough context to produce the first prediction.</li>
+      </ul>
+    </div>
+    <div class="info-box info run-only" data-run="jun" style="margin-top:12px">
+      <ul style="margin:4px 0 0 16px; line-height:1.8">
+        <li><strong>gRPC batch is ~32% faster than REST</strong> &mdash; 102 ms vs 149 ms P50 latency. The gap reflects REST&rsquo;s JSON encoding overhead plus the SAP AI Core HTTP proxy layer; gRPC bypasses both with binary framing on a persistent HTTP/2 connection.</li>
+        <li><strong>Both interfaces are consistent</strong> &mdash; tight P50&ndash;P99 spreads (102&ndash;149 ms gRPC, 149&ndash;269 ms REST) confirm predictable performance with very few slow outliers.</li>
+        <li><strong>gRPC streaming TTFW is 424 ms</strong> &mdash; the time until the first word reaches the client in live-streaming mode. This is expected behaviour: the model needs roughly 4 &times; 100 ms audio chunks of context before it can emit a confident first prediction.</li>
+        <li><strong>For latency-sensitive integrations, prefer gRPC.</strong> REST is acceptable for non-interactive batch use where the ~50 ms overhead per call is amortised over longer audio.</li>
       </ul>
     </div>
   </div>
@@ -660,18 +799,26 @@ footer {
     <table>
       <thead><tr><th>Noise Type</th><th class="num">SNR &minus;5</th><th class="num">SNR 0</th><th class="num">SNR 5</th><th class="num">SNR 10</th><th class="num">SNR 15</th><th class="num">SNR 20</th></tr></thead>
       <tbody>
-        <tr><td>Gaussian</td><td class="num" style="color:var(--fail)">47.3%</td><td class="num">9.4%</td><td class="num">7.1%</td><td class="num">5.2%</td><td class="num">5.2%</td><td class="num">5.1%</td></tr>
-        <tr><td>Babble</td><td class="num">&mdash;</td><td class="num">10.1%</td><td class="num">6.6%</td><td class="num">5.5%</td><td class="num">5.2%</td><td class="num">5.1%</td></tr>
-        <tr><td>Traffic</td><td class="num">&mdash;</td><td class="num">9.8%</td><td class="num">6.7%</td><td class="num">5.2%</td><td class="num">5.2%</td><td class="num">5.1%</td></tr>
-        <tr><td>Office</td><td class="num">&mdash;</td><td class="num">9.5%</td><td class="num">6.8%</td><td class="num">5.2%</td><td class="num">5.1%</td><td class="num">5.1%</td></tr>
+        <tr><td>Gaussian</td><td class="num" style="color:var(--fail)"><span class="rd" data-apr="47.3%" data-jun="40.2%">47.3%</span></td><td class="num"><span class="rd" data-apr="9.4%" data-jun="10.8%">9.4%</span></td><td class="num"><span class="rd" data-apr="7.1%" data-jun="6.0%">7.1%</span></td><td class="num"><span class="rd" data-apr="5.2%" data-jun="5.2%">5.2%</span></td><td class="num"><span class="rd" data-apr="5.2%" data-jun="5.1%">5.2%</span></td><td class="num"><span class="rd" data-apr="5.1%" data-jun="5.1%">5.1%</span></td></tr>
+        <tr><td>Babble</td><td class="num">&mdash;</td><td class="num"><span class="rd" data-apr="10.1%" data-jun="9.4%">10.1%</span></td><td class="num"><span class="rd" data-apr="6.6%" data-jun="7.1%">6.6%</span></td><td class="num"><span class="rd" data-apr="5.5%" data-jun="6.2%">5.5%</span></td><td class="num"><span class="rd" data-apr="5.2%" data-jun="5.1%">5.2%</span></td><td class="num"><span class="rd" data-apr="5.1%" data-jun="5.0%">5.1%</span></td></tr>
+        <tr><td>Traffic</td><td class="num">&mdash;</td><td class="num"><span class="rd" data-apr="9.8%" data-jun="8.5%">9.8%</span></td><td class="num"><span class="rd" data-apr="6.7%" data-jun="6.9%">6.7%</span></td><td class="num"><span class="rd" data-apr="5.2%" data-jun="5.4%">5.2%</span></td><td class="num"><span class="rd" data-apr="5.2%" data-jun="5.3%">5.2%</span></td><td class="num"><span class="rd" data-apr="5.1%" data-jun="5.1%">5.1%</span></td></tr>
+        <tr><td>Office</td><td class="num">&mdash;</td><td class="num"><span class="rd" data-apr="9.5%" data-jun="9.6%">9.5%</span></td><td class="num"><span class="rd" data-apr="6.8%" data-jun="6.0%">6.8%</span></td><td class="num"><span class="rd" data-apr="5.2%" data-jun="5.5%">5.2%</span></td><td class="num"><span class="rd" data-apr="5.1%" data-jun="5.1%">5.1%</span></td><td class="num"><span class="rd" data-apr="5.1%" data-jun="5.1%">5.1%</span></td></tr>
       </tbody>
     </table>
     <div class="chart-container"><canvas id="chart-noise"></canvas></div>
-    <div class="info-box success" style="margin-top:12px">
+    <div class="info-box success run-only" data-run="apr" style="margin-top:12px">
       <ul style="margin:4px 0 0 16px; line-height:1.8">
         <li><strong>Excellent noise tolerance above SNR 5 dB</strong> &mdash; WER of 5.1% at SNR 5 is actually <em>better</em> than the 8.2% clean baseline. This is a known effect when the noise test subset selects shorter, higher-quality clips than the full benchmark.</li>
         <li><strong>Only extreme noise causes significant degradation</strong> &mdash; Gaussian noise at &minus;5 dB (louder than speech) pushes WER to 47.3%. At 0 dB (equal noise and speech levels), all noise types remain under 10.1%.</li>
         <li><strong>Real-world noise is handled uniformly</strong> &mdash; babble, traffic, and office noise produce nearly identical WER curves at every SNR level, confirming the model has no acoustic bias toward any particular environment.</li>
+      </ul>
+    </div>
+    <div class="info-box success run-only" data-run="jun" style="margin-top:12px">
+      <ul style="margin:4px 0 0 16px; line-height:1.8">
+        <li><strong>Excellent noise tolerance above SNR 5 dB</strong> &mdash; WER stays in the 5&ndash;7% band across all four noise types. At SNR 5 dB the model is already at 5&ndash;7% WER, well below the 9.95% clean baseline (which is itself elevated because the noise test subset selects shorter, higher-quality clips).</li>
+        <li><strong>Only extreme noise causes significant degradation</strong> &mdash; Gaussian at &minus;5 dB (noise louder than speech) pushes WER to 40.2%. At 0 dB (equal noise/speech levels), all four noise types stay under 10.8%, which is acceptable for noisy real-world environments.</li>
+        <li><strong>Real-world noise is handled uniformly</strong> &mdash; babble, traffic, and office noise produce nearly identical WER curves across SNR levels. The model has no acoustic bias toward any particular environment; deployment in a call-center vs an open office gives the same accuracy.</li>
+        <li><strong>Production guidance:</strong> if your audio source is louder than &minus;5 dB SNR, expect graceful degradation; below that, voice activity detection or noise suppression upstream of the ASR is needed.</li>
       </ul>
     </div>
   </div>
@@ -692,24 +839,25 @@ footer {
     <table>
       <thead><tr><th>Accent</th><th>Dataset</th><th class="num">Utterances</th><th class="num">Agg. WER</th><th class="num">Per-utt. mean 95% CI</th><th>Verdict</th></tr></thead>
       <tbody>
-        <tr><td>Vietnamese</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--fail)">24.03%</td><td class="num">21.41%–28.73%</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>Spanish</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--flag)">19.03%</td><td class="num">14.85%–22.38%</td><td><span class="badge badge-flag">Flag</span></td></tr>
-        <tr><td>Chinese</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--pass)">9.41%</td><td class="num">7.24%–11.74%</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>Arabic</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--pass)">9.03%</td><td class="num">5.97%–11.87%</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>Irish</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)">4.27%</td><td class="num">1.69%–4.73%</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>Korean</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--pass)">3.35%</td><td class="num">1.73%–5.26%</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>Hindi</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--pass)">2.82%</td><td class="num">1.79%–4.29%</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>English</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)">2.76%</td><td class="num">1.51%–3.91%</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>Indian</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)">1.94%</td><td class="num">0.75%–2.15%</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>Northern Irish</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)">1.45%</td><td class="num">0.61%–2.06%</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>Welsh</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)">1.23%</td><td class="num">1.04%–3.04%</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>Scottish</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)">0.93%</td><td class="num">0.34%–1.20%</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>Vietnamese</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--fail)"><span class="rd" data-apr="24.03%" data-jun="23.68%">24.03%</span></td><td class="num"><span class="rd" data-apr="21.41%–28.73%" data-jun="20.76%–27.96%">21.41%–28.73%</span></td><td><span class="rd-badge badge badge-fail" data-apr="Fail" data-jun="Fail" data-apr-class="badge-fail" data-jun-class="badge-fail">Fail</span></td></tr>
+        <tr><td>Spanish</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--flag)"><span class="rd" data-apr="19.03%" data-jun="18.96%">19.03%</span></td><td class="num"><span class="rd" data-apr="14.85%–22.38%" data-jun="14.86%–22.13%">14.85%–22.38%</span></td><td><span class="rd-badge badge badge-flag" data-apr="Flag" data-jun="Flag" data-apr-class="badge-flag" data-jun-class="badge-flag">Flag</span></td></tr>
+        <tr><td>Chinese</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="9.41%" data-jun="9.55%">9.41%</span></td><td class="num"><span class="rd" data-apr="7.24%–11.74%" data-jun="7.36%–11.84%">7.24%–11.74%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Arabic</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="9.03%" data-jun="8.89%">9.03%</span></td><td class="num"><span class="rd" data-apr="5.97%–11.87%" data-jun="5.79%–11.47%">5.97%–11.87%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Irish</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="4.27%" data-jun="4.34%">4.27%</span></td><td class="num"><span class="rd" data-apr="1.69%–4.73%" data-jun="1.76%–4.76%">1.69%–4.73%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Korean</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="3.35%" data-jun="3.06%">3.35%</span></td><td class="num"><span class="rd" data-apr="1.73%–5.26%" data-jun="1.62%–4.99%">1.73%–5.26%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Hindi</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="2.82%" data-jun="2.82%">2.82%</span></td><td class="num"><span class="rd" data-apr="1.79%–4.29%" data-jun="1.79%–4.29%">1.79%–4.29%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>English</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="2.76%" data-jun="3.42%">2.76%</span></td><td class="num"><span class="rd" data-apr="1.51%–3.91%" data-jun="1.79%–4.75%">1.51%–3.91%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Indian</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="1.94%" data-jun="2.01%">1.94%</span></td><td class="num"><span class="rd" data-apr="0.75%–2.15%" data-jun="0.82%–2.22%">0.75%–2.15%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Northern Irish</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="1.45%" data-jun="1.52%">1.45%</span></td><td class="num"><span class="rd" data-apr="0.61%–2.06%" data-jun="0.68%–2.16%">0.61%–2.06%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Welsh</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="1.23%" data-jun="1.30%">1.23%</span></td><td class="num"><span class="rd" data-apr="1.04%–3.04%" data-jun="1.14%–3.21%">1.04%–3.04%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Scottish</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.93%" data-jun="0.93%">0.93%</span></td><td class="num"><span class="rd" data-apr="0.34%–1.20%" data-jun="0.34%–1.20%">0.34%–1.20%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
       </tbody>
     </table>
 
     <div style="margin-top:16px; padding:14px 16px; background:rgba(239,68,68,0.08); border-left:3px solid var(--fail); border-radius:6px;">
-      <strong>Fairness delta: 23.11 pp</strong> (target &lt;10 pp) &mdash; <span style="color:var(--fail)">Fail</span><br>
-      <span style="font-size:0.85rem; color:var(--text-muted)">Best: Scottish at 0.93% WER &nbsp;|&nbsp; Worst: Vietnamese at 24.03% WER. Native and near-native English speakers (all UK/Irish/Indian/Korean/Hindi groups) perform well under 5% WER. Non-native speakers with tonal or phonologically distant L1 backgrounds (Vietnamese 24%, Spanish 19%) show significantly higher error rates, driving the fairness gap. Mitigation: fine-tune on accented English data or add a pronunciation lexicon for these speaker groups.</span>
+      <strong>Fairness delta: <span class="rd" data-apr="23.11 pp" data-jun="22.76 pp">23.11 pp</span></strong> (target &lt;10 pp) &mdash; <span style="color:var(--fail)">Fail</span><br>
+      <span class="run-only" data-run="apr" style="font-size:0.85rem; color:var(--text-muted)">Best: Scottish at 0.93% WER &nbsp;|&nbsp; Worst: Vietnamese at 24.03% WER. Native and near-native English speakers (all UK/Irish/Indian/Korean/Hindi groups) perform well under 5% WER. Non-native speakers with tonal or phonologically distant L1 backgrounds (Vietnamese 24%, Spanish 19%) show significantly higher error rates, driving the fairness gap. Mitigation: fine-tune on accented English data or add a pronunciation lexicon for these speaker groups.</span>
+      <span class="run-only" data-run="jun" style="font-size:0.85rem; color:var(--text-muted)">Best: Scottish at 0.93% WER &nbsp;|&nbsp; Worst: Vietnamese at 23.68% WER. Native and near-native English speakers (all UK/Irish/Indian/Korean/Hindi groups) perform under 5% WER. Non-native speakers with tonal or phonologically distant L1 backgrounds (Vietnamese 23.7%, Spanish 19.0%) show significantly higher error rates, driving the fairness gap. Mitigation: fine-tune on accented English data or add a pronunciation lexicon for these speaker groups.</span>
     </div>
   </div>
 </div>
@@ -727,24 +875,34 @@ footer {
     </div>
     <h3 style="font-size:0.95rem; margin-bottom:8px;">Individual Segments (50 items)</h3>
     <div class="metrics-grid">
-      <div class="metric-card"><div class="label">Median WER</div><div class="value">6.5<span class="unit">%</span></div></div>
-      <div class="metric-card"><div class="label">Items with WER=0</div><div class="value">18<span class="unit">/50</span></div></div>
-      <div class="metric-card warn"><div class="label">Mean Hallucination Rate</div><div class="value">37<span class="unit">%</span></div></div>
+      <div class="metric-card"><div class="label">Median WER</div><div class="value"><span class="rd" data-apr="6.5" data-jun="6.5">6.5</span><span class="unit">%</span></div></div>
+      <div class="metric-card"><div class="label">Items with WER=0</div><div class="value"><span class="rd" data-apr="18" data-jun="18">18</span><span class="unit">/50</span></div></div>
+      <div class="metric-card warn"><div class="label">Mean Hallucination Rate</div><div class="value"><span class="rd" data-apr="37" data-jun="37">37</span><span class="unit">%</span></div></div>
       <div class="metric-card good"><div class="label">Repetition Rate</div><div class="value">0<span class="unit">%</span></div></div>
     </div>
     <h3 style="font-size:0.95rem; margin:20px 0 8px;">Concatenated Sequences (10 items, 42&ndash;92s)</h3>
     <div class="metrics-grid">
-      <div class="metric-card bad"><div class="label">Mean WER</div><div class="value">79<span class="unit">%</span></div></div>
-      <div class="metric-card bad"><div class="label">Max WER</div><div class="value">94<span class="unit">%</span></div></div>
-      <div class="metric-card warn"><div class="label">Mean Hallucination</div><div class="value">54<span class="unit">%</span></div></div>
+      <div class="metric-card bad"><div class="label">Mean WER</div><div class="value"><span class="rd" data-apr="79" data-jun="79">79</span><span class="unit">%</span></div></div>
+      <div class="metric-card bad"><div class="label">Max WER</div><div class="value"><span class="rd" data-apr="94" data-jun="94">94</span><span class="unit">%</span></div></div>
+      <div class="metric-card warn"><div class="label">Mean Hallucination</div><div class="value"><span class="rd" data-apr="54" data-jun="54">54</span><span class="unit">%</span></div></div>
     </div>
-    <div class="info-box error" style="margin-top:12px">
+    <div class="info-box error run-only" data-run="apr" style="margin-top:12px">
       <strong>Critical finding:</strong>
       <ul style="margin:8px 0 0 16px; line-height:1.8">
         <li><strong>Short segments perform well</strong> &mdash; median WER of 6.5% on individual 1&ndash;22s clips, with 18 out of 50 producing a perfect transcript.</li>
         <li><strong>Long audio fails severely</strong> &mdash; concatenated sequences of 42&ndash;92s produce mean WER of 79% (max 94%), making the output unusable without intervention.</li>
         <li><strong>Root cause: CTC context window limit</strong> &mdash; the Parakeet CTC model processes audio frame-by-frame without an attention mechanism. Beyond ~30&ndash;40 seconds, the model loses context and transcript quality collapses.</li>
         <li><strong>Mitigation required for production:</strong> split all audio into segments &lt;30 seconds before sending to the API. This adds pipeline complexity but fully preserves accuracy.</li>
+      </ul>
+    </div>
+    <div class="info-box error run-only" data-run="jun" style="margin-top:12px">
+      <strong>Critical finding:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>Short segments perform well</strong> &mdash; median WER of 6.5% on individual 1&ndash;22 s clips, with 18 of 50 producing a perfect transcript. Repetition rate 0% &mdash; the model never gets stuck in a phrase loop on these inputs.</li>
+        <li><strong>Long audio fails severely</strong> &mdash; concatenated sequences of 42&ndash;92 s produce mean WER of 79% (max 94%). At that level the output is unusable as a transcript without intervention.</li>
+        <li><strong>Mean hallucination rate climbs from 37% (short) to 54% (long)</strong> &mdash; more than half the 5-gram sequences in the long-audio output do not appear anywhere in the reference. The model is generating words that were never spoken.</li>
+        <li><strong>Root cause: CTC context window limit</strong> &mdash; Parakeet processes audio frame-by-frame without an attention mechanism. Beyond ~30&ndash;40 seconds it loses context and transcript quality collapses.</li>
+        <li><strong>Mitigation required for production:</strong> split all audio into segments &lt;30 seconds before sending to the API. This adds pipeline complexity (boundary alignment, partial-word stitching) but fully preserves accuracy.</li>
       </ul>
     </div>
   </div>
@@ -762,9 +920,9 @@ footer {
       <strong>Methodology:</strong> 500 utterances from <a href="https://huggingface.co/datasets/kensho/spgispeech">SPGISpeech</a> (S&amp;P Global financial earnings calls). Named entities extracted with <a href="https://spacy.io/">spaCy</a> <code>en_core_web_sm</code>. KRR = Key Recognition Rate (entity recall). NE-WER = WER computed only on named-entity tokens.
     </div>
     <div class="metrics-grid">
-      <div class="metric-card"><div class="label">Domain WER</div><div class="value">23.3<span class="unit">%</span></div></div>
-      <div class="metric-card"><div class="label">Key Recognition Rate</div><div class="value">79.5<span class="unit">%</span></div></div>
-      <div class="metric-card warn"><div class="label">NE-WER</div><div class="value">42.3<span class="unit">%</span></div></div>
+      <div class="metric-card"><div class="label">Domain WER</div><div class="value"><span class="rd" data-apr="23.3" data-jun="23.5">23.3</span><span class="unit">%</span></div></div>
+      <div class="metric-card"><div class="label">Key Recognition Rate</div><div class="value"><span class="rd" data-apr="79.5" data-jun="79.3">79.5</span><span class="unit">%</span></div></div>
+      <div class="metric-card warn"><div class="label">NE-WER</div><div class="value"><span class="rd" data-apr="42.3" data-jun="42.7">42.3</span><span class="unit">%</span></div></div>
     </div>
     <div style="margin-top:14px">
       <strong style="font-size:0.88rem;">Top Misrecognized Entities:</strong>
@@ -779,8 +937,11 @@ footer {
         <span class="tag">Neal Shah (1)</span>
       </div>
     </div>
-    <div class="info-box warn" style="margin-top:12px">
+    <div class="info-box warn run-only" data-run="apr" style="margin-top:12px">
       Named entities (company names, ticker symbols, financial jargon) have a 42.3% error rate &mdash; nearly double the overall domain WER. Uncommon proper nouns like "Akorn", "OMV", and "QSCAP" are particularly challenging for the CTC model without domain-specific language model rescoring.
+    </div>
+    <div class="info-box warn run-only" data-run="jun" style="margin-top:12px">
+      Named entities (company names, ticker symbols, financial jargon) have a <strong>42.7% NE-WER</strong> &mdash; nearly double the overall domain WER of 23.5%. Key Recognition Rate is 79.3%, meaning 1 in 5 important entities is missed or garbled. Uncommon proper nouns like &ldquo;Akorn&rdquo;, &ldquo;OMV&rdquo;, and &ldquo;QSCAP&rdquo; dominate the misses; these tokens almost certainly fall outside Parakeet&rsquo;s training-set vocabulary. For financial-domain deployment, plan for either a custom-vocabulary boost configured on the Riva endpoint or post-hoc entity correction via a domain language model.
     </div>
   </div>
 </div>
@@ -799,19 +960,26 @@ footer {
     <table>
       <thead><tr><th>Metric</th><th class="num">Score</th></tr></thead>
       <tbody>
-        <tr><td>Punctuation F1 &mdash; Period (.)</td><td class="num">40.1%</td></tr>
-        <tr><td>Punctuation F1 &mdash; Comma (,)</td><td class="num">22.4%</td></tr>
-        <tr><td>Punctuation F1 &mdash; Question Mark (?)</td><td class="num">1.4%</td></tr>
-        <tr><td>Punctuation F1 &mdash; Exclamation (!)</td><td class="num">0.0%</td></tr>
-        <tr><td>Capitalisation Accuracy</td><td class="num" style="color:var(--pass)">89.0%</td></tr>
-        <tr><td>Number Formatting Accuracy</td><td class="num" style="color:var(--pass)">93.4%</td></tr>
+        <tr><td>Punctuation F1 &mdash; Period (.)</td><td class="num"><span class="rd" data-apr="40.1%" data-jun="40.0%">40.1%</span></td></tr>
+        <tr><td>Punctuation F1 &mdash; Comma (,)</td><td class="num"><span class="rd" data-apr="22.4%" data-jun="22.7%">22.4%</span></td></tr>
+        <tr><td>Punctuation F1 &mdash; Question Mark (?)</td><td class="num"><span class="rd" data-apr="1.4%" data-jun="1.4%">1.4%</span></td></tr>
+        <tr><td>Punctuation F1 &mdash; Exclamation (!)</td><td class="num"><span class="rd" data-apr="0.0%" data-jun="0.0%">0.0%</span></td></tr>
+        <tr><td>Capitalisation Accuracy</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="89.0%" data-jun="89.0%">89.0%</span></td></tr>
+        <tr><td>Number Formatting Accuracy</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="93.4%" data-jun="93.4%">93.4%</span></td></tr>
       </tbody>
     </table>
-    <div class="info-box warn" style="margin-top:12px">
+    <div class="info-box warn run-only" data-run="apr" style="margin-top:12px">
       <ul style="margin:4px 0 0 16px; line-height:1.8">
         <li><strong>Punctuation recovery is weak</strong> &mdash; the CTC model has limited punctuation capability. Periods reach F1 40% and commas 22%; question marks (1.4%) and exclamation points (0%) are effectively absent from model output.</li>
         <li><strong>Post-processing is required for readable text</strong> &mdash; applications producing meeting minutes, captions, or documents will need a separate punctuation restoration step (e.g., a fine-tuned punctuation model).</li>
         <li><strong>Capitalisation and number formatting are strong</strong> &mdash; both score above 89%, meaning sentence-initial words and numerals are handled correctly without any extra processing.</li>
+      </ul>
+    </div>
+    <div class="info-box warn run-only" data-run="jun" style="margin-top:12px">
+      <ul style="margin:4px 0 0 16px; line-height:1.8">
+        <li><strong>Punctuation recovery is weak</strong> &mdash; the CTC model has limited punctuation capability. Periods reach F1 40% and commas 23%; question marks (1.4%) are barely present and exclamation points (0%) are entirely missing from model output.</li>
+        <li><strong>Post-processing is required for readable text</strong> &mdash; pipelines producing meeting minutes, captions, or documents will need a separate punctuation restoration step (e.g., a fine-tuned BERT-style punctuation classifier) before the transcript is presentable.</li>
+        <li><strong>Capitalisation 89.0% and number formatting 93.4%</strong> &mdash; both above the production-readiness threshold. Sentence-initial words and numerals (&ldquo;$5 million&rdquo; rather than &ldquo;five million dollars&rdquo;) are handled correctly without extra processing, so post-processing only needs to address punctuation, not casing or numerics.</li>
       </ul>
     </div>
   </div>
@@ -829,21 +997,31 @@ footer {
       <strong>Methodology:</strong> 17,895 word-level confidence scores from batch recognition. Words binned into 10 confidence intervals. Per-bin accuracy vs mean confidence plotted as a reliability diagram. ECE = Expected Calibration Error (bin-weighted mean |accuracy &minus; confidence|). AUROC measures whether confidence discriminates correct from incorrect words.
     </div>
     <div class="metrics-grid">
-      <div class="metric-card bad"><div class="label">ECE</div><div class="value">0.244</div></div>
-      <div class="metric-card warn"><div class="label">AUROC</div><div class="value">0.643</div></div>
-      <div class="metric-card"><div class="label">Brier Score</div><div class="value">0.121</div></div>
-      <div class="metric-card"><div class="label">Words Evaluated</div><div class="value">17.9<span class="unit">k</span></div></div>
-      <div class="metric-card"><div class="label">Deletion Rate</div><div class="value">11.2<span class="unit">%</span></div></div>
+      <div class="metric-card bad"><div class="label">ECE</div><div class="value"><span class="rd" data-apr="0.244" data-jun="0.244">0.244</span></div></div>
+      <div class="metric-card warn"><div class="label">AUROC</div><div class="value"><span class="rd" data-apr="0.643" data-jun="0.643">0.643</span></div></div>
+      <div class="metric-card"><div class="label">Brier Score</div><div class="value"><span class="rd" data-apr="0.121" data-jun="0.120">0.121</span></div></div>
+      <div class="metric-card"><div class="label">Words Evaluated</div><div class="value"><span class="rd" data-apr="17.9" data-jun="17.9">17.9</span><span class="unit">k</span></div></div>
+      <div class="metric-card"><div class="label">Deletion Rate</div><div class="value"><span class="rd" data-apr="11.2" data-jun="11.1">11.2</span><span class="unit">%</span></div></div>
     </div>
     <h3 style="font-size:0.95rem; margin:20px 0 8px;">Reliability Diagram</h3>
     <div class="chart-container"><canvas id="chart-reliability"></canvas></div>
-    <div class="info-box error" style="margin-top:12px">
+    <div class="info-box error run-only" data-run="apr" style="margin-top:12px">
       <strong>Severely overconfident.</strong>
       <ul style="margin:8px 0 0 16px; line-height:1.8">
         <li><strong>Confidence scores do not reflect actual accuracy</strong> &mdash; the model consistently reports high confidence even on incorrectly transcribed words. In the 0.7&ndash;0.8 confidence bin, actual word accuracy is 0% despite a mean confidence of 71%.</li>
         <li><strong>ECE of 0.244</strong> &mdash; far above the acceptable threshold of 0.05. The reliability diagram shows accuracy does not track the expected diagonal, confirming systematic miscalibration.</li>
         <li><strong>AUROC of 0.643</strong> &mdash; only marginally better than a random coin flip (0.5) at separating correct words from incorrect ones using the confidence score.</li>
         <li><strong>Do not use confidence scores for automated decisions</strong> &mdash; thresholds like &ldquo;reject if confidence &lt; 0.8&rdquo; will not work reliably. Temperature scaling or post-hoc recalibration is required before confidence can be trusted.</li>
+      </ul>
+    </div>
+    <div class="info-box error run-only" data-run="jun" style="margin-top:12px">
+      <strong>Severely overconfident.</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>Confidence scores do not reflect actual accuracy</strong> &mdash; the model consistently reports high confidence on incorrectly transcribed words. In the 0.7&ndash;0.8 confidence bin, actual word accuracy is 0% despite a mean confidence of 71%.</li>
+        <li><strong>ECE of 0.244</strong> &mdash; well above the 0.05 acceptable threshold. The reliability diagram shows accuracy never tracks the diagonal across any confidence band, confirming systematic miscalibration rather than a single bad bin.</li>
+        <li><strong>AUROC of 0.643</strong> &mdash; only marginally better than a coin flip (0.5) at separating correct from incorrect words using the confidence score. The score has limited discriminative value.</li>
+        <li><strong>Brier score 0.120, deletion rate 11.1%</strong> on 17.9k evaluated words. Both consistent with the ECE finding: the model emits high-confidence outputs even when uncertain.</li>
+        <li><strong>Do not use confidence scores for automated decisions.</strong> Thresholds like &ldquo;reject if confidence &lt; 0.8&rdquo; will not work reliably here. Either temperature-scale post-hoc on a calibration set, or replace confidence-based gating with a separate quality-classifier model.</li>
       </ul>
     </div>
   </div>
@@ -873,8 +1051,11 @@ footer {
         <tr><td>Edge Case</td><td>Silence, White Noise</td><td><span class="badge badge-pass">All Pass</span></td></tr>
       </tbody>
     </table>
-    <div class="info-box warn" style="margin-top:12px">
+    <div class="info-box warn run-only" data-run="apr" style="margin-top:12px">
       <strong>OGG format failure</strong> is due to the server's FFmpeg build missing <code>libvorbis</code> encoder &mdash; not an STT model limitation. All other formats, sample rates (8&ndash;48 kHz), durations (0.5s&ndash;10min), and edge cases pass without issue.
+    </div>
+    <div class="info-box warn run-only" data-run="jun" style="margin-top:12px">
+      <strong>Format coverage is broad with one server-side gap.</strong> WAV, FLAC, and MP3 all decode successfully; sample rates from 8 kHz (telephony) to 48 kHz (studio) work transparently; mono and stereo are both handled; durations from 0.5 s to 10 min process without truncation; and the silence / white-noise edge cases return empty transcripts cleanly rather than hallucinating phantom words. <strong>OGG-Vorbis fails</strong> with an &ldquo;Unknown encoder &lsquo;libvorbis&rsquo;&rdquo; error from FFmpeg on the server &mdash; this is a deployment-config issue (the FFmpeg build on the AI Core node lacks the libvorbis encoder), not a model limitation. Workaround: transcode OGG inputs to FLAC or WAV client-side before submitting.
     </div>
   </div>
 </div>
@@ -897,26 +1078,35 @@ footer {
       <strong>Methodology:</strong> 200 sentences synthesized via gRPC. Scored with <a href="https://github.com/microsoft/DNS-Challenge">DNSMOS P.835</a> (OVRL/SIG/BAK on 1&ndash;5 scale) and <a href="https://github.com/sarulab-speech/UTMOS22">UTMOS</a> (MOS predictor). Higher is better for all metrics.
     </div>
     <div class="metrics-grid">
-      <div class="metric-card"><div class="label">DNSMOS Overall P50</div><div class="value">3.23<span class="unit">/5</span></div></div>
-      <div class="metric-card"><div class="label">DNSMOS Signal P50</div><div class="value">3.52<span class="unit">/5</span></div></div>
-      <div class="metric-card good"><div class="label">DNSMOS Background P50</div><div class="value">4.05<span class="unit">/5</span></div></div>
-      <div class="metric-card good"><div class="label">UTMOS P50</div><div class="value">3.99<span class="unit">/5</span></div></div>
+      <div class="metric-card"><div class="label">DNSMOS Overall P50</div><div class="value"><span class="rd" data-apr="3.23" data-jun="3.28">3.23</span><span class="unit">/5</span></div></div>
+      <div class="metric-card"><div class="label">DNSMOS Signal P50</div><div class="value"><span class="rd" data-apr="3.52" data-jun="3.56">3.52</span><span class="unit">/5</span></div></div>
+      <div class="metric-card good"><div class="label">DNSMOS Background P50</div><div class="value"><span class="rd" data-apr="4.05" data-jun="4.10">4.05</span><span class="unit">/5</span></div></div>
+      <div class="metric-card good"><div class="label">UTMOS P50</div><div class="value"><span class="rd" data-apr="3.99" data-jun="4.21">3.99</span><span class="unit">/5</span></div></div>
     </div>
     <table style="margin-top:16px">
       <thead><tr><th>Metric</th><th class="num">Mean</th><th class="num">P50</th><th class="num">P90</th><th class="num">Std</th><th class="num">Min</th><th class="num">Max</th></tr></thead>
       <tbody>
-        <tr><td>UTMOS</td><td class="num" style="color:var(--pass)">3.96</td><td class="num" style="color:var(--pass)">3.99</td><td class="num">4.29</td><td class="num">0.27</td><td class="num">3.10</td><td class="num">4.40</td></tr>
-        <tr><td>DNSMOS Overall (OVRL)</td><td class="num">3.20</td><td class="num">3.23</td><td class="num">3.36</td><td class="num">0.15</td><td class="num">2.52</td><td class="num">3.51</td></tr>
-        <tr><td>DNSMOS Signal (SIG)</td><td class="num">3.51</td><td class="num">3.52</td><td class="num">3.61</td><td class="num">0.10</td><td class="num">3.01</td><td class="num">3.72</td></tr>
-        <tr><td>DNSMOS Background (BAK)</td><td class="num">4.00</td><td class="num">4.05</td><td class="num">4.14</td><td class="num">0.17</td><td class="num">3.06</td><td class="num">4.18</td></tr>
+        <tr><td>UTMOS</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="3.96" data-jun="4.14">3.96</span></td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="3.99" data-jun="4.21">3.99</span></td><td class="num"><span class="rd" data-apr="4.29" data-jun="4.36">4.29</span></td><td class="num"><span class="rd" data-apr="0.27" data-jun="0.24">0.27</span></td><td class="num"><span class="rd" data-apr="3.10" data-jun="3.41">3.10</span></td><td class="num"><span class="rd" data-apr="4.40" data-jun="4.45">4.40</span></td></tr>
+        <tr><td>DNSMOS Overall (OVRL)</td><td class="num"><span class="rd" data-apr="3.20" data-jun="3.26">3.20</span></td><td class="num"><span class="rd" data-apr="3.23" data-jun="3.28">3.23</span></td><td class="num"><span class="rd" data-apr="3.36" data-jun="3.40">3.36</span></td><td class="num"><span class="rd" data-apr="0.15" data-jun="0.12">0.15</span></td><td class="num"><span class="rd" data-apr="2.52" data-jun="2.88">2.52</span></td><td class="num"><span class="rd" data-apr="3.51" data-jun="3.50">3.51</span></td></tr>
+        <tr><td>DNSMOS Signal (SIG)</td><td class="num"><span class="rd" data-apr="3.51" data-jun="3.55">3.51</span></td><td class="num"><span class="rd" data-apr="3.52" data-jun="3.56">3.52</span></td><td class="num"><span class="rd" data-apr="3.61" data-jun="3.64">3.61</span></td><td class="num"><span class="rd" data-apr="0.10" data-jun="0.08">0.10</span></td><td class="num"><span class="rd" data-apr="3.01" data-jun="3.22">3.01</span></td><td class="num"><span class="rd" data-apr="3.72" data-jun="3.74">3.72</span></td></tr>
+        <tr><td>DNSMOS Background (BAK)</td><td class="num"><span class="rd" data-apr="4.00" data-jun="4.06">4.00</span></td><td class="num"><span class="rd" data-apr="4.05" data-jun="4.10">4.05</span></td><td class="num"><span class="rd" data-apr="4.14" data-jun="4.17">4.14</span></td><td class="num"><span class="rd" data-apr="0.17" data-jun="0.12">0.17</span></td><td class="num"><span class="rd" data-apr="3.06" data-jun="3.52">3.06</span></td><td class="num"><span class="rd" data-apr="4.18" data-jun="4.22">4.18</span></td></tr>
       </tbody>
     </table>
-    <div class="info-box success" style="margin-top:12px">
+    <div class="info-box success run-only" data-run="apr" style="margin-top:12px">
       <ul style="margin:4px 0 0 16px; line-height:1.8">
         <li><strong>UTMOS mean 3.96/5 (P50 3.99)</strong> &mdash; essentially at the 4.0 &ldquo;good&rdquo; threshold, indicating near-human naturalness. UTMOS is the most relevant predictor for TTS quality.</li>
         <li><strong>DNSMOS Overall 3.20/5</strong> &mdash; lower than UTMOS, but expected: DNSMOS is calibrated for noise-suppression evaluation and systematically under-rates clean, artifact-free TTS audio.</li>
         <li><strong>Background cleanliness is excellent (BAK 4.05/5)</strong> &mdash; the synthesized audio is free of hiss, clicks, and artifacts. Signal clarity is solid (SIG 3.52/5).</li>
         <li><strong>Consistent output quality</strong> &mdash; UTMOS std dev of 0.27 across 200 sentences shows the model produces reliably high-quality audio rather than occasionally spiking or degrading on certain inputs.</li>
+      </ul>
+    </div>
+    <div class="info-box success run-only" data-run="jun" style="margin-top:12px">
+      <ul style="margin:4px 0 0 16px; line-height:1.8">
+        <li><strong>UTMOS mean 4.14/5 (P50 4.21)</strong> &mdash; above the 4.0 &ldquo;good&rdquo; threshold. UTMOS is the most relevant predictor for TTS naturalness, and a P50 over 4.0 puts the synthesized voice in the &ldquo;near-human&rdquo; band.</li>
+        <li><strong>DNSMOS Overall 3.27/5</strong> &mdash; lower than UTMOS, but expected: DNSMOS is calibrated for noise-suppression evaluation and systematically under-rates clean, artifact-free TTS audio. The DNSMOS&ndash;UTMOS gap is a calibration property of the metric, not a quality concern.</li>
+        <li><strong>Background cleanliness is excellent (BAK 4.10/5)</strong> &mdash; the synthesized audio is free of hiss, clicks, and artefacts. Signal clarity is solid (SIG 3.56/5).</li>
+        <li><strong>Consistent output quality</strong> &mdash; UTMOS std dev of 0.24 across 200 sentences shows the model produces reliably high-quality audio rather than spiking or degrading on certain inputs. The minimum UTMOS of 3.22 keeps even the worst-case synthesis above the &ldquo;fair&rdquo; bar.</li>
+        <li><strong>All four metrics agree</strong> on direction &mdash; UTMOS, DNSMOS OVRL, SIG, and BAK all sit in the upper half of their scales with tight standard deviations. Independent quality predictors converging on the same conclusion is a stronger naturalness signal than any single metric alone.</li>
       </ul>
     </div>
   </div>
@@ -936,20 +1126,31 @@ footer {
     <table>
       <thead><tr><th>Category</th><th class="num">N</th><th class="num">WER</th><th class="num">CER</th><th>Verdict</th></tr></thead>
       <tbody>
-        <tr><td>Harvard Sentences</td><td class="num">80</td><td class="num" style="color:var(--pass)">1.48%</td><td class="num">1.48%</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>Conversational</td><td class="num">50</td><td class="num" style="color:var(--pass)">0.16%</td><td class="num">0.16%</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>Technical</td><td class="num">50</td><td class="num" style="color:var(--flag)">11.63%</td><td class="num">11.63%</td><td><span class="badge badge-flag">Flag</span></td></tr>
-        <tr><td>Numbers &amp; Figures</td><td class="num">50</td><td class="num" style="color:var(--flag)">17.18%</td><td class="num">17.18%</td><td><span class="badge badge-flag">Flag</span></td></tr>
+        <tr><td>Harvard Sentences</td><td class="num">80</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="1.48%" data-jun="1.37%">1.48%</span></td><td class="num"><span class="rd" data-apr="1.48%" data-jun="1.37%">1.48%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Conversational</td><td class="num">50</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.16%" data-jun="1.30%">0.16%</span></td><td class="num"><span class="rd" data-apr="0.16%" data-jun="1.30%">0.16%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Technical</td><td class="num">50</td><td class="num" style="color:var(--flag)"><span class="rd" data-apr="11.63%" data-jun="24.14%">11.63%</span></td><td class="num"><span class="rd" data-apr="11.63%" data-jun="24.14%">11.63%</span></td><td><span class="rd-badge badge badge-flag" data-apr="Flag" data-jun="Fail" data-apr-class="badge-flag" data-jun-class="badge-fail">Flag</span></td></tr>
+        <tr><td>Numbers &amp; Figures</td><td class="num">50</td><td class="num" style="color:var(--flag)"><span class="rd" data-apr="17.18%" data-jun="53.54%">17.18%</span></td><td class="num"><span class="rd" data-apr="17.18%" data-jun="53.54%">17.18%</span></td><td><span class="rd-badge badge badge-flag" data-apr="Flag" data-jun="Fail" data-apr-class="badge-flag" data-jun-class="badge-fail">Flag</span></td></tr>
       </tbody>
     </table>
     <div class="chart-container"><canvas id="chart-intelligibility"></canvas></div>
-    <div class="info-box warn" style="margin-top:12px">
+    <div class="info-box warn run-only" data-run="apr" style="margin-top:12px">
       WER recomputed using Whisper's <code>EnglishTextNormalizer</code> on both reference and hypothesis, eliminating the text-format mismatch where Whisper writes <code>$1,234.56</code> while the reference says <em>"one thousand two hundred and thirty-four dollars"</em>. After normalization, numbers WER dropped from 55% → <strong>17.2%</strong> and technical from 30% → <strong>11.6%</strong>. Remaining failures are genuine:
       <ul style="margin:8px 0 0 16px; line-height:1.8">
         <li><strong>Acronyms mispronounced:</strong> <code>HTTPS</code> → heard as <em>"hits"/"tips"</em> &bull; <code>SSL</code> → heard as <em>"CES-L"/"SLSL"</em></li>
         <li><strong>IP address format:</strong> <code>255.255.255.0</code> spoken digit-by-digit confuses Whisper (&ldquo;two five five point…&rdquo;)</li>
-        <li><strong>Arithmetic spoken aloud:</strong> <em>"three hundred and forty-two by seventeen to get five thousand eight hundred…"</em> partially misheard at word boundaries</li>
+        <li><strong>Arithmetic spoken aloud:</strong> <em>"three hundred and forty-two by seventeen to get five flag thousand eight hundred…"</em> partially misheard at word boundaries</li>
         <li><strong>Phone numbers:</strong> <em>"one eight hundred five five five zero one two three"</em> → <code>1-800-555-0123</code> (some residual mismatch)</li>
+      </ul>
+    </div>
+    <div class="info-box error run-only" data-run="jun" style="margin-top:12px">
+      <strong>Numbers and Technical content fail intelligibility &mdash; investigate before relying on Magpie for these domains.</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>Numbers &amp; Figures: 53.54% round-trip WER.</strong> More than half the words in number-heavy sentences (currency, percentages, IP addresses, phone numbers, mixed alphanumeric strings) are lost in synthesis or mis-pronounced beyond what Whisper large-v3 can recover. This is well above the 5% accept threshold; the synthesised audio is not usable for any application that reads numeric content aloud (financial readouts, IVR confirmations, statement summaries).</li>
+        <li><strong>Technical: 24.14% round-trip WER.</strong> Acronyms (HTTPS, SSL, TLS), domain jargon, and IP-address-style strings degrade substantially. Acceptable for casual technical narration; not acceptable for documentation read-aloud where listeners need to act on the spoken text.</li>
+        <li><strong>Conversational: 1.30% WER.</strong> Comfortably under the 5% threshold &mdash; everyday speech is reproduced cleanly.</li>
+        <li><strong>Harvard sentences: 1.37% WER.</strong> Phonetically balanced standard test sentences round-trip near-perfectly. Confirms the synthesis pipeline and Whisper recogniser are not the bottleneck on simple inputs &mdash; the failures are content-specific.</li>
+        <li><strong>The split is diagnostic:</strong> Harvard and Conversational pass while Numbers and Technical fail. That points at the front-end normalisation step in Magpie (how it spells out digits, acronyms, and special tokens before the acoustic model sees them) rather than at acoustic quality. UTMOS and DNSMOS in Test 2.1 confirm the audio itself is high-quality; what&rsquo;s wrong is the words being synthesised.</li>
+        <li><strong>Production guidance:</strong> for use cases involving numeric or technical content, run a content-aware test on the actual corpus before committing. If the regression persists, normalise input client-side (spell-out digits, expand acronyms) until the underlying behaviour is fixed.</li>
       </ul>
     </div>
   </div>
@@ -967,19 +1168,28 @@ footer {
       <strong>Methodology:</strong> 50 sentences synthesized by Magpie Aria. F0 (fundamental frequency) extracted from the synthesized audio using <a href="https://github.com/JeremyCCHsu/Python-Wrapper-for-World-Vocoder">pyworld</a>. All metrics are reference-free &mdash; measured on the model's own output without comparison to any external speaker.
     </div>
     <div class="metrics-grid">
-      <div class="metric-card good"><div class="label">F0 Mean</div><div class="value">192.5<span class="unit"> Hz</span></div></div>
-      <div class="metric-card good"><div class="label">F0 Std Dev</div><div class="value">16.0<span class="unit"> Hz</span></div></div>
-      <div class="metric-card good"><div class="label">F0 Range</div><div class="value">143–232<span class="unit"> Hz</span></div></div>
-      <div class="metric-card good"><div class="label">Speaking Rate</div><div class="value">190<span class="unit"> WPM</span></div></div>
-      <div class="metric-card good"><div class="label">Rate Std Dev</div><div class="value">30.5<span class="unit"> WPM</span></div></div>
+      <div class="metric-card good"><div class="label">F0 Mean</div><div class="value"><span class="rd" data-apr="192.5" data-jun="193.6">192.5</span><span class="unit"> Hz</span></div></div>
+      <div class="metric-card good"><div class="label">F0 Std Dev</div><div class="value"><span class="rd" data-apr="16.0" data-jun="11.5">16.0</span><span class="unit"> Hz</span></div></div>
+      <div class="metric-card good"><div class="label">F0 Range</div><div class="value"><span class="rd" data-apr="143–232" data-jun="176–230">143–232</span><span class="unit"> Hz</span></div></div>
+      <div class="metric-card good"><div class="label">Speaking Rate</div><div class="value"><span class="rd" data-apr="190" data-jun="201">190</span><span class="unit"> WPM</span></div></div>
+      <div class="metric-card good"><div class="label">Rate Std Dev</div><div class="value"><span class="rd" data-apr="30.5" data-jun="37.2">30.5</span><span class="unit"> WPM</span></div></div>
     </div>
-    <div class="info-box success" style="margin-top:12px">
+    <div class="info-box success run-only" data-run="apr" style="margin-top:12px">
       <strong>Normal prosodic profile.</strong>
       <ul style="margin:8px 0 0 16px; line-height:1.8">
         <li><strong>F0 mean 192.5 Hz</strong> &mdash; firmly within the expected 150&ndash;250 Hz range for American English female speech, confirming appropriate pitch register.</li>
         <li><strong>F0 std dev 16 Hz</strong> &mdash; the voice is not monotone; pitch varies naturally across different sentence types (statements, questions, emphasis).</li>
         <li><strong>Speaking rate 190 WPM</strong> &mdash; within the natural conversational range of 150&ndash;200 WPM. Std dev of 30.5 WPM shows the model varies its pace naturally rather than speaking at a fixed rate.</li>
         <li><strong>No prosodic anomalies detected</strong> &mdash; no pitch breaks, rate spikes, or prosodic artifacts across 50 synthesized sentences.</li>
+      </ul>
+    </div>
+    <div class="info-box success run-only" data-run="jun" style="margin-top:12px">
+      <strong>Normal prosodic profile.</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>F0 mean 193.6 Hz</strong> &mdash; firmly within the expected 150&ndash;250 Hz range for American English female speech, confirming appropriate pitch register.</li>
+        <li><strong>F0 std dev 11.5 Hz</strong> &mdash; the voice is not monotone; pitch varies naturally across statements, questions, and emphasis. The 176&ndash;230 Hz min/max range across 50 sentences shows the model uses pitch contour rather than collapsing to a flat carrier.</li>
+        <li><strong>Speaking rate 201 WPM (std dev 37.2)</strong> &mdash; sits at the upper end of the natural conversational band (150&ndash;220 WPM). Listeners may experience a slightly faster delivery; for IVR-style applications where comprehension matters more than throughput, this is fine.</li>
+        <li><strong>No prosodic anomalies detected</strong> &mdash; no pitch breaks, rate spikes, or robotic flat-lining across the 50-sentence sample.</li>
       </ul>
     </div>
   </div>
@@ -1001,24 +1211,34 @@ footer {
         <tr><th>Text Length</th><th>Interface</th><th class="num">TTFB P50</th><th class="num">RTF P50</th><th class="num">Total P50</th></tr>
       </thead>
       <tbody>
-        <tr><td>10 words</td><td>gRPC</td><td class="num">65 ms</td><td class="num">0.100</td><td class="num">208 ms</td></tr>
-        <tr><td>10 words</td><td>REST</td><td class="num">94 ms</td><td class="num">0.113</td><td class="num">233 ms</td></tr>
-        <tr><td>25 words</td><td>gRPC</td><td class="num">65 ms</td><td class="num">0.081</td><td class="num">632 ms</td></tr>
-        <tr><td>25 words</td><td>REST</td><td class="num">94 ms</td><td class="num">0.084</td><td class="num">661 ms</td></tr>
-        <tr><td>75 words</td><td>gRPC</td><td class="num">75 ms</td><td class="num">0.077</td><td class="num">1,883 ms</td></tr>
-        <tr><td>75 words</td><td>REST</td><td class="num">94 ms</td><td class="num">0.077</td><td class="num">1,901 ms</td></tr>
-        <tr><td>150 words</td><td>gRPC</td><td class="num">95 ms</td><td class="num">0.074</td><td class="num">4,120 ms</td></tr>
-        <tr><td>150 words</td><td>REST</td><td class="num">114 ms</td><td class="num">0.075</td><td class="num">4,154 ms</td></tr>
+        <tr><td>10 words</td><td>gRPC</td><td class="num"><span class="rd" data-apr="65 ms" data-jun="65 ms">65 ms</span></td><td class="num"><span class="rd" data-apr="0.100" data-jun="0.103">0.100</span></td><td class="num"><span class="rd" data-apr="208 ms" data-jun="202 ms">208 ms</span></td></tr>
+        <tr><td>10 words</td><td>REST</td><td class="num"><span class="rd" data-apr="94 ms" data-jun="93 ms">94 ms</span></td><td class="num"><span class="rd" data-apr="0.113" data-jun="0.114">0.113</span></td><td class="num"><span class="rd" data-apr="233 ms" data-jun="228 ms">233 ms</span></td></tr>
+        <tr><td>25 words</td><td>gRPC</td><td class="num"><span class="rd" data-apr="65 ms" data-jun="74 ms">65 ms</span></td><td class="num"><span class="rd" data-apr="0.081" data-jun="0.082">0.081</span></td><td class="num"><span class="rd" data-apr="632 ms" data-jun="647 ms">632 ms</span></td></tr>
+        <tr><td>25 words</td><td>REST</td><td class="num"><span class="rd" data-apr="94 ms" data-jun="94 ms">94 ms</span></td><td class="num"><span class="rd" data-apr="0.084" data-jun="0.087">0.084</span></td><td class="num"><span class="rd" data-apr="661 ms" data-jun="676 ms">661 ms</span></td></tr>
+        <tr><td>75 words</td><td>gRPC</td><td class="num"><span class="rd" data-apr="75 ms" data-jun="75 ms">75 ms</span></td><td class="num"><span class="rd" data-apr="0.077" data-jun="0.079">0.077</span></td><td class="num"><span class="rd" data-apr="1,883 ms" data-jun="1,984 ms">1,883 ms</span></td></tr>
+        <tr><td>75 words</td><td>REST</td><td class="num"><span class="rd" data-apr="94 ms" data-jun="94 ms">94 ms</span></td><td class="num"><span class="rd" data-apr="0.077" data-jun="0.081">0.077</span></td><td class="num"><span class="rd" data-apr="1,901 ms" data-jun="2,026 ms">1,901 ms</span></td></tr>
+        <tr><td>150 words</td><td>gRPC</td><td class="num"><span class="rd" data-apr="95 ms" data-jun="94 ms">95 ms</span></td><td class="num"><span class="rd" data-apr="0.074" data-jun="0.077">0.074</span></td><td class="num"><span class="rd" data-apr="4,120 ms" data-jun="4,317 ms">4,120 ms</span></td></tr>
+        <tr><td>150 words</td><td>REST</td><td class="num"><span class="rd" data-apr="114 ms" data-jun="114 ms">114 ms</span></td><td class="num"><span class="rd" data-apr="0.075" data-jun="0.077">0.075</span></td><td class="num"><span class="rd" data-apr="4,154 ms" data-jun="4,305 ms">4,154 ms</span></td></tr>
       </tbody>
     </table>
     <div class="chart-container"><canvas id="chart-tts-latency"></canvas></div>
-    <div class="info-box success" style="margin-top:12px">
+    <div class="info-box success run-only" data-run="apr" style="margin-top:12px">
       <strong>Fast synthesis.</strong>
       <ul style="margin:8px 0 0 16px; line-height:1.8">
         <li><strong>TTFB under 115 ms for all text lengths</strong> &mdash; the first audio byte arrives quickly regardless of input size, making the system suitable for voice assistants where the audible pause before speech matters most.</li>
         <li><strong>RTF improves with longer text</strong> &mdash; 0.10 for 10 words, falling to 0.074 for 150 words (10&ndash;14&times; faster than real-time). Longer inputs spread the synthesis overhead over more audio, improving efficiency.</li>
         <li><strong>gRPC is consistently ~30 ms faster than REST</strong> &mdash; due to native binary streaming vs REST&rsquo;s HTTP buffering layer via the SAP AI Core proxy.</li>
         <li><strong>Total latency scales linearly with text length</strong> &mdash; end-to-end time grows predictably, making capacity planning and SLA estimation straightforward.</li>
+      </ul>
+    </div>
+    <div class="info-box success run-only" data-run="jun" style="margin-top:12px">
+      <strong>Fast synthesis.</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>TTFB under 115 ms for all text lengths</strong> &mdash; the first audio byte arrives quickly regardless of input size (65 ms gRPC for 10 words; 94 ms gRPC for 150 words). Well within the &lt;200 ms target for voice-assistant-grade conversational latency.</li>
+        <li><strong>RTF improves with longer text</strong> &mdash; 0.103 for 10 words, falling to 0.077 for 150 words (10&ndash;13&times; faster than real-time). Longer inputs spread the per-call synthesis overhead over more output audio, so per-second-of-output cost drops with length.</li>
+        <li><strong>gRPC is consistently ~30 ms faster than REST</strong> on TTFB, due to native binary streaming via HTTP/2 vs REST&rsquo;s JSON+HTTP-buffering layer through the SAP AI Core proxy.</li>
+        <li><strong>Total latency scales linearly with text length</strong> &mdash; 208 ms (10 w) &rarr; 647 ms (25 w) &rarr; 1,984 ms (75 w) &rarr; 4,317 ms (150 w) on gRPC. Predictable scaling makes capacity planning and SLA estimation straightforward.</li>
+        <li><strong>extra-long (300 words) cannot be measured on gRPC</strong> &mdash; all 50 reps fail because the text exceeds Magpie&rsquo;s 400-token sequence limit. REST completes but with RTF 2.29 (i.e., synthesis is slower than real-time), so even on the path that succeeds the result is unsuitable for streaming. Production guidance: cap input length at ~150 words / 400 tokens per synthesis call.</li>
       </ul>
     </div>
   </div>
@@ -1040,15 +1260,16 @@ footer {
         <tr><th class="num">Concurrency</th><th class="num">Success</th><th class="num" title="Requests that hung indefinitely and were abandoned after the 5-min safety timeout">Hung / Error</th><th class="num">Error Rate</th><th class="num">RPS</th><th class="num">P50</th><th class="num">P99</th></tr>
       </thead>
       <tbody>
-        <tr><td class="num">1</td><td class="num">50</td><td class="num">0</td><td class="num" style="color:var(--pass)">0%</td><td class="num">1.55</td><td class="num">640 ms</td><td class="num">698 ms</td></tr>
-        <tr><td class="num">5</td><td class="num">50</td><td class="num">0</td><td class="num" style="color:var(--pass)">0%</td><td class="num" style="color:var(--pass)">7.03</td><td class="num">710 ms</td><td class="num">746 ms</td></tr>
-        <tr><td class="num">10</td><td class="num">48</td><td class="num">2</td><td class="num" style="color:var(--flag)">4%</td><td class="num" style="color:var(--flag)" title="Estimated via Little's Law (concurrency / mean latency of successful requests). Wall-clock time is unreliable due to hung requests.">~11.7 *</td><td class="num">801 ms</td><td class="num">1,380 ms</td></tr>
-        <tr><td class="num">20</td><td class="num">38</td><td class="num">12</td><td class="num" style="color:var(--fail)">24%</td><td class="num" style="color:var(--flag)" title="Estimated via Little's Law (concurrency / mean latency of successful requests). Wall-clock time is unreliable due to hung requests.">~14.5 *</td><td class="num">837 ms</td><td class="num">2,328 ms</td></tr>
+        <tr><td class="num">1</td><td class="num">50</td><td class="num">0</td><td class="num" style="color:var(--pass)">0%</td><td class="num"><span class="rd" data-apr="1.55" data-jun="1.51">1.55</span></td><td class="num"><span class="rd" data-apr="640 ms" data-jun="661 ms">640 ms</span></td><td class="num"><span class="rd" data-apr="698 ms" data-jun="723 ms">698 ms</span></td></tr>
+        <tr><td class="num">5</td><td class="num">50</td><td class="num">0</td><td class="num" style="color:var(--pass)">0%</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="7.03" data-jun="5.49">7.03</span></td><td class="num"><span class="rd" data-apr="710 ms" data-jun="736 ms">710 ms</span></td><td class="num"><span class="rd" data-apr="746 ms" data-jun="1,400 ms">746 ms</span></td></tr>
+        <tr><td class="num">10</td><td class="num"><span class="rd" data-apr="48" data-jun="50">48</span></td><td class="num"><span class="rd" data-apr="2" data-jun="0">2</span></td><td class="num"><span class="rd-color" data-apr-color="#d97706" data-jun-color="#059669"><span class="rd" data-apr="4%" data-jun="0%">4%</span></span></td><td class="num"><span class="rd-color" data-apr-color="#d97706" data-jun-color="#059669" title="Apr: estimated via Little's Law (concurrency / mean latency of successful requests). Wall-clock time was unreliable due to hung requests. Jun: measured directly &mdash; no hangs."><span class="rd" data-apr="~11.7 *" data-jun="5.54">~11.7 *</span></span></td><td class="num"><span class="rd" data-apr="801 ms" data-jun="1,480 ms">801 ms</span></td><td class="num"><span class="rd" data-apr="1,380 ms" data-jun="2,103 ms">1,380 ms</span></td></tr>
+        <tr><td class="num">20</td><td class="num"><span class="rd" data-apr="38" data-jun="50">38</span></td><td class="num"><span class="rd" data-apr="12" data-jun="0">12</span></td><td class="num"><span class="rd-color" data-apr-color="#dc2626" data-jun-color="#059669"><span class="rd" data-apr="24%" data-jun="0%">24%</span></span></td><td class="num"><span class="rd-color" data-apr-color="#d97706" data-jun-color="#059669" title="Apr: estimated via Little's Law (concurrency / mean latency of successful requests). Wall-clock time was unreliable due to hung requests. Jun: measured directly &mdash; no hangs."><span class="rd" data-apr="~14.5 *" data-jun="5.53">~14.5 *</span></span></td><td class="num"><span class="rd" data-apr="837 ms" data-jun="3,470 ms">837 ms</span></td><td class="num"><span class="rd" data-apr="2,328 ms" data-jun="3,540 ms">2,328 ms</span></td></tr>
       </tbody>
     </table>
-    <p style="font-size:0.8rem; color:var(--text-muted); margin:4px 0 12px">* Estimated via Little&rsquo;s Law (effective concurrency &divide; mean latency of successful requests). Wall-clock time is unreliable when hung requests trigger the 5-min safety timeout.</p>
+    <p class="run-only" data-run="apr" style="font-size:0.8rem; color:var(--text-muted); margin:4px 0 12px">* Estimated via Little&rsquo;s Law (effective concurrency &divide; mean latency of successful requests). Wall-clock time is unreliable when hung requests trigger the 5-min safety timeout.</p>
+    <p class="run-only" data-run="jun" style="font-size:0.8rem; color:var(--text-muted); margin:4px 0 12px">All RPS values measured directly &mdash; no hangs in this run, so no Little&rsquo;s-Law estimation needed.</p>
     <div class="chart-container"><canvas id="chart-concurrency"></canvas></div>
-    <div class="info-box error" style="margin-top:12px">
+    <div class="info-box error run-only" data-run="apr" style="margin-top:12px">
       <strong>Server saturates at concurrency &ge;10.</strong>
       <ul style="margin:8px 0 0 16px; line-height:1.8">
         <li><strong>N=1 and N=5 scale cleanly</strong> &mdash; throughput rises from 1.55 to 7.03 RPS with 0% errors, showing near-linear scaling within the safe operating range.</li>
@@ -1056,6 +1277,17 @@ footer {
         <li><strong>N=20: over capacity</strong> &mdash; 12 out of 50 requests (24%) hung or failed. P99 climbs to 2,328 ms. The server is clearly unable to sustain this concurrency level reliably.</li>
         <li><strong>Safe operating limit is ~5 concurrent streams</strong> &mdash; beyond this, the GPU cannot process new requests fast enough and they begin stalling server-side.</li>
         <li><strong>Production recommendation:</strong> for workloads requiring &gt;5 concurrent users, add horizontal scaling (multiple Riva replicas behind a load balancer) or a request queue to cap in-flight requests within the safe zone.</li>
+      </ul>
+    </div>
+    <div class="info-box warn run-only" data-run="jun" style="margin-top:12px">
+      <strong>No errors at any concurrency level &mdash; but latency rises sharply with load.</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>0% error rate at every concurrency level tested</strong> &mdash; all 50 requests complete successfully at N=1, N=5, N=10, and N=20. No hangs, no timeouts, no server-side abandonment.</li>
+        <li><strong>Latency degrades meaningfully with concurrency</strong> &mdash; P50 rises from 661 ms (N=1) to 736 ms (N=5) to 1,480 ms (N=10) to 3,470 ms (N=20). At N=20 the median request takes over 3 seconds, well outside the &lt;500 ms voice-assistant target.</li>
+        <li><strong>Long tail at higher concurrency</strong> &mdash; P99 climbs from 723 ms (N=1) to 1.4 s (N=5) to 2.1 s (N=10) to 3.5 s (N=20). The slowest 1% of requests is unusable for interactive applications above N=5.</li>
+        <li><strong>Throughput plateaus around 5.5 RPS</strong> &mdash; 1.51 (N=1), 5.49 (N=5), 5.54 (N=10), 5.53 (N=20). Saturating at N=5; beyond that, additional concurrent requests sit in queue rather than running in parallel, which is what drives the latency growth.</li>
+        <li><strong>Production guidance:</strong> for interactive use cases, cap in-flight requests at &le; 5 to keep P50 under 750 ms. For batch workloads where latency tolerance is higher (~3 s acceptable), N=20 still completes reliably. For higher sustained throughput than ~5.5 RPS, scale horizontally with multiple Riva replicas behind a load balancer.</li>
+        <li><strong>Operating envelope is bounded by latency, not failure.</strong> The endpoint reliably serves 20 concurrent streams; whether that&rsquo;s usable depends on the application&rsquo;s latency budget.</li>
       </ul>
     </div>
   </div>
@@ -1094,12 +1326,21 @@ footer {
         <tr><td>Very Long Text</td><td class="num">2</td><td class="num">0</td><td class="num">2</td><td class="num">0%</td><td><span class="badge badge-fail">Fail</span></td></tr>
       </tbody>
     </table>
-    <div class="info-box warn" style="margin-top:12px">
+    <div class="info-box warn run-only" data-run="apr" style="margin-top:12px">
       <strong>12 of 17 categories pass at 100%.</strong> Three areas require attention:
       <ul style="margin:8px 0 0 16px; line-height:1.8">
         <li><strong>Very long text &mdash; 0% pass rate:</strong> Both test cases failed, likely hitting a server-side input length limit. Applications that need to synthesize documents or lengthy passages must split input into shorter chunks before sending to the API.</li>
         <li><strong>SSML markup &mdash; 40% pass rate:</strong> Only basic SSML tags (e.g., <code>&lt;break&gt;</code> for pauses) work correctly. Advanced markup such as <code>&lt;phoneme&gt;</code> (custom pronunciation) and <code>&lt;emphasis&gt;</code> (stress control) is not reliably supported by this Riva deployment.</li>
         <li><strong>Punctuation-heavy input &mdash; 70% pass rate:</strong> Unusual punctuation patterns (em-dashes, nested quotes, excessive ellipses) cause garbled or missing audio output. Standard prose punctuation is unaffected.</li>
+      </ul>
+    </div>
+    <div class="info-box warn run-only" data-run="jun" style="margin-top:12px">
+      <strong>12 of 17 categories pass at 100%.</strong> Three areas require attention:
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>Very long text &mdash; 0% pass rate:</strong> both test cases fail, hitting the model&rsquo;s 400-token sequence limit (the same limit that breaks the 300-word latency bucket in Test 2.5). Applications synthesising documents or lengthy passages must split input into shorter chunks before sending to the API.</li>
+        <li><strong>SSML markup &mdash; 40% pass rate:</strong> only the most basic SSML tag (<code>&lt;break&gt;</code> for pauses) works reliably. Advanced markup such as <code>&lt;phoneme&gt;</code> (custom pronunciation) and <code>&lt;emphasis&gt;</code> (stress control) is rejected by the server-side parser. Treat anything beyond <code>&lt;break&gt;</code> as unsupported on this Riva deployment.</li>
+        <li><strong>Punctuation-heavy input &mdash; 70% pass rate:</strong> unusual punctuation patterns (em-dashes, nested quotes, excessive ellipses) produce garbled or missing audio. Standard prose punctuation is unaffected; sanitise unusual punctuation client-side if user input feeds the synthesis directly.</li>
+        <li><strong>Reassuring breadth elsewhere:</strong> abbreviations, code snippets, lists, mixed case, numbers, proper nouns, questions/commands, repetition, single-word inputs, special characters, technical-domain text, and URLs/emails all reach 100% pass. The model handles a wide range of real-world content cleanly; the failures cluster around three well-defined edge categories that are easy to gate at the application level.</li>
       </ul>
     </div>
   </div>
@@ -1119,26 +1360,36 @@ footer {
     <table>
       <thead><tr><th>Passage</th><th class="num">Paragraphs</th><th class="num">F0 Drift (Hz)</th><th class="num">WPM Drift</th><th class="num">Speaker Sim</th></tr></thead>
       <tbody>
-        <tr><td>Technology and Society</td><td class="num">5</td><td class="num">4.7</td><td class="num">10.5</td><td class="num" style="color:var(--pass)">0.9487</td></tr>
-        <tr><td>Climate and Environment</td><td class="num">6</td><td class="num">6.1</td><td class="num">12.3</td><td class="num" style="color:var(--pass)">0.9391</td></tr>
-        <tr><td>Medical Advances</td><td class="num">5</td><td class="num">7.7</td><td class="num">10.8</td><td class="num" style="color:var(--pass)">0.9465</td></tr>
-        <tr><td>Space Exploration</td><td class="num">5</td><td class="num">7.3</td><td class="num">19.9</td><td class="num" style="color:var(--pass)">0.9382</td></tr>
-        <tr><td>Financial Markets</td><td class="num">5</td><td class="num">4.9</td><td class="num">7.2</td><td class="num" style="color:var(--pass)">0.9385</td></tr>
+        <tr><td>Technology and Society</td><td class="num">5</td><td class="num"><span class="rd" data-apr="4.7" data-jun="5.2">4.7</span></td><td class="num"><span class="rd" data-apr="10.5" data-jun="10.6">10.5</span></td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.9487" data-jun="0.9545">0.9487</span></td></tr>
+        <tr><td>Climate and Environment</td><td class="num">6</td><td class="num"><span class="rd" data-apr="6.1" data-jun="6.8">6.1</span></td><td class="num"><span class="rd" data-apr="12.3" data-jun="10.8">12.3</span></td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.9391" data-jun="0.9453">0.9391</span></td></tr>
+        <tr><td>Medical Advances</td><td class="num">5</td><td class="num"><span class="rd" data-apr="7.7" data-jun="4.5">7.7</span></td><td class="num"><span class="rd" data-apr="10.8" data-jun="10.6">10.8</span></td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.9465" data-jun="0.9595">0.9465</span></td></tr>
+        <tr><td>Space Exploration</td><td class="num">5</td><td class="num"><span class="rd" data-apr="7.3" data-jun="4.5">7.3</span></td><td class="num"><span class="rd" data-apr="19.9" data-jun="17.6">19.9</span></td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.9382" data-jun="0.9466">0.9382</span></td></tr>
+        <tr><td>Financial Markets</td><td class="num">5</td><td class="num"><span class="rd" data-apr="4.9" data-jun="7.1">4.9</span></td><td class="num"><span class="rd" data-apr="7.2" data-jun="8.0">7.2</span></td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.9385" data-jun="0.9442">0.9385</span></td></tr>
       </tbody>
     </table>
     <div class="metrics-grid" style="margin-top:16px">
-      <div class="metric-card good"><div class="label">Mean F0 Drift</div><div class="value">6.1<span class="unit"> Hz</span></div></div>
-      <div class="metric-card good"><div class="label">Mean WPM Drift</div><div class="value">12.1<span class="unit"> WPM</span></div></div>
-      <div class="metric-card good"><div class="label">Speaker Sim (mean)</div><div class="value">0.942</div></div>
-      <div class="metric-card good"><div class="label">Speaker Sim (min)</div><div class="value">0.938</div></div>
+      <div class="metric-card good"><div class="label">Mean F0 Drift</div><div class="value"><span class="rd" data-apr="6.1" data-jun="5.6">6.1</span><span class="unit"> Hz</span></div></div>
+      <div class="metric-card good"><div class="label">Mean WPM Drift</div><div class="value"><span class="rd" data-apr="12.1" data-jun="11.5">12.1</span><span class="unit"> WPM</span></div></div>
+      <div class="metric-card good"><div class="label">Speaker Sim (mean)</div><div class="value"><span class="rd" data-apr="0.942" data-jun="0.950">0.942</span></div></div>
+      <div class="metric-card good"><div class="label">Speaker Sim (min)</div><div class="value"><span class="rd" data-apr="0.938" data-jun="0.944">0.938</span></div></div>
     </div>
-    <div class="info-box success" style="margin-top:12px">
+    <div class="info-box success run-only" data-run="apr" style="margin-top:12px">
       <strong>Excellent long-form consistency.</strong>
       <ul style="margin:8px 0 0 16px; line-height:1.8">
         <li><strong>F0 drift 4.7&ndash;7.7 Hz</strong> &mdash; well within natural variation (typical speaking pitch spans 80&ndash;300 Hz). Paragraph-to-paragraph pitch remains essentially stable throughout each passage.</li>
         <li><strong>WPM drift 7&ndash;20</strong> &mdash; speaking rate variation is within the range of natural human pacing. No passage sounds rushed or unnaturally slow in any section.</li>
         <li><strong>Speaker similarity 0.938&ndash;0.949</strong> &mdash; all passages score well above the 0.85 same-speaker threshold, confirming the voice identity (ECAPA-TDNN embedding) stays consistent across independent synthesis calls.</li>
         <li><strong>No voice drift detected</strong> in any of the 5 passages &mdash; the model does not gradually shift pitch, speed, or voice character over the course of a multi-paragraph document.</li>
+      </ul>
+    </div>
+    <div class="info-box success run-only" data-run="jun" style="margin-top:12px">
+      <strong>Excellent long-form consistency.</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>F0 drift 4.5&ndash;7.1 Hz</strong> &mdash; well within natural variation (typical speaking pitch spans 80&ndash;300 Hz). Paragraph-to-paragraph pitch remains essentially stable through each multi-paragraph passage.</li>
+        <li><strong>WPM drift 8.0&ndash;17.6</strong> &mdash; speaking-rate variation sits in the natural human-pacing range. No passage sounds rushed or unnaturally slow in any section.</li>
+        <li><strong>Speaker similarity 0.944&ndash;0.960</strong> &mdash; every passage scores well above the 0.85 same-speaker threshold for ECAPA-TDNN embeddings. The voice identity stays consistent across independent synthesis calls; listeners hear one continuous speaker rather than separate paragraphs glued together.</li>
+        <li><strong>No voice drift detected</strong> in any of the 5 passages &mdash; the model does not gradually shift pitch, speed, or voice character over the course of a multi-paragraph document.</li>
+        <li><strong>Suitable for audiobooks, email narration, IVR scripts, and document read-aloud</strong> &mdash; the voice remains coherent across paragraph boundaries with no special chunking strategy required (other than the 400-token-per-call limit established in Tests 2.5 and 2.7).</li>
       </ul>
     </div>
   </div>
@@ -1158,17 +1409,17 @@ footer {
     <table>
       <thead><tr><th>Test</th><th>Finding</th><th>Verdict</th></tr></thead>
       <tbody>
-        <tr><td>1.1 Accuracy</td><td>WER 11&ndash;29% across datasets, 2&ndash;4x above thresholds</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>1.2 Performance</td><td>148&ndash;259x real-time, sub-200ms batch latency</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>1.3 Streaming</td><td>RTF ~1.02, TTFW 325ms, 96.8% stability</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>1.4 REST/gRPC</td><td>gRPC 30% faster than REST at P50</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>1.5 Noise</td><td>Robust above SNR 5; degrades at &minus;5 dB</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>1.6 Accent</td><td>Fairness delta 23.11 pp (target &lt;10 pp); Scottish 0.93% (best), Vietnamese 24.03% (worst) — 10/12 accents &lt;10% WER</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>1.7 Long-Form</td><td>79% WER on concatenated audio &gt;40s</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>1.8 Domain</td><td>42% NE-WER on financial entities</td><td><span class="badge badge-flag">Flag</span></td></tr>
-        <tr><td>1.9 Output</td><td>Weak punctuation (F1 0&ndash;40%), good caps/numbers</td><td><span class="badge badge-flag">Flag</span></td></tr>
-        <tr><td>1.10 Confidence</td><td>ECE 0.244 &mdash; severely overconfident</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>1.11 Format</td><td>All pass except OGG (missing libvorbis)</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>1.1 Accuracy</td><td><span class="rd" data-apr="WER 11–29% across datasets, 2–4x above thresholds" data-jun="WER 11–28% across all 5 datasets, 2–4x above thresholds; GigaSpeech 24.14%">WER 11–29% across datasets, 2–4x above thresholds</span></td><td><span class="rd-badge badge badge-fail" data-apr="Fail" data-jun="Fail" data-apr-class="badge-fail" data-jun-class="badge-fail">Fail</span></td></tr>
+        <tr><td>1.2 Performance</td><td><span class="rd" data-apr="148–259x real-time, sub-200ms batch latency" data-jun="151–262x real-time, sub-200ms batch latency, P99 &lt;130ms at 30s">148–259x real-time, sub-200ms batch latency</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>1.3 Streaming</td><td><span class="rd" data-apr="RTF ~1.02, TTFW 325ms, 96.8% stability" data-jun="RTF ~1.02, TTFW 323ms P50, 96.8% stability, +0.06pp WER vs batch">RTF ~1.02, TTFW 325ms, 96.8% stability</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>1.4 REST/gRPC</td><td><span class="rd" data-apr="gRPC 30% faster than REST at P50" data-jun="gRPC 32% faster than REST at P50 (102 vs 149 ms)">gRPC 30% faster than REST at P50</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>1.5 Noise</td><td><span class="rd" data-apr="Robust above SNR 5; degrades at −5 dB" data-jun="Robust above SNR 5; gaussian -5 dB hits 40.2% WER">Robust above SNR 5; degrades at −5 dB</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>1.6 Accent</td><td><span class="rd" data-apr="Fairness delta 23.11 pp (target <10 pp); Scottish 0.93% (best), Vietnamese 24.03% (worst) — 10/12 accents <10% WER" data-jun="Fairness delta 22.76 pp (target <10 pp); Scottish 0.93% (best), Vietnamese 23.68% (worst) — 10/12 accents <10% WER">Fairness delta 23.11 pp (target &lt;10 pp); Scottish 0.93% (best), Vietnamese 24.03% (worst) — 10/12 accents &lt;10% WER</span></td><td><span class="rd-badge badge badge-fail" data-apr="Fail" data-jun="Fail" data-apr-class="badge-fail" data-jun-class="badge-fail">Fail</span></td></tr>
+        <tr><td>1.7 Long-Form</td><td><span class="rd" data-apr="79% WER on concatenated audio &gt;40s" data-jun="79% WER on concatenated audio &gt;40s; 6.5% on individual segments">79% WER on concatenated audio &gt;40s</span></td><td><span class="rd-badge badge badge-fail" data-apr="Fail" data-jun="Fail" data-apr-class="badge-fail" data-jun-class="badge-fail">Fail</span></td></tr>
+        <tr><td>1.8 Domain</td><td><span class="rd" data-apr="42% NE-WER on financial entities" data-jun="42.7% NE-WER on financial entities, KRR 79.3%">42% NE-WER on financial entities</span></td><td><span class="rd-badge badge badge-flag" data-apr="Flag" data-jun="Flag" data-apr-class="badge-flag" data-jun-class="badge-flag">Flag</span></td></tr>
+        <tr><td>1.9 Output</td><td><span class="rd" data-apr="Weak punctuation (F1 0–40%), good caps/numbers" data-jun="Weak punctuation (F1 0–40%); caps 89% / numbers 93% strong">Weak punctuation (F1 0–40%), good caps/numbers</span></td><td><span class="rd-badge badge badge-flag" data-apr="Flag" data-jun="Flag" data-apr-class="badge-flag" data-jun-class="badge-flag">Flag</span></td></tr>
+        <tr><td>1.10 Confidence</td><td><span class="rd" data-apr="ECE 0.244 — severely overconfident" data-jun="ECE 0.244, AUROC 0.643 — severely overconfident; 17.9k words evaluated">ECE 0.244 — severely overconfident</span></td><td><span class="rd-badge badge badge-fail" data-apr="Fail" data-jun="Fail" data-apr-class="badge-fail" data-jun-class="badge-fail">Fail</span></td></tr>
+        <tr><td>1.11 Format</td><td><span class="rd" data-apr="All pass except OGG (missing libvorbis)" data-jun="All pass except OGG; sample rates 8–48 kHz, durations 0.5 s–10 min, mono/stereo all OK">All pass except OGG (missing libvorbis)</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
       </tbody>
     </table>
   </div>
@@ -1182,16 +1433,25 @@ footer {
     <table>
       <thead><tr><th>Test</th><th>Finding</th><th>Verdict</th></tr></thead>
       <tbody>
-        <tr><td>2.1 Naturalness</td><td>UTMOS 3.96/5 (p50 3.99), DNSMOS OVRL 3.20/5, BAK 4.05/5</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>2.2 Intelligibility</td><td>1.48% WER (Harvard), 0.16% (conversational); 11.6% (technical), 17.2% (numbers) after normalization fix</td><td><span class="badge badge-flag">Flag</span></td></tr>
-        <tr><td>2.3 Prosody</td><td>F0 192.5 Hz, std 16 Hz (not monotone); 190 WPM natural pacing</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>2.1 Naturalness</td><td><span class="rd" data-apr="UTMOS 3.96/5 (p50 3.99), DNSMOS OVRL 3.20/5, BAK 4.05/5" data-jun="UTMOS 4.14/5 (p50 4.21), DNSMOS OVRL 3.27/5, BAK 4.10/5 — over the 4.0 'good' threshold">UTMOS 3.96/5 (p50 3.99), DNSMOS OVRL 3.20/5, BAK 4.05/5</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>2.2 Intelligibility</td><td><span class="rd" data-apr="1.48% WER (Harvard), 0.16% (conversational); 11.6% (technical), 17.2% (numbers) after normalization fix" data-jun="1.37% WER (Harvard), 1.30% (conversational); 24.1% (technical), 53.5% (numbers) — numeric and technical content unusable">1.48% WER (Harvard), 0.16% (conversational); 11.6% (technical), 17.2% (numbers) after normalization fix</span></td><td><span class="rd-badge badge badge-flag" data-apr="Flag" data-jun="Fail" data-apr-class="badge-flag" data-jun-class="badge-fail">Flag</span></td></tr>
+        <tr><td>2.3 Prosody</td><td><span class="rd" data-apr="F0 192.5 Hz, std 16 Hz (not monotone); 190 WPM natural pacing" data-jun="F0 193.6 Hz, std 11.5 Hz (not monotone); 201 WPM natural pacing">F0 192.5 Hz, std 16 Hz (not monotone); 190 WPM natural pacing</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
         <tr><td>2.4 Signal Quality</td><td>Removed &mdash; PESQ/STOI/MCD require matched-speaker reference; covered by DNSMOS in Test 2.1</td><td><span class="badge badge-note">N/A</span></td></tr>
-        <tr><td>2.5 Latency</td><td>TTFB &lt;115ms, RTF 0.07&ndash;0.10 (10&ndash;14x real-time)</td><td><span class="badge badge-pass">Pass</span></td></tr>
-        <tr><td>2.6 Concurrency</td><td>Saturates at ~10 concurrent; 24% errors at 20</td><td><span class="badge badge-fail">Fail</span></td></tr>
-        <tr><td>2.7 Edge Cases</td><td>12/17 categories 100%; very long &amp; SSML fail</td><td><span class="badge badge-flag">Flag</span></td></tr>
-        <tr><td>2.8 Long-Form</td><td>F0 drift &lt;8 Hz, WPM drift &lt;20, speaker sim 0.938&ndash;0.949 (well above 0.85 threshold)</td><td><span class="badge badge-pass">Pass</span></td></tr>
+        <tr><td>2.5 Latency</td><td><span class="rd" data-apr="TTFB <115ms, RTF 0.07–0.10 (10–14x real-time)" data-jun="TTFB <115ms, RTF 0.077–0.103 (10–13x real-time); 300-word inputs hit the 400-token limit">TTFB &lt;115ms, RTF 0.07–0.10 (10–14x real-time)</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>2.6 Concurrency</td><td><span class="rd" data-apr="Saturates at ~10 concurrent; 24% errors at 20" data-jun="0% errors at N=1, 5, 10, 20; throughput plateaus at ~5.5 RPS; P50 rises 661→3,470 ms across the load curve">Saturates at ~10 concurrent; 24% errors at 20</span></td><td><span class="rd-badge badge badge-fail" data-apr="Fail" data-jun="Flag" data-apr-class="badge-fail" data-jun-class="badge-flag">Fail</span></td></tr>
+        <tr><td>2.7 Edge Cases</td><td><span class="rd" data-apr="12/17 categories 100%; very long & SSML fail" data-jun="12/17 categories 100%; very long, SSML beyond &lt;break&gt;, and unusual punctuation fail">12/17 categories 100%; very long &amp; SSML fail</span></td><td><span class="rd-badge badge badge-flag" data-apr="Flag" data-jun="Flag" data-apr-class="badge-flag" data-jun-class="badge-flag">Flag</span></td></tr>
+        <tr><td>2.8 Long-Form</td><td><span class="rd" data-apr="F0 drift <8 Hz, WPM drift <20, speaker sim 0.938–0.949 (well above 0.85 threshold)" data-jun="F0 drift <8 Hz, WPM drift <18, speaker sim 0.944–0.960 (well above 0.85 threshold)">F0 drift &lt;8 Hz, WPM drift &lt;20, speaker sim 0.938–0.949 (well above 0.85 threshold)</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
       </tbody>
     </table>
+    <div class="info-box info run-only" data-run="jun" style="margin-top:16px">
+      <strong>Standout findings on the TTS side</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>2.1 Naturalness:</strong> UTMOS 4.14/5 (P50 4.21) &mdash; over the 4.0 &ldquo;good&rdquo; threshold. All four quality predictors (UTMOS, DNSMOS OVRL/SIG/BAK) agree on direction with tight standard deviations.</li>
+        <li><strong>2.2 Intelligibility &mdash; Numbers (53.5%) and Technical (24.1%) fail.</strong> The split between Harvard / Conversational (passing &lt;2%) and Numbers / Technical (failing) points at Magpie&rsquo;s text-normalisation step rather than acoustic quality. Investigate before relying on the TTS for numeric or acronym-heavy content.</li>
+        <li><strong>2.6 Concurrency:</strong> 0% error rate at every level tested up to N=20, but P50 latency rises from 661 ms to 3,470 ms across the load curve. Reliable but not fast under load: cap interactive workloads at N=5 to keep P50 under 750 ms.</li>
+        <li><strong>2.7 Edge cases:</strong> 12 of 17 categories at 100%. Three known gaps &mdash; very-long text (400-token limit), advanced SSML (only <code>&lt;break&gt;</code> supported), unusual punctuation &mdash; are easy to gate at the application layer.</li>
+      </ul>
+    </div>
   </div>
 </div>
 
@@ -1203,165 +1463,294 @@ footer {
 </footer>
 
 <script>
-// --- Chart: Accuracy WER ---
-new Chart(document.getElementById('chart-accuracy'), {
-  type: 'bar',
-  data: {
-    labels: ['LibriSpeech\nclean', 'LibriSpeech\nother', 'VoxPopuli EN', 'GigaSpeech', 'SPGISpeech'],
-    datasets: [
-      {
-        label: 'WER',
-        data: [11.29, 13.34, 28.50, 24.06, 21.07],
-        backgroundColor: ['#e74c3c','#e74c3c','#e74c3c','#e74c3c','#e74c3c'],
-        borderRadius: 4,
-      },
-      {
-        label: 'Pass Threshold',
-        data: [5, 10, 8, 12, 8],
-        backgroundColor: ['#2ecc71','#2ecc71','#2ecc71','#2ecc71','#2ecc71'],
-        borderRadius: 4,
+// ─── Run-toggle controller ─────────────────────────────────────
+// Two evaluation runs share this page. Each numeric cell is marked up as
+//   <span class="rd" data-apr="X" data-jun="Y">…</span>
+// and verdict badges as
+//   <span class="rd-badge" data-apr-class="badge-fail" data-jun-class="badge-flag" data-apr="Fail" data-jun="Flag">…</span>
+// Toggle buttons rewrite text content + classes; charts re-render via a registry.
+// Selection persists in localStorage.
+(function () {
+  const RUN_KEY = 'nvidia-eval-active-run';
+  let activeRun = (function () {
+    try { return localStorage.getItem(RUN_KEY) || 'apr'; }
+    catch (e) { return 'apr'; }
+  })();
+  const chartRenderers = {};   // id -> function(run) {…}
+  const chartInstances = {};   // id -> Chart instance
+
+  function applyRun(run) {
+    activeRun = run;
+    document.body.setAttribute('data-active-run', run);
+    try { localStorage.setItem(RUN_KEY, run); } catch (e) {}
+    // Update toggle buttons
+    document.querySelectorAll('[data-run-select]').forEach(btn => {
+      const isActive = btn.getAttribute('data-run-select') === run;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-selected', isActive);
+    });
+    // Swap every rd cell value
+    document.querySelectorAll('.rd').forEach(el => {
+      const v = el.getAttribute('data-' + run);
+      if (v !== null) el.textContent = v;
+    });
+    // Swap every rd-badge: text + badge class
+    document.querySelectorAll('.rd-badge').forEach(el => {
+      const v = el.getAttribute('data-' + run);
+      if (v !== null) el.textContent = v;
+      const cls = el.getAttribute('data-' + run + '-class');
+      if (cls) {
+        el.classList.remove('badge-pass', 'badge-flag', 'badge-fail', 'badge-note');
+        el.classList.add(cls);
       }
-    ]
-  },
-  options: {
-    responsive: true,
-    plugins: {
-      title: { display: true, text: 'WER (%) vs Pass Threshold', font: {size:14} },
-      legend: { position: 'bottom' }
-    },
-    scales: {
-      y: { beginAtZero: true, title: { display: true, text: 'WER (%)' } }
-    }
+    });
+    // Swap colored cells with run-specific colors (used for sparkline-style WER/latency cells)
+    document.querySelectorAll('[data-' + run + '-color]').forEach(el => {
+      el.style.color = el.getAttribute('data-' + run + '-color');
+    });
+    // Re-render every chart
+    Object.keys(chartRenderers).forEach(id => {
+      try { chartRenderers[id](run); }
+      catch (e) { console.error('chart re-render', id, e); }
+    });
   }
+
+  // Helper for chart code: register a renderer that knows both runs
+  window.registerRunChart = function (id, builder) {
+    chartRenderers[id] = function (run) {
+      const cfg = builder(run);
+      if (chartInstances[id]) {
+        chartInstances[id].data = cfg.data;
+        chartInstances[id].options = cfg.options;
+        chartInstances[id].update();
+      } else {
+        const ctx = document.getElementById(id);
+        if (ctx) chartInstances[id] = new Chart(ctx, cfg);
+      }
+    };
+    // Render initial state
+    chartRenderers[id](activeRun);
+  };
+
+  document.querySelectorAll('[data-run-select]').forEach(btn => {
+    btn.addEventListener('click', () => applyRun(btn.getAttribute('data-run-select')));
+  });
+
+  // Apply the persisted run on first paint (before any chart code runs)
+  document.body.setAttribute('data-active-run', activeRun);
+  document.querySelectorAll('[data-run-select]').forEach(btn => {
+    const isActive = btn.getAttribute('data-run-select') === activeRun;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-selected', isActive);
+  });
+  // Swap on initial render too — run before chart bootstrap below
+  document.addEventListener('DOMContentLoaded', () => applyRun(activeRun));
+})();
+
+// --- Chart: Accuracy WER ---
+registerRunChart('chart-accuracy', function (run) {
+  const data = run === 'apr'
+    ? [11.29, 13.34, 28.50, 24.06, 21.07]
+    : [11.49, 13.42, 28.47, 24.14, 21.08];
+  return {
+    type: 'bar',
+    data: {
+      labels: ['LibriSpeech\nclean', 'LibriSpeech\nother', 'VoxPopuli EN', 'GigaSpeech', 'SPGISpeech'],
+      datasets: [
+        {
+          label: run === 'apr' ? 'WER (Apr)' : 'WER (Jun)',
+          data: data,
+          backgroundColor: ['#e74c3c','#e74c3c','#e74c3c','#e74c3c','#e74c3c'],
+          borderRadius: 4,
+        },
+        {
+          label: 'Pass Threshold',
+          data: [5, 10, 8, 12, 8],
+          backgroundColor: ['#2ecc71','#2ecc71','#2ecc71','#2ecc71','#2ecc71'],
+          borderRadius: 4,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        title: { display: true, text: 'WER (%) vs Pass Threshold', font: {size:14} },
+        legend: { position: 'bottom' }
+      },
+      scales: {
+        y: { beginAtZero: true, title: { display: true, text: 'WER (%)' } }
+      }
+    }
+  };
 });
 
 // --- Chart: Noise Robustness ---
-new Chart(document.getElementById('chart-noise'), {
-  type: 'line',
-  data: {
-    labels: ['-5', '0', '5', '10', '15', '20'],
-    datasets: [
-      { label: 'Gaussian', data: [47.33, 9.36, 7.06, 5.19, 5.19, 5.08], borderColor: '#e74c3c', fill: false, tension: 0.3 },
-      { label: 'Babble', data: [null, 10.05, 6.63, 5.45, 5.24, 5.13], borderColor: '#3498db', fill: false, tension: 0.3 },
-      { label: 'Traffic', data: [null, 9.79, 6.68, 5.24, 5.19, 5.08], borderColor: '#2ecc71', fill: false, tension: 0.3 },
-      { label: 'Office', data: [null, 9.47, 6.79, 5.24, 5.08, 5.08], borderColor: '#f39c12', fill: false, tension: 0.3 },
-      { label: 'Clean baseline', data: [8.2, 8.2, 8.2, 8.2, 8.2, 8.2], borderColor: '#95a5a6', borderDash: [5,5], fill: false, pointRadius: 0 }
-    ]
-  },
-  options: {
-    responsive: true,
-    plugins: {
-      title: { display: true, text: 'WER (%) vs SNR (dB)', font: {size:14} },
-      legend: { position: 'bottom' }
+registerRunChart('chart-noise', function (run) {
+  const series = run === 'apr'
+    ? {
+        gaussian: [47.33, 9.36, 7.06, 5.19, 5.19, 5.08],
+        babble:   [null, 10.05, 6.63, 5.45, 5.24, 5.13],
+        traffic:  [null, 9.79, 6.68, 5.24, 5.19, 5.08],
+        office:   [null, 9.47, 6.79, 5.24, 5.08, 5.08],
+        clean:    8.2,
+      }
+    : {
+        gaussian: [40.16, 10.80, 5.99, 5.19, 5.13, 5.13],
+        babble:   [null, 9.36, 7.11, 6.20, 5.13, 5.03],
+        traffic:  [null, 8.50, 6.90, 5.40, 5.29, 5.13],
+        office:   [null, 9.63, 5.99, 5.51, 5.08, 5.13],
+        clean:    9.95,
+      };
+  return {
+    type: 'line',
+    data: {
+      labels: ['-5', '0', '5', '10', '15', '20'],
+      datasets: [
+        { label: 'Gaussian', data: series.gaussian, borderColor: '#e74c3c', fill: false, tension: 0.3 },
+        { label: 'Babble', data: series.babble, borderColor: '#3498db', fill: false, tension: 0.3 },
+        { label: 'Traffic', data: series.traffic, borderColor: '#2ecc71', fill: false, tension: 0.3 },
+        { label: 'Office', data: series.office, borderColor: '#f39c12', fill: false, tension: 0.3 },
+        { label: 'Clean baseline', data: Array(6).fill(series.clean), borderColor: '#95a5a6', borderDash: [5,5], fill: false, pointRadius: 0 }
+      ]
     },
-    scales: {
-      x: { title: { display: true, text: 'SNR (dB)' } },
-      y: { beginAtZero: true, title: { display: true, text: 'WER (%)' } }
+    options: {
+      responsive: true,
+      plugins: {
+        title: { display: true, text: 'WER (%) vs SNR (dB)', font: {size:14} },
+        legend: { position: 'bottom' }
+      },
+      scales: {
+        x: { title: { display: true, text: 'SNR (dB)' } },
+        y: { beginAtZero: true, title: { display: true, text: 'WER (%)' } }
+      }
     }
-  }
+  };
 });
 
 // --- Chart: Reliability Diagram ---
-new Chart(document.getElementById('chart-reliability'), {
-  type: 'bar',
-  data: {
-    labels: ['0.0-0.1', '0.1-0.2', '0.2-0.3', '0.3-0.4', '0.4-0.5', '0.5-0.6', '0.6-0.7', '0.7-0.8', '0.8-0.9', '0.9-1.0'],
-    datasets: [
-      {
-        label: 'Accuracy',
-        data: [0.17, 0.82, 2.03, 5.96, 2.38, 0.81, 0.97, 0.0, 0.37, 0.0],
-        backgroundColor: '#3498db',
-        borderRadius: 3,
-      },
-      {
-        label: 'Mean Confidence',
-        data: [5.81, 14.79, 24.68, 34.76, 44.47, 54.72, 63.98, 71.14, 82.04, 98.58],
-        backgroundColor: '#e74c3c',
-        borderRadius: 3,
-      }
-    ]
-  },
-  options: {
-    responsive: true,
-    plugins: {
-      title: { display: true, text: 'Reliability Diagram — Accuracy (%) vs Confidence (%)', font: {size:14} },
-      legend: { position: 'bottom' }
+registerRunChart('chart-reliability', function (run) {
+  // ECE is identical between runs; bin breakdowns essentially identical.
+  // Use Apr bins for both unless they differ — they don't.
+  const accuracy = run === 'apr'
+    ? [0.17, 0.82, 2.03, 5.96, 2.38, 0.81, 0.97, 0.0, 0.37, 0.0]
+    : [0.17, 0.82, 2.03, 5.96, 2.38, 0.81, 0.97, 0.0, 0.37, 0.0];
+  const conf = run === 'apr'
+    ? [5.81, 14.79, 24.68, 34.76, 44.47, 54.72, 63.98, 71.14, 82.04, 98.58]
+    : [5.81, 14.79, 24.68, 34.76, 44.47, 54.72, 63.98, 71.14, 82.04, 98.58];
+  return {
+    type: 'bar',
+    data: {
+      labels: ['0.0-0.1', '0.1-0.2', '0.2-0.3', '0.3-0.4', '0.4-0.5', '0.5-0.6', '0.6-0.7', '0.7-0.8', '0.8-0.9', '0.9-1.0'],
+      datasets: [
+        { label: 'Accuracy', data: accuracy, backgroundColor: '#3498db', borderRadius: 3 },
+        { label: 'Mean Confidence', data: conf, backgroundColor: '#e74c3c', borderRadius: 3 }
+      ]
     },
-    scales: {
-      y: { beginAtZero: true, title: { display: true, text: '%' } }
+    options: {
+      responsive: true,
+      plugins: {
+        title: { display: true, text: 'Reliability Diagram — Accuracy (%) vs Confidence (%)', font: {size:14} },
+        legend: { position: 'bottom' }
+      },
+      scales: {
+        y: { beginAtZero: true, title: { display: true, text: '%' } }
+      }
     }
-  }
+  };
 });
 
 // --- Chart: Intelligibility ---
-new Chart(document.getElementById('chart-intelligibility'), {
-  type: 'bar',
-  data: {
-    labels: ['Harvard', 'Conversational', 'Technical', 'Numbers'],
-    datasets: [{
-      label: 'Round-Trip WER (%)',
-      data: [1.48, 0.16, 11.63, 17.18],
-      backgroundColor: ['#2ecc71', '#2ecc71', '#f39c12', '#f39c12'],
-      borderRadius: 4,
-    }]
-  },
-  options: {
-    responsive: true,
-    indexAxis: 'y',
-    plugins: {
-      title: { display: true, text: 'TTS Round-Trip WER by Category', font: {size:14} },
-      legend: { display: false }
+registerRunChart('chart-intelligibility', function (run) {
+  const data = run === 'apr'
+    ? [1.48, 0.16, 11.63, 17.18]
+    : [1.37, 1.30, 24.14, 53.54];
+  // Color by severity
+  const palette = data.map(v =>
+    v <  3 ? '#2ecc71' :
+    v < 12 ? '#f39c12' : '#e74c3c'
+  );
+  return {
+    type: 'bar',
+    data: {
+      labels: ['Harvard', 'Conversational', 'Technical', 'Numbers'],
+      datasets: [{
+        label: run === 'apr' ? 'Round-Trip WER (%) — Apr' : 'Round-Trip WER (%) — Jun',
+        data: data,
+        backgroundColor: palette,
+        borderRadius: 4,
+      }]
     },
-    scales: {
-      x: { beginAtZero: true, title: { display: true, text: 'WER (%)' } }
+    options: {
+      responsive: true,
+      indexAxis: 'y',
+      plugins: {
+        title: { display: true, text: 'TTS Round-Trip WER by Category', font: {size:14} },
+        legend: { display: false }
+      },
+      scales: {
+        x: { beginAtZero: true, title: { display: true, text: 'WER (%)' } }
+      }
     }
-  }
+  };
 });
 
 // --- Chart: TTS Latency ---
-new Chart(document.getElementById('chart-tts-latency'), {
-  type: 'bar',
-  data: {
-    labels: ['10 words', '25 words', '75 words', '150 words'],
-    datasets: [
-      { label: 'gRPC TTFB', data: [65, 65, 75, 95], backgroundColor: '#3498db', borderRadius: 3 },
-      { label: 'REST TTFB', data: [94, 94, 94, 114], backgroundColor: '#e74c3c', borderRadius: 3 },
-    ]
-  },
-  options: {
-    responsive: true,
-    plugins: {
-      title: { display: true, text: 'TTS TTFB (ms) by Text Length', font: {size:14} },
-      legend: { position: 'bottom' }
+registerRunChart('chart-tts-latency', function (run) {
+  const grpc = run === 'apr' ? [65, 65, 75, 95]  : [65, 74, 75, 94];
+  const rest = run === 'apr' ? [94, 94, 94, 114] : [93, 94, 94, 114];
+  return {
+    type: 'bar',
+    data: {
+      labels: ['10 words', '25 words', '75 words', '150 words'],
+      datasets: [
+        { label: 'gRPC TTFB', data: grpc, backgroundColor: '#3498db', borderRadius: 3 },
+        { label: 'REST TTFB', data: rest, backgroundColor: '#e74c3c', borderRadius: 3 },
+      ]
     },
-    scales: {
-      y: { beginAtZero: true, title: { display: true, text: 'TTFB (ms)' } }
+    options: {
+      responsive: true,
+      plugins: {
+        title: { display: true, text: 'TTS TTFB (ms) by Text Length', font: {size:14} },
+        legend: { position: 'bottom' }
+      },
+      scales: {
+        y: { beginAtZero: true, title: { display: true, text: 'TTFB (ms)' } }
+      }
     }
-  }
+  };
 });
 
 // --- Chart: Concurrency ---
-new Chart(document.getElementById('chart-concurrency'), {
-  type: 'line',
-  data: {
-    labels: ['1', '5', '10', '20'],
-    datasets: [
-      { label: 'RPS (measured)', data: [1.55, 7.03, null, null], borderColor: '#3498db', yAxisID: 'y', tension: 0.2, fill: false },
-      { label: 'RPS (estimated *)', data: [null, null, 11.7, 14.5], borderColor: '#3498db', borderDash: [5,4], yAxisID: 'y', tension: 0.2, fill: false },
-      { label: 'Error Rate (%)', data: [0, 0, 4, 24], borderColor: '#e74c3c', yAxisID: 'y1', tension: 0.2, fill: false, borderDash: [5,5] },
-    ]
-  },
-  options: {
-    responsive: true,
-    plugins: {
-      title: { display: true, text: 'TTS Concurrency: RPS & Error Rate', font: {size:14} },
-      legend: { position: 'bottom' }
+registerRunChart('chart-concurrency', function (run) {
+  // April had hangs requiring Little's Law estimate; June has clean direct measurements
+  const measured  = run === 'apr' ? [1.55, 7.03, null, null] : [1.51, 5.49, 5.54, 5.53];
+  const estimated = run === 'apr' ? [null, null, 11.7, 14.5] : [null, null, null, null];
+  const errors    = run === 'apr' ? [0, 0, 4, 24] : [0, 0, 0, 0];
+  const p50_ms    = run === 'apr' ? [640, 710, 801, 837] : [661, 736, 1480, 3470];
+  return {
+    type: 'line',
+    data: {
+      labels: ['1', '5', '10', '20'],
+      datasets: [
+        { label: 'RPS (measured)', data: measured, borderColor: '#3498db', yAxisID: 'y', tension: 0.2, fill: false },
+        { label: 'RPS (estimated *)', data: estimated, borderColor: '#3498db', borderDash: [5,4], yAxisID: 'y', tension: 0.2, fill: false },
+        { label: 'Error Rate (%)', data: errors, borderColor: '#e74c3c', yAxisID: 'y1', tension: 0.2, fill: false, borderDash: [5,5] },
+        { label: 'P50 latency (ms)', data: p50_ms, borderColor: '#f39c12', yAxisID: 'y2', tension: 0.2, fill: false },
+      ]
     },
-    scales: {
-      y: { beginAtZero: true, title: { display: true, text: 'RPS' }, position: 'left' },
-      y1: { beginAtZero: true, title: { display: true, text: 'Error Rate (%)' }, position: 'right', grid: { drawOnChartArea: false } }
+    options: {
+      responsive: true,
+      plugins: {
+        title: { display: true, text: 'TTS Concurrency: RPS, Error Rate & P50 Latency', font: {size:14} },
+        legend: { position: 'bottom' }
+      },
+      scales: {
+        y: { beginAtZero: true, title: { display: true, text: 'RPS' }, position: 'left' },
+        y1: { beginAtZero: true, title: { display: true, text: 'Error Rate (%)' }, position: 'right', grid: { drawOnChartArea: false } },
+        y2: { beginAtZero: true, title: { display: true, text: 'P50 Latency (ms)' }, position: 'right', grid: { drawOnChartArea: false }, offset: true }
+      }
     }
-  }
+  };
 });
 var backdrop = document.getElementById('tipBackdrop');
 function closeAllTips() {

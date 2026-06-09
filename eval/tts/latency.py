@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
@@ -10,11 +11,37 @@ from tqdm import tqdm
 from eval.config import Config
 from eval.data.tts_test_sets import get_text_length_buckets
 from eval.tts.client import TTSClient, TTS_MAX_SEQUENCE_TOKENS
-from eval.utils import compute_percentiles, get_completed_ids, save_summary_csv, write_jsonl
+from eval.utils import compute_percentiles, get_completed_ids, read_jsonl, save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.tts.latency")
 
 N_REPS_PER_BUCKET = 50
+
+
+def _seed_buckets_from_jsonl(jsonl_path: Path) -> dict[tuple, dict]:
+    """Reconstruct per-(bucket, interface) accumulators from existing JSONL.
+
+    Resume-safe: if every rep was completed in a prior session, the in-loop
+    accumulators stay empty and the summary write is skipped — losing the
+    aggregated CSV. Pre-seeding from disk fixes that without re-running the
+    loop.
+    """
+    seeded: dict[tuple, dict] = defaultdict(
+        lambda: {"ttfb": [], "rtf": [], "elapsed": []}
+    )
+    for r in read_jsonl(jsonl_path):
+        bucket = r.get("bucket")
+        interface = r.get("interface")
+        if not bucket or not interface:
+            continue
+        key = (bucket, interface)
+        if r.get("ttfb") is not None:
+            seeded[key]["ttfb"].append(float(r["ttfb"]))
+        if r.get("rtf") is not None:
+            seeded[key]["rtf"].append(float(r["rtf"]))
+        if r.get("elapsed_s") is not None:
+            seeded[key]["elapsed"].append(float(r["elapsed_s"]))
+    return seeded
 
 
 def run(config: Config) -> dict:
@@ -24,6 +51,7 @@ def run(config: Config) -> dict:
     tts_client = TTSClient(config)
     jsonl_path = results_dir / "calls.jsonl"
     completed = get_completed_ids(jsonl_path)
+    seeded = _seed_buckets_from_jsonl(jsonl_path)
 
     logger.info("=== Test 2.5: Streaming TTFB & RTF ===")
 
@@ -34,9 +62,10 @@ def run(config: Config) -> dict:
     for bucket_name, texts in buckets.items():
         for interface in ["grpc", "rest"]:
             logger.info("Bucket=%s Interface=%s", bucket_name, interface)
-            ttfb_values = []
-            rtf_values = []
-            elapsed_values = []
+            seeded_key = (bucket_name, interface)
+            ttfb_values = list(seeded[seeded_key]["ttfb"])
+            rtf_values = list(seeded[seeded_key]["rtf"])
+            elapsed_values = list(seeded[seeded_key]["elapsed"])
 
             for rep in tqdm(range(N_REPS_PER_BUCKET), desc=f"{bucket_name}/{interface}"):
                 item_id = f"{bucket_name}_{interface}_{rep}"

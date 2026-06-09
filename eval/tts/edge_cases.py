@@ -12,7 +12,7 @@ from eval.config import Config
 from eval.data.tts_test_sets import get_edge_cases
 from eval.tts.client import TTSClient
 from eval.tts.utmos import score_utmos
-from eval.utils import NORMALIZE_FOR_WER, get_completed_ids, save_summary_csv, write_jsonl
+from eval.utils import NORMALIZE_FOR_WER, get_completed_ids, read_jsonl, save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.tts.edge_cases")
 
@@ -50,6 +50,14 @@ def run(config: Config) -> dict:
 
     completed = get_completed_ids(jsonl_path)
     summary_rows = []
+
+    # Seed summary_rows from existing JSONL so a resume-only run still has
+    # something to aggregate. Records skipped via `continue` below would
+    # otherwise leave summary_rows empty and the per-category aggregator at
+    # the end would write a near-empty CSV.
+    for r in read_jsonl(jsonl_path):
+        if "category" in r and "status" in r:
+            summary_rows.append(r)
 
     for i, case in enumerate(tqdm(edge_cases, desc="Edge cases")):
         item_id = f"edge_{i}"

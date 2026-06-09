@@ -5,6 +5,7 @@ import gc
 import logging
 import shutil
 import tempfile
+from collections import defaultdict
 from pathlib import Path
 
 import jiwer
@@ -15,7 +16,7 @@ from tqdm import tqdm
 from eval.config import Config
 from eval.data.tts_test_sets import get_intelligibility_sentences
 from eval.tts.client import TTSClient
-from eval.utils import NORMALIZE_FOR_WER, get_completed_ids, save_summary_csv, write_jsonl
+from eval.utils import NORMALIZE_FOR_WER, get_completed_ids, read_jsonl, save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.tts.intelligibility")
 
@@ -27,6 +28,23 @@ def _transcribe_whisper(audio_path: str, model=None):
         model = whisper.load_model("large-v3")
     result = model.transcribe(audio_path)
     return result["text"]
+
+
+def _seed_categories_from_jsonl(jsonl_path: Path) -> dict[str, dict]:
+    """Reconstruct per-category ref/hyp lists from existing JSONL.
+
+    Resume-safe: when every sentence was completed on a prior run, the loop
+    appends nothing and the summary would be empty otherwise.
+    """
+    seeded: dict[str, dict] = defaultdict(lambda: {"refs": [], "hyps": []})
+    for r in read_jsonl(jsonl_path):
+        cat = r.get("category")
+        ref = r.get("original_text")
+        hyp = r.get("whisper_transcript")
+        if cat and ref is not None and hyp is not None:
+            seeded[cat]["refs"].append(ref)
+            seeded[cat]["hyps"].append(hyp)
+    return seeded
 
 
 def run(config: Config) -> dict:
@@ -47,11 +65,15 @@ def run(config: Config) -> dict:
     whisper_model = whisper.load_model("large-v3")
 
     completed = get_completed_ids(jsonl_path)
+    seeded = _seed_categories_from_jsonl(jsonl_path)
     summary_rows = []
 
     for category, sentences in categories.items():
         logger.info("Category: %s (%d sentences)", category, len(sentences))
-        refs, hyps = [], []
+        # Seed with anything already on disk so resume-only runs still produce
+        # a summary row.
+        refs = list(seeded[category]["refs"])
+        hyps = list(seeded[category]["hyps"])
         per_sent_wers = []
 
         for i, text in enumerate(tqdm(sentences, desc=category)):

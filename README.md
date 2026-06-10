@@ -72,8 +72,15 @@ nvidia-model-evaluation/
 │       └── generate_report.py    # HTML report with pass/fail badges
 ├── results/                  # All output written here (created on first run)
 ├── docs/
-│   ├── evaluation_plan.md    # Full test specifications and pass/fail thresholds
-│   └── implementation_plan.md
+│   ├── index.html                       # Published dual-run HTML report (Apr/Jun toggle)
+│   ├── nvidia/
+│   │   ├── evaluation_plan.md           # Full test specs and pass/fail thresholds
+│   │   ├── implementation_plan.md
+│   │   └── analysis/
+│   │       ├── tts-gap-analysis.md
+│   │       └── wer-gap-analysis.md
+│   └── others/
+│       └── voice_agent_evaluation.md    # Research reference
 ├── requirements.txt
 └── RUNBOOK.md                # Step-by-step setup and run guide for the Azure VM
 ```
@@ -136,7 +143,7 @@ Every test writes results immediately to `results/<suite>/<test>/`:
 - `summary.csv` — aggregated metrics
 - `*.wav` — synthesized audio files (TTS tests)
 
-After all tests complete, `results/report.html` contains a full HTML report with per-test tables and pass/fail badges derived from the thresholds in `docs/evaluation_plan.md`.
+After all tests complete, `results/report.html` contains a full HTML report with per-test tables and pass/fail badges derived from the thresholds in `docs/nvidia/evaluation_plan.md`.
 
 ---
 
@@ -176,5 +183,5 @@ Key packages (see `requirements.txt` for the full list):
 
 ## Documentation
 
-- `docs/evaluation_plan.md` — full test specifications, metrics definitions, and pass/fail thresholds
+- `docs/nvidia/evaluation_plan.md` — full test specifications, metrics definitions, and pass/fail thresholds
 - `RUNBOOK.md` — VM setup, configuration, and step-by-step run instructions

@@ -112,7 +112,7 @@ tts_service = riva.client.SpeechSynthesisService(auth)
 
 #### Riva response fields used for KPIs
 
-These fields come from the Riva SDK response objects (see `voice_agent_evaluation.md` §1.13 for full reference):
+These fields come from the Riva SDK response objects (see `../others/voice_agent_evaluation.md` §1.13 for full reference):
 
 | Riva Field | Used In | KPI |
 |:---|:---|:---|
@@ -1391,7 +1391,7 @@ User Audio → VAD → parakeet (STT) → EOU detection → LLM → Magpie (TTS)
 
 ### KPI groups for Phase 2
 
-> Section references below (§) point to the **research doc** `voice_agent_evaluation.md`, not this plan.
+> Section references below (§) point to the **research doc** `../others/voice_agent_evaluation.md`, not this plan.
 
 | Group | Key Metrics | Research doc reference |
 |:---|:---|:---|
@@ -1421,8 +1421,13 @@ User Audio → VAD → parakeet (STT) → EOU detection → LLM → Magpie (TTS)
 ```
 nvidia-model-evaluation/
 ├── docs/
-│   ├── voice_agent_evaluation.md   # Research reference
-│   └── evaluation_plan.md          # This document
+│   ├── nvidia/
+│   │   ├── evaluation_plan.md      # This document
+│   │   ├── implementation_plan.md
+│   │   └── analysis/               # Gap analyses
+│   ├── others/
+│   │   └── voice_agent_evaluation.md   # Research reference
+│   └── index.html                  # Published dual-run report
 ├── eval/
 │   ├── config.yaml                 # Endpoints, auth, model names
 │   ├── stt/

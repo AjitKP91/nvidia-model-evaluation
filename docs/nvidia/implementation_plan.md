@@ -2,7 +2,7 @@
 
 ## Context
 
-We have a detailed evaluation plan (`docs/evaluation_plan.md`) for testing NVIDIA STT (Parakeet) and TTS (Magpie Aria) models deployed on SAP AI Core. The project currently has only documentation — no code. We need to implement the entire evaluation harness: Phase 0 discovery, all 11 STT tests, all 9 TTS tests, data download scripts, and report generation. Both REST and gRPC interfaces are required. The harness will run on an Azure NC24ads A100 VM in Frankfurt (same region as AI Core).
+We have a detailed evaluation plan (`docs/nvidia/evaluation_plan.md`) for testing NVIDIA STT (Parakeet) and TTS (Magpie Aria) models deployed on SAP AI Core. The project currently has only documentation — no code. We need to implement the entire evaluation harness: Phase 0 discovery, all 11 STT tests, all 9 TTS tests, data download scripts, and report generation. Both REST and gRPC interfaces are required. The harness will run on an Azure NC24ads A100 VM in Frankfurt (same region as AI Core).
 
 ## Architecture
 

@@ -60,14 +60,14 @@ class STTClient:
         response = self.asr_service.offline_recognize(audio_bytes, config)
         elapsed = time.perf_counter() - start
 
-        transcript = ""
+        transcript_parts = []
         confidence = 0.0
         words = []
         if response.results:
             alt = response.results[0].alternatives[0]
-            transcript = alt.transcript
+            transcript_parts.append(alt.transcript)
             confidence = alt.confidence
-            words = [
+            words += [
                 {
                     "word": w.word,
                     "start_time": w.start_time,
@@ -76,6 +76,7 @@ class STTClient:
                 }
                 for w in getattr(alt, "words", [])
             ]
+        transcript = " ".join(p.strip() for p in transcript_parts if p.strip())
 
         return {
             "transcript": transcript,

@@ -21,6 +21,42 @@ from eval.utils import NORMALIZE_FOR_WER, get_completed_ids, read_jsonl, save_su
 logger = logging.getLogger("eval.tts.intelligibility")
 
 
+# ---------------------------------------------------------------------------
+# Text normalisation
+# ---------------------------------------------------------------------------
+#
+# The reference sentences for the `numbers` and `technical` categories spell
+# digits and symbols in words ("one thousand two hundred and thirty-four
+# dollars and fifty-six cents"), while Whisper transcribes the synthesised
+# audio back in digit form ("$1,234.56"). Plain jiwer normalisation lowercases
+# and strips punctuation but does not unify the two surface forms, which
+# inflated WER on those categories to 25–54 % even though the audio is
+# perfectly intelligible.
+#
+# Whisper's official EnglishTextNormalizer (used in the Whisper paper for the
+# same problem) handles digit↔word, currency, contractions, and unit
+# normalisation. We apply it to both sides before jiwer so the metric reflects
+# semantic equality, not surface mismatch.
+def _build_english_normalizer():
+    try:
+        from whisper.normalizers import EnglishTextNormalizer
+        return EnglishTextNormalizer()
+    except Exception as exc:  # pragma: no cover — fallback path
+        logger.warning(
+            "Whisper EnglishTextNormalizer unavailable (%s); falling back to "
+            "jiwer-only normalisation. WER on numbers/technical will be "
+            "inflated by surface form mismatches.",
+            exc,
+        )
+        return None
+
+
+def _normalize_pair(normalizer, ref: str, hyp: str) -> tuple[str, str]:
+    if normalizer is None:
+        return ref, hyp
+    return normalizer(ref), normalizer(hyp)
+
+
 def _transcribe_whisper(audio_path: str, model=None):
     """Transcribe audio using Whisper large-v3."""
     import whisper
@@ -68,6 +104,10 @@ def run(config: Config) -> dict:
     seeded = _seed_categories_from_jsonl(jsonl_path)
     summary_rows = []
 
+    normalizer = _build_english_normalizer()
+    if normalizer is not None:
+        logger.info("Using Whisper EnglishTextNormalizer for WER computation")
+
     for category, sentences in categories.items():
         logger.info("Category: %s (%d sentences)", category, len(sentences))
         # Seed with anything already on disk so resume-only runs still produce
@@ -87,13 +127,14 @@ def run(config: Config) -> dict:
                 hyp = _transcribe_whisper(str(wav_path), whisper_model)
                 wav_path.unlink(missing_ok=True)
 
+                ref_n, hyp_n = _normalize_pair(normalizer, text, hyp)
                 wer_val = jiwer.wer(
-                    text, hyp,
+                    ref_n, hyp_n,
                     reference_transform=NORMALIZE_FOR_WER,
                     hypothesis_transform=NORMALIZE_FOR_WER,
                 )
                 cer_val = jiwer.cer(
-                    text, hyp,
+                    ref_n, hyp_n,
                     reference_transform=NORMALIZE_FOR_WER,
                     hypothesis_transform=NORMALIZE_FOR_WER,
                 )
@@ -107,6 +148,8 @@ def run(config: Config) -> dict:
                     "category": category,
                     "original_text": text,
                     "whisper_transcript": hyp,
+                    "normalized_reference": ref_n,
+                    "normalized_hypothesis": hyp_n,
                     "wer": wer_val,
                     "cer": cer_val,
                 })
@@ -115,14 +158,19 @@ def run(config: Config) -> dict:
                 logger.warning("Failed %s_%d: %s", category, i, e)
 
         if refs:
-            agg_wer = jiwer.wer(refs, hyps, reference_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
-            agg_cer = jiwer.cer(refs, hyps, reference_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
+            # Aggregate WER over the whole category — apply the same normaliser
+            # so the per-sentence and aggregate metrics agree.
+            refs_n = [normalizer(r) for r in refs] if normalizer else refs
+            hyps_n = [normalizer(h) for h in hyps] if normalizer else hyps
+            agg_wer = jiwer.wer(refs_n, hyps_n, reference_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
+            agg_cer = jiwer.cer(refs_n, hyps_n, reference_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
 
             row = {
                 "category": category,
                 "n_sentences": len(refs),
                 "round_trip_wer": round(agg_wer, 4),
                 "round_trip_cer": round(agg_cer, 4),
+                "normalizer": "whisper_english" if normalizer else "jiwer_only",
             }
             summary_rows.append(row)
             logger.info("  %s: WER=%.2f%% CER=%.2f%%", category, agg_wer * 100, agg_cer * 100)

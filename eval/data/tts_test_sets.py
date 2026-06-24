@@ -48,17 +48,27 @@ def get_intelligibility_sentences() -> dict[str, list[str]]:
             "The microservices architecture uses REST and gRPC for inter-service communication.",
             "Allocate four gigabytes of RAM and eight CPU cores to the virtual machine.",
         ] * 5,
-        "numbers": [
+        "numbers_basic": [
+            # Normaliser-friendly: standard currency / units / plain integers.
+            # Expected post-normalisation: near-zero WER on any TTS that
+            # pronounces the digits correctly.
             "The price is one thousand two hundred and thirty-four dollars and fifty-six cents.",
+            "The patient's temperature is ninety-eight point six degrees Fahrenheit.",
+            "The population of the city is approximately two point three million people.",
+            "Multiply three hundred and forty-two by seventeen to get five thousand eight hundred and fourteen.",
+        ] * 5,
+        "numbers_edge": [
+            # Normaliser-limited surface forms: phone numbers, coords,
+            # version numbers, dates, alphanumeric IDs, clock format. These
+            # are intentionally hard for jiwer-comparison even after the
+            # Whisper EnglishTextNormalizer; surviving WER here is measurement
+            # noise, not TTS intelligibility loss.
             "Call us at one eight hundred five five five zero one two three.",
             "The coordinates are forty point seven one degrees north, seventy-four point zero one degrees west.",
             "Version three point fourteen one five nine two of the software is now available.",
-            "The patient's temperature is ninety-eight point six degrees Fahrenheit.",
             "The meeting is scheduled for the fifteenth of March twenty twenty-five.",
-            "The population of the city is approximately two point three million people.",
             "Your confirmation number is A B C one two three four five six seven.",
             "The flight departs at six forty-five AM and arrives at ten fifteen PM.",
-            "Multiply three hundred and forty-two by seventeen to get five thousand eight hundred and fourteen.",
         ] * 5,
         "conversational": [
             "Hey, can you remind me to call Sarah at five o'clock this afternoon?",

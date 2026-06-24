@@ -312,7 +312,15 @@ def build_numeric_specs(results_dir: Path) -> list[dict]:
         "harvard":        "Harvard Sentences",
         "conversational": "Conversational",
         "technical":      "Technical",
+        # Legacy single bucket — kept for back-compat with pre-split runs
+        # (April + June Magpie baselines used this).
         "numbers":        "Numbers & Figures",
+        # Split introduced 2026-06-24: basic = normaliser-friendly digit/word
+        # forms; edge = phone/coord/version/clock/alphanumeric (normaliser-
+        # limited). Runs that re-execute Test 2.2 post-fix will populate
+        # these two rows instead of the legacy "numbers" row.
+        "numbers_basic":  "Numbers — Basic",
+        "numbers_edge":   "Numbers — Edge Cases",
     }
     for r in _read_csv(results_dir / "tts/intelligibility/summary.csv"):
         label = cat_label.get(r["category"])

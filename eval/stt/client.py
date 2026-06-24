@@ -63,19 +63,35 @@ class STTClient:
         transcript = ""
         confidence = 0.0
         words = []
+        # Riva returns one `result` per segment (chunked at VAD boundaries on
+        # long or silence-bearing audio). Joining all segments is required;
+        # reading only `response.results[0]` truncates the hypothesis and
+        # inflates WER, worse on longer/noisier datasets. (NVIDIA flagged this
+        # in PR #1 but the diff there is a no-op — still reads [0] once.)
         if response.results:
-            alt = response.results[0].alternatives[0]
-            transcript = alt.transcript
-            confidence = alt.confidence
-            words = [
-                {
-                    "word": w.word,
-                    "start_time": w.start_time,
-                    "end_time": w.end_time,
-                    "confidence": getattr(w, "confidence", None),
-                }
-                for w in getattr(alt, "words", [])
-            ]
+            transcript_parts: list[str] = []
+            confidence_parts: list[float] = []
+            for result in response.results:
+                if not result.alternatives:
+                    continue
+                alt = result.alternatives[0]
+                if alt.transcript:
+                    transcript_parts.append(alt.transcript)
+                confidence_parts.append(alt.confidence)
+                words.extend([
+                    {
+                        "word": w.word,
+                        "start_time": w.start_time,
+                        "end_time": w.end_time,
+                        "confidence": getattr(w, "confidence", None),
+                    }
+                    for w in getattr(alt, "words", [])
+                ])
+            transcript = " ".join(p.strip() for p in transcript_parts if p.strip())
+            confidence = (
+                float(sum(confidence_parts) / len(confidence_parts))
+                if confidence_parts else 0.0
+            )
 
         return {
             "transcript": transcript,
@@ -219,8 +235,15 @@ class STTClient:
 
         stream_end = time.perf_counter()
 
-        final_result = final_results[-1] if final_results else None
-        final_transcript = final_result["transcript"] if final_result else ""
+        # Streaming Riva emits one is_final=True segment per VAD chunk. Like
+        # the offline path above, keeping only the last truncates the
+        # hypothesis to one segment and inflates WER on long/silence-bearing
+        # audio. Join all final segments in order; use the timestamp of the
+        # last for finalization-latency math.
+        last_final = final_results[-1] if final_results else None
+        final_transcript = " ".join(
+            r["transcript"].strip() for r in final_results if r.get("transcript", "").strip()
+        )
 
         ttfw = (
             first_word_time - chunk_send_times[0]
@@ -228,8 +251,8 @@ class STTClient:
             else None
         )
         finalization_latency = (
-            final_result["recv_t"] - last_chunk_send_time
-            if final_result and last_chunk_send_time
+            last_final["recv_t"] - last_chunk_send_time
+            if last_final and last_chunk_send_time
             else None
         )
 

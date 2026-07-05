@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Start the evaluation in a persistent tmux session.
+# Writes into a dated per-provider dir: results/run-<DD-MM-YY>/riva/
+# so historical runs (like results/run-09-06-26/) stay untouched.
 # Asks for the AICORE bearer token, then launches inside tmux so SSH drops don't kill it.
 # Usage: bash scripts/start_eval.sh [all|stt|tts|phase0|report]
 set -euo pipefail
@@ -33,6 +35,17 @@ if [ -z "$AICORE_TOKEN" ]; then
     exit 1
 fi
 
+# ── Compute per-run, per-provider results directory ──────────────────────────
+# Landing at results/run-<DD-MM-YY>/riva/ keeps each date's run isolated and
+# leaves historical runs (results/run-09-06-26/, results/run-26-04-26/)
+# untouched. If a run spans midnight, RUN_DATE is set once at launch and
+# doesn't roll over — resume writes to the same dir.
+RUN_DATE="$(date +%d-%m-%y)"
+RESULTS_DIR="results/run-${RUN_DATE}/riva"
+mkdir -p "$RESULTS_DIR"
+echo ""
+echo "Results dir: $RESULTS_DIR"
+
 # ── Kill existing tmux session if running ────────────────────────────────────
 if tmux has-session -t "$SESSION" 2>/dev/null; then
     echo "Killing existing tmux session '$SESSION'..."
@@ -53,10 +66,10 @@ export AICORE_BEARER_TOKEN="$AICORE_TOKEN"
 # Make PyTorch bundled CUDA visible (fixes UTMOS libcudart error)
 TORCH_LIB="\$(python -c 'import torch, os; print(os.path.dirname(torch.__file__))')/lib"
 export LD_LIBRARY_PATH="\$TORCH_LIB:\${LD_LIBRARY_PATH:-}"
-mkdir -p results
-echo "Starting: python -m eval.run $COMMAND"
-echo "Log: results/run.log"
-python -m eval.run $COMMAND 2>&1 | tee results/run.log
+mkdir -p "$RESULTS_DIR"
+echo "Starting: python -m eval.run $COMMAND --results-dir $RESULTS_DIR"
+echo "Log: $RESULTS_DIR/run.log"
+python -m eval.run $COMMAND --results-dir "$RESULTS_DIR" 2>&1 | tee "$RESULTS_DIR/run.log"
 echo ""
 echo "=== Run complete. Press any key to close. ==="
 read -n1
@@ -79,5 +92,5 @@ echo "  Detach without killing:"
 echo "    Ctrl+B then D"
 echo ""
 echo "  Tail the log from outside tmux:"
-echo "    tail -f $REPO_DIR/results/run.log"
+echo "    tail -f $REPO_DIR/$RESULTS_DIR/run.log"
 echo "=========================================="

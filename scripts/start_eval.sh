@@ -68,8 +68,8 @@ TORCH_LIB="\$(python -c 'import torch, os; print(os.path.dirname(torch.__file__)
 export LD_LIBRARY_PATH="\$TORCH_LIB:\${LD_LIBRARY_PATH:-}"
 mkdir -p "$RESULTS_DIR"
 echo "Starting: python -m eval.run $COMMAND --results-dir $RESULTS_DIR"
-echo "Log: $RESULTS_DIR/run.log"
-python -m eval.run $COMMAND --results-dir "$RESULTS_DIR" 2>&1 | tee "$RESULTS_DIR/run.log"
+echo "Log: $RESULTS_DIR/run.log (append mode)"
+python -m eval.run $COMMAND --results-dir "$RESULTS_DIR" 2>&1 | tee -a "$RESULTS_DIR/run.log"
 echo ""
 echo "=== Run complete. Press any key to close. ==="
 read -n1

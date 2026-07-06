@@ -358,6 +358,47 @@ def cold_start_test(stt_client: STTClient, tts_client: TTSClient, out_dir: Path)
 # Run all Phase 0
 # ------------------------------------------------------------------
 
+def _run_subphase(name: str, fn, out_dir: Path, results: dict, *args, **kwargs) -> None:
+    """Run a sub-phase and record its result (or full exception) in results[name].
+
+    On success: results[name] is whatever fn returned.
+    On failure: results[name] = {"phase": name, "error": "<str(exc)>",
+                                 "error_type": "<ExcClass>",
+                                 "traceback": "<full traceback>"}.
+    The full traceback also lands in run.log via logger.exception so the raw
+    RPC error, HTTP status, upstream envoy message, etc. are all preserved.
+
+    Persists results/phase0/discovery.json after each sub-phase so a crash
+    midway leaves everything up to that point on disk. Callers pass ``fn``
+    plus its positional and keyword arguments verbatim.
+    """
+    import traceback as _tb
+    try:
+        results[name] = fn(*args, **kwargs)
+    except Exception as e:
+        tb_str = _tb.format_exc()
+        logger.exception("Sub-phase %s FAILED: %s", name, e)
+        results[name] = {
+            "phase": name,
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "traceback": tb_str,
+        }
+    # Persist incrementally — one file rewrite per sub-phase; cheap because
+    # results is tiny (<50 KB). If Python crashes right after this, whatever
+    # completed is on disk.
+    _write_discovery(out_dir, results)
+
+
+def _write_discovery(out_dir: Path, results: dict) -> None:
+    """Atomic-ish write of discovery.json — write to .tmp then rename."""
+    output_path = out_dir / "discovery.json"
+    tmp_path = out_dir / "discovery.json.tmp"
+    with open(tmp_path, "w") as f:
+        json.dump(results, f, indent=2, default=str)
+    tmp_path.replace(output_path)
+
+
 def run(config: Config | None = None) -> dict:
     if config is None:
         config = load_config()
@@ -366,22 +407,62 @@ def run(config: Config | None = None) -> dict:
     out_dir = Path(config.evaluation.results_dir) / "phase0"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    stt_client = STTClient(config)
-    tts_client = TTSClient(config)
+    # Client construction can itself fail (missing token, invalid config).
+    # Wrap it so we still write a usable discovery.json instead of crashing.
+    results: dict = {}
+    try:
+        stt_client = STTClient(config)
+    except Exception as e:
+        logger.exception("Failed to construct STTClient: %s", e)
+        results["stt_client_init"] = {
+            "phase": "stt_client_init",
+            "error": str(e),
+            "error_type": type(e).__name__,
+        }
+        stt_client = None
 
-    results = {}
-    results["connectivity"] = check_connectivity(stt_client, tts_client, out_dir)
-    results["stt_schema"] = discover_stt_schema(stt_client, out_dir)
-    results["stt_streaming_schema"] = discover_stt_streaming_schema(stt_client, out_dir)
-    results["tts_schema"] = discover_tts_schema(tts_client, out_dir)
-    results["parameters"] = explore_parameters(stt_client, tts_client, out_dir)
-    results["smoke_tests"] = smoke_tests(stt_client, tts_client, out_dir)
-    results["cold_start"] = cold_start_test(stt_client, tts_client, out_dir)
+    try:
+        tts_client = TTSClient(config)
+    except Exception as e:
+        logger.exception("Failed to construct TTSClient: %s", e)
+        results["tts_client_init"] = {
+            "phase": "tts_client_init",
+            "error": str(e),
+            "error_type": type(e).__name__,
+        }
+        tts_client = None
 
-    output_path = out_dir / "discovery.json"
-    with open(output_path, "w") as f:
-        json.dump(results, f, indent=2, default=str)
-    logger.info("Phase 0 results written to %s", output_path)
+    if stt_client is None or tts_client is None:
+        _write_discovery(out_dir, results)
+        logger.error(
+            "Phase 0 aborted: could not construct client(s). "
+            "Partial discovery.json written to %s", out_dir / "discovery.json",
+        )
+        return results
+
+    # Each sub-phase is isolated — a failure records its error and moves on.
+    _run_subphase("connectivity",           check_connectivity,           out_dir, results, stt_client, tts_client, out_dir)
+    _run_subphase("stt_schema",             discover_stt_schema,          out_dir, results, stt_client, out_dir)
+    _run_subphase("stt_streaming_schema",   discover_stt_streaming_schema, out_dir, results, stt_client, out_dir)
+    _run_subphase("tts_schema",             discover_tts_schema,          out_dir, results, tts_client, out_dir)
+    _run_subphase("parameters",             explore_parameters,           out_dir, results, stt_client, tts_client, out_dir)
+    _run_subphase("smoke_tests",            smoke_tests,                  out_dir, results, stt_client, tts_client, out_dir)
+    _run_subphase("cold_start",             cold_start_test,              out_dir, results, stt_client, tts_client, out_dir)
+
+    logger.info("Phase 0 results written to %s", out_dir / "discovery.json")
+
+    # Summary line so the operator doesn't have to open the JSON to know
+    # which sub-phases passed. Failed ones already logged full tracebacks.
+    passed, failed = [], []
+    for name, r in results.items():
+        if isinstance(r, dict) and r.get("error"):
+            failed.append(name)
+        else:
+            passed.append(name)
+    logger.info("Phase 0 summary: %d passed, %d failed", len(passed), len(failed))
+    if failed:
+        logger.info("  Failed sub-phases: %s", ", ".join(failed))
+        logger.info("  See discovery.json (error/traceback fields) and run.log for details.")
 
     for wav in out_dir.glob("*.wav"):
         wav.unlink(missing_ok=True)

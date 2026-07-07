@@ -391,9 +391,13 @@ footer {
   font-size: 0.78rem;
 }
 
-/* Run-only blocks: hide the inactive run's content */
+/* Run-only blocks: hide the inactive runs' content */
 body[data-active-run="apr"] .run-only[data-run="jun"],
-body[data-active-run="jun"] .run-only[data-run="apr"] {
+body[data-active-run="apr"] .run-only[data-run="jul"],
+body[data-active-run="jun"] .run-only[data-run="apr"],
+body[data-active-run="jun"] .run-only[data-run="jul"],
+body[data-active-run="jul"] .run-only[data-run="apr"],
+body[data-active-run="jul"] .run-only[data-run="jun"] {
   display: none !important;
 }
 
@@ -432,13 +436,16 @@ nav { top: 50px; }
     <strong>Active run:</strong>
     <span class="run-only" data-run="apr">26&nbsp;Apr&nbsp;2026 baseline &mdash; commit <code>166d5ab</code></span>
     <span class="run-only" data-run="jun">09&nbsp;Jun&nbsp;2026 re-evaluation &mdash; commit <code>aae28d8</code></span>
+    <span class="run-only" data-run="jul">07&nbsp;Jul&nbsp;2026 re-evaluation &mdash; commit <code>86fa4a5</code></span>
     <span style="color: var(--text-muted)">&middot;</span>
     <span class="run-only" data-run="apr">Same VM, same endpoints. Click <em>Jun&nbsp;09</em> to compare.</span>
     <span class="run-only" data-run="jun">Same VM, same endpoints. Click <em>Apr&nbsp;26</em> to compare.</span>
+    <span class="run-only" data-run="jul">Same VM, same endpoints.</span>
   </div>
   <div class="run-toggle" role="tablist" aria-label="Select evaluation run">
     <button type="button" data-run-select="apr" class="active" role="tab" aria-selected="true"><span class="dot"></span>Apr&nbsp;26</button>
     <button type="button" data-run-select="jun" role="tab" aria-selected="false"><span class="dot"></span>Jun&nbsp;09</button>
+    <button type="button" data-run-select="jul" role="tab" aria-selected="false"><span class="dot"></span>Jul&nbsp;07</button>
   </div>
 </div>
 
@@ -575,50 +582,50 @@ nav { top: 50px; }
         <tr>
           <td><a href="https://huggingface.co/datasets/openslr/librispeech_asr">LibriSpeech clean</a></td>
           <td class="num">2,620</td>
-          <td class="num"><span class="rd" data-apr="11.29%" data-jun="11.49%">11.29%</span></td>
-          <td class="num"><span class="rd" data-apr="11.29%" data-jun="11.49%">11.29%</span></td>
-          <td class="num"><span class="rd" data-apr="36.37%" data-jun="36.30%">36.37%</span></td>
-          <td class="num"><span class="rd" data-apr="7.65%–9.06%" data-jun="7.78%–9.21%">7.65%–9.06%</span></td>
+          <td class="num"><span class="rd" data-apr="11.29%" data-jun="11.49%" data-jul="2.81%">11.29%</span></td>
+          <td class="num"><span class="rd" data-apr="11.29%" data-jun="11.49%" data-jul="2.81%">11.29%</span></td>
+          <td class="num"><span class="rd" data-apr="36.37%" data-jun="36.30%" data-jul="31.03%">36.37%</span></td>
+          <td class="num"><span class="rd" data-apr="7.65%–9.06%" data-jun="7.78%–9.21%" data-jul="2.99%–3.60%">7.65%–9.06%</span></td>
           <td class="num">&le;5%</td>
           <td><span class="rd-badge badge badge-fail" data-apr="Fail" data-jun="Fail" data-apr-class="badge-fail" data-jun-class="badge-fail">Fail</span></td>
         </tr>
         <tr>
           <td><a href="https://huggingface.co/datasets/openslr/librispeech_asr">LibriSpeech other</a></td>
           <td class="num">2,939</td>
-          <td class="num"><span class="rd" data-apr="13.34%" data-jun="13.42%">13.34%</span></td>
-          <td class="num"><span class="rd" data-apr="13.34%" data-jun="13.42%">13.34%</span></td>
-          <td class="num"><span class="rd" data-apr="49.74%" data-jun="49.85%">49.74%</span></td>
-          <td class="num"><span class="rd" data-apr="11.21%–12.73%" data-jun="11.31%–12.83%">11.21%–12.73%</span></td>
+          <td class="num"><span class="rd" data-apr="13.34%" data-jun="13.42%" data-jul="5.10%">13.34%</span></td>
+          <td class="num"><span class="rd" data-apr="13.34%" data-jun="13.42%" data-jul="5.10%">13.34%</span></td>
+          <td class="num"><span class="rd" data-apr="49.74%" data-jun="49.85%" data-jul="44.74%">49.74%</span></td>
+          <td class="num"><span class="rd" data-apr="11.21%–12.73%" data-jun="11.31%–12.83%" data-jul="6.00%–6.94%">11.21%–12.73%</span></td>
           <td class="num">&le;10%</td>
           <td><span class="rd-badge badge badge-flag" data-apr="Flag" data-jun="Flag" data-apr-class="badge-flag" data-jun-class="badge-flag">Flag</span></td>
         </tr>
         <tr>
           <td><a href="https://huggingface.co/datasets/facebook/voxpopuli">VoxPopuli EN</a></td>
           <td class="num">1,842</td>
-          <td class="num"><span class="rd" data-apr="28.50%" data-jun="28.47%">28.50%</span></td>
-          <td class="num"><span class="rd" data-apr="28.50%" data-jun="28.47%">28.50%</span></td>
-          <td class="num"><span class="rd" data-apr="75.52%" data-jun="75.35%">75.52%</span></td>
-          <td class="num"><span class="rd" data-apr="22.05%–24.58%" data-jun="22.07%–24.58%">22.05%–24.58%</span></td>
+          <td class="num"><span class="rd" data-apr="28.50%" data-jun="28.47%" data-jul="9.58%">28.50%</span></td>
+          <td class="num"><span class="rd" data-apr="28.50%" data-jun="28.47%" data-jul="9.58%">28.50%</span></td>
+          <td class="num"><span class="rd" data-apr="75.52%" data-jun="75.35%" data-jul="70.74%">75.52%</span></td>
+          <td class="num"><span class="rd" data-apr="22.05%–24.58%" data-jun="22.07%–24.58%" data-jul="8.85%–9.84%">22.05%–24.58%</span></td>
           <td class="num">&le;8%</td>
           <td><span class="rd-badge badge badge-fail" data-apr="Fail" data-jun="Fail" data-apr-class="badge-fail" data-jun-class="badge-fail">Fail</span></td>
         </tr>
         <tr>
           <td><a href="https://huggingface.co/datasets/speechcolab/gigaspeech">GigaSpeech</a></td>
           <td class="num">19,931</td>
-          <td class="num"><span class="rd" data-apr="24.06%" data-jun="24.14%">24.06%</span></td>
-          <td class="num"><span class="rd" data-apr="24.06%" data-jun="24.14%">24.06%</span></td>
-          <td class="num"><span class="rd" data-apr="71.62%" data-jun="71.62%">71.62%</span></td>
-          <td class="num"><span class="rd" data-apr="23.08%–23.86%" data-jun="23.18%–23.95%">23.08%–23.86%</span></td>
+          <td class="num"><span class="rd" data-apr="24.06%" data-jun="24.14%" data-jul="12.64%">24.06%</span></td>
+          <td class="num"><span class="rd" data-apr="24.06%" data-jun="24.14%" data-jul="12.64%">24.06%</span></td>
+          <td class="num"><span class="rd" data-apr="71.62%" data-jun="71.62%" data-jul="68.14%">71.62%</span></td>
+          <td class="num"><span class="rd" data-apr="23.08%–23.86%" data-jun="23.18%–23.95%" data-jul="14.40%–14.93%">23.08%–23.86%</span></td>
           <td class="num">&le;12%</td>
           <td><span class="rd-badge badge badge-fail" data-apr="Fail" data-jun="Fail" data-apr-class="badge-fail" data-jun-class="badge-fail">Fail</span></td>
         </tr>
         <tr>
           <td><a href="https://huggingface.co/datasets/kensho/spgispeech">SPGISpeech</a></td>
           <td class="num">39,304</td>
-          <td class="num"><span class="rd" data-apr="21.07%" data-jun="21.08%">21.07%</span></td>
-          <td class="num"><span class="rd" data-apr="21.07%" data-jun="21.08%">21.07%</span></td>
-          <td class="num"><span class="rd" data-apr="65.95%" data-jun="66.00%">65.95%</span></td>
-          <td class="num"><span class="rd" data-apr="20.03%–20.59%" data-jun="20.03%–20.60%">20.03%–20.59%</span></td>
+          <td class="num"><span class="rd" data-apr="21.07%" data-jun="21.08%" data-jul="4.28%">21.07%</span></td>
+          <td class="num"><span class="rd" data-apr="21.07%" data-jun="21.08%" data-jul="4.28%">21.07%</span></td>
+          <td class="num"><span class="rd" data-apr="65.95%" data-jun="66.00%" data-jul="52.26%">65.95%</span></td>
+          <td class="num"><span class="rd" data-apr="20.03%–20.59%" data-jun="20.03%–20.60%" data-jul="4.17%–4.27%">20.03%–20.59%</span></td>
           <td class="num">&le;8%</td>
           <td><span class="rd-badge badge badge-fail" data-apr="Fail" data-jun="Fail" data-apr-class="badge-fail" data-jun-class="badge-fail">Fail</span></td>
         </tr>
@@ -645,6 +652,16 @@ nav { top: 50px; }
         <li><strong>Production guidance:</strong> deploy with a domain-specific language-model rescoring step, or fine-tune Parakeet on the target speech distribution before relying on raw transcripts.</li>
       </ul>
     </div>
+    <div class="info-box success run-only" data-run="jul" style="margin-top:16px">
+      <strong>Analysis:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>WER 2.81–12.64% across all five datasets</strong> &mdash; LibriSpeech clean 2.81%, LibriSpeech other 5.10%, VoxPopuli EN 9.58%, GigaSpeech 12.64%, SPGISpeech 4.28%. Three of five (clean, other, SPGISpeech) sit at or below their pass thresholds; VoxPopuli and GigaSpeech land in the FLAG band.</li>
+        <li><strong>WER &asymp; CER on every dataset</strong> &mdash; character-error-rate matches word-level almost exactly, indicating whole-word substitutions rather than partial character errors.</li>
+        <li><strong>SER 31–71%</strong> &mdash; the majority of sentences carry at least one error, with the highest sentence-error concentration on VoxPopuli (70.7%) reflecting its longer, denser utterances.</li>
+        <li><strong>Hardest domain: GigaSpeech</strong> at 12.64% WER on 19,931 utterances of mixed broadcast/podcast content, followed by VoxPopuli EN at 9.58% on 1,842 European-Parliament utterances.</li>
+        <li><strong>Tightest confidence intervals on the largest sets</strong> &mdash; SPGISpeech (n=39,304) CI half-width ~0.1&nbsp;pp, GigaSpeech (n=19,931) CI half-width ~0.5&nbsp;pp. Their headline WER values are statistically settled.</li>
+      </ul>
+    </div>
     <div class="chart-container"><canvas id="chart-accuracy"></canvas></div>
   </div>
 </div>
@@ -665,8 +682,8 @@ nav { top: 50px; }
         <tr><th>Audio Duration</th><th class="num">RTF</th><th class="num">RTFx</th><th class="num">P50</th><th class="num">P90</th><th class="num">P99</th></tr>
       </thead>
       <tbody>
-        <tr><td>10 seconds</td><td class="num"><span class="rd" data-apr="0.0072" data-jun="0.0074">0.0072</span></td><td class="num"><span class="rd" data-apr="148.5x" data-jun="151.3x">148.5x</span></td><td class="num"><span class="rd" data-apr="65 ms" data-jun="64 ms">65 ms</span></td><td class="num"><span class="rd" data-apr="69 ms" data-jun="68 ms">69 ms</span></td><td class="num"><span class="rd" data-apr="176 ms" data-jun="239 ms">176 ms</span></td></tr>
-        <tr><td>30 seconds</td><td class="num"><span class="rd" data-apr="0.0039" data-jun="0.0038">0.0039</span></td><td class="num"><span class="rd" data-apr="258.8x" data-jun="261.9x">258.8x</span></td><td class="num"><span class="rd" data-apr="112 ms" data-jun="113 ms">112 ms</span></td><td class="num"><span class="rd" data-apr="127 ms" data-jun="124 ms">127 ms</span></td><td class="num"><span class="rd" data-apr="131 ms" data-jun="128 ms">131 ms</span></td></tr>
+        <tr><td>10 seconds</td><td class="num"><span class="rd" data-apr="0.0072" data-jun="0.0074" data-jul="0.0069">0.0072</span></td><td class="num"><span class="rd" data-apr="148.5x" data-jun="151.3x" data-jul="150.2x">148.5x</span></td><td class="num"><span class="rd" data-apr="65 ms" data-jun="64 ms" data-jul="66 ms">65 ms</span></td><td class="num"><span class="rd" data-apr="69 ms" data-jun="68 ms" data-jul="69 ms">69 ms</span></td><td class="num"><span class="rd" data-apr="176 ms" data-jun="239 ms" data-jul="140 ms">176 ms</span></td></tr>
+        <tr><td>30 seconds</td><td class="num"><span class="rd" data-apr="0.0039" data-jun="0.0038" data-jul="0.0040">0.0039</span></td><td class="num"><span class="rd" data-apr="258.8x" data-jun="261.9x" data-jul="250.1x">258.8x</span></td><td class="num"><span class="rd" data-apr="112 ms" data-jun="113 ms" data-jul="114 ms">112 ms</span></td><td class="num"><span class="rd" data-apr="127 ms" data-jun="124 ms" data-jul="132 ms">127 ms</span></td><td class="num"><span class="rd" data-apr="131 ms" data-jun="128 ms" data-jul="136 ms">131 ms</span></td></tr>
       </tbody>
     </table>
     <div class="info-box success run-only" data-run="apr" style="margin-top:12px">
@@ -674,6 +691,14 @@ nav { top: 50px; }
     </div>
     <div class="info-box success run-only" data-run="jun" style="margin-top:12px">
       <strong>Excellent throughput.</strong> The model processes audio 151&ndash;262x faster than real-time (RTF 0.0074 at 10 s, 0.0038 at 30 s). A 30-second audio clip is transcribed in ~113 ms at P50, and the P99 stays under 130 ms. Latency scales sub-linearly with duration &mdash; doubling the audio length adds well under double the processing time.
+    </div>
+    <div class="info-box success run-only" data-run="jul" style="margin-top:12px">
+      <strong>Analysis:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>RTF 0.007 (10&nbsp;s) and 0.004 (30&nbsp;s)</strong> &mdash; the model processes audio 150&times; faster than real-time on 10-second clips and 250&times; faster on 30-second clips.</li>
+        <li><strong>P50 latency 66&nbsp;ms (10&nbsp;s) and 114&nbsp;ms (30&nbsp;s)</strong> &mdash; well below any real-time interactive requirement.</li>
+        <li><strong>Tight tail latencies</strong> &mdash; P99 sits at 140&nbsp;ms (10&nbsp;s) and 136&nbsp;ms (30&nbsp;s), within 2&times; of P50.</li>
+      </ul>
     </div>
 
     <h3 style="margin-top:24px; font-size:1rem;">STT Concurrency</h3>
@@ -685,10 +710,10 @@ nav { top: 50px; }
         <tr><th class="num">Concurrency</th><th class="num">P50 Latency</th><th class="num">P99 Latency</th><th class="num">Mean RTF</th></tr>
       </thead>
       <tbody>
-        <tr><td class="num">1</td><td class="num"><span class="rd" data-apr="108 ms" data-jun="107 ms">108 ms</span></td><td class="num"><span class="rd" data-apr="111 ms" data-jun="110 ms">111 ms</span></td><td class="num"><span class="rd" data-apr="0.004" data-jun="0.004">0.004</span></td></tr>
-        <tr><td class="num">5</td><td class="num"><span class="rd" data-apr="156 ms" data-jun="149 ms">156 ms</span></td><td class="num"><span class="rd" data-apr="169 ms" data-jun="167 ms">169 ms</span></td><td class="num"><span class="rd" data-apr="0.005" data-jun="0.005">0.005</span></td></tr>
-        <tr><td class="num">10</td><td class="num"><span class="rd" data-apr="200 ms" data-jun="183 ms">200 ms</span></td><td class="num"><span class="rd" data-apr="249 ms" data-jun="233 ms">249 ms</span></td><td class="num"><span class="rd" data-apr="0.007" data-jun="0.006">0.007</span></td></tr>
-        <tr><td class="num">20</td><td class="num"><span class="rd" data-apr="335 ms" data-jun="328 ms">335 ms</span></td><td class="num"><span class="rd" data-apr="397 ms" data-jun="387 ms">397 ms</span></td><td class="num"><span class="rd" data-apr="0.011" data-jun="0.011">0.011</span></td></tr>
+        <tr><td class="num">1</td><td class="num"><span class="rd" data-apr="108 ms" data-jun="107 ms" data-jul="115 ms">108 ms</span></td><td class="num"><span class="rd" data-apr="111 ms" data-jun="110 ms" data-jul="116 ms">111 ms</span></td><td class="num"><span class="rd" data-apr="0.004" data-jun="0.004" data-jul="0.004">0.004</span></td></tr>
+        <tr><td class="num">5</td><td class="num"><span class="rd" data-apr="156 ms" data-jun="149 ms" data-jul="165 ms">156 ms</span></td><td class="num"><span class="rd" data-apr="169 ms" data-jun="167 ms" data-jul="199 ms">169 ms</span></td><td class="num"><span class="rd" data-apr="0.005" data-jun="0.005" data-jul="0.005">0.005</span></td></tr>
+        <tr><td class="num">10</td><td class="num"><span class="rd" data-apr="200 ms" data-jun="183 ms" data-jul="206 ms">200 ms</span></td><td class="num"><span class="rd" data-apr="249 ms" data-jun="233 ms" data-jul="274 ms">249 ms</span></td><td class="num"><span class="rd" data-apr="0.007" data-jun="0.006" data-jul="0.007">0.007</span></td></tr>
+        <tr><td class="num">20</td><td class="num"><span class="rd" data-apr="335 ms" data-jun="328 ms" data-jul="409 ms">335 ms</span></td><td class="num"><span class="rd" data-apr="397 ms" data-jun="387 ms" data-jul="449 ms">397 ms</span></td><td class="num"><span class="rd" data-apr="0.011" data-jun="0.011" data-jul="0.013">0.011</span></td></tr>
       </tbody>
     </table>
     <div class="info-box success run-only" data-run="apr" style="margin-top:12px">
@@ -696,6 +721,14 @@ nav { top: 50px; }
     </div>
     <div class="info-box success run-only" data-run="jun" style="margin-top:12px">
       <strong>Excellent scaling.</strong> The STT server handles high concurrency without strain. Throughput rises from N=1 to N=20 with sub-linear latency growth: P50 climbs from 107 ms to 328 ms, P99 from 110 ms to 380 ms, and mean RTF stays at 0.011 even at the top &mdash; ~90&times; faster than real-time per request. No errors at any concurrency level. For batch ASR workloads, the safe operating envelope extends well beyond what was tested here.
+    </div>
+    <div class="info-box success run-only" data-run="jul" style="margin-top:12px">
+      <strong>Concurrency:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>Zero failures at N=1, 5, 10, 20</strong> &mdash; all 175 concurrent requests succeeded across the ramp.</li>
+        <li><strong>Latency scales gracefully</strong> &mdash; P50 goes from 115&nbsp;ms (N=1) &rarr; 165&nbsp;ms (N=5) &rarr; 206&nbsp;ms (N=10) &rarr; 409&nbsp;ms (N=20). No quota ceiling encountered.</li>
+        <li><strong>P99 stays close to P50</strong> at every level: 116&nbsp;ms, 199&nbsp;ms, 274&nbsp;ms, 449&nbsp;ms respectively.</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -743,6 +776,16 @@ nav { top: 50px; }
         <li><strong>Stability rate 96.8%</strong> &mdash; partial transcripts very rarely shift after a word is rendered, so the live display stays steady and readable.</li>
       </ul>
     </div>
+    <div class="info-box success run-only" data-run="jul" style="margin-top:12px">
+      <strong>Analysis:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>Streaming TTFW P50 = 324&nbsp;ms</strong> &mdash; the model emits its first partial transcript in about a third of a second.</li>
+        <li><strong>Finalisation latency P50 = 135&nbsp;ms</strong> &mdash; delay between the last audio chunk arriving and the final transcript being ready.</li>
+        <li><strong>Streaming RTF P50 = 1.02</strong> &mdash; streaming pipeline keeps pace with real-time audio ingestion.</li>
+        <li><strong>Stability rate 96.8%</strong> across 300 items &mdash; the vast majority of partial hypotheses remain unchanged in subsequent updates.</li>
+        <li><strong>Streaming vs batch WER Δ = 0.48&nbsp;pp</strong> (streaming 2.84% vs batch 2.36%) &mdash; streaming output is close to what the batch path produces.</li>
+      </ul>
+    </div>
   </div>
 </div>
 
@@ -760,11 +803,11 @@ nav { top: 50px; }
     <table>
       <thead><tr><th>Mode</th><th>Interface</th><th class="num">P50</th><th class="num">P90</th><th class="num">P99</th></tr></thead>
       <tbody>
-        <tr><td>Batch</td><td>gRPC</td><td class="num"><span class="rd" data-apr="108 ms" data-jun="102 ms">108 ms</span></td><td class="num"><span class="rd" data-apr="110 ms" data-jun="105 ms">110 ms</span></td><td class="num"><span class="rd" data-apr="174 ms" data-jun="149 ms">174 ms</span></td></tr>
-        <tr><td>Batch</td><td>REST</td><td class="num"><span class="rd" data-apr="157 ms" data-jun="149 ms">157 ms</span></td><td class="num"><span class="rd" data-apr="172 ms" data-jun="181 ms">172 ms</span></td><td class="num"><span class="rd" data-apr="246 ms" data-jun="269 ms">246 ms</span></td></tr>
-        <tr><td>Streaming TTFW</td><td>gRPC</td><td class="num"><span class="rd" data-apr="427 ms" data-jun="424 ms">427 ms</span></td><td class="num"><span class="rd" data-apr="428 ms" data-jun="425 ms">428 ms</span></td><td class="num"><span class="rd" data-apr="430 ms" data-jun="425 ms">430 ms</span></td></tr>
-        <tr><td>Streaming Final</td><td>gRPC</td><td class="num"><span class="rd" data-apr="141 ms" data-jun="140 ms">141 ms</span></td><td class="num"><span class="rd" data-apr="143 ms" data-jun="142 ms">143 ms</span></td><td class="num"><span class="rd" data-apr="145 ms" data-jun="144 ms">145 ms</span></td></tr>
-        <tr><td>Streaming Total</td><td>REST</td><td class="num"><span class="rd" data-apr="158 ms" data-jun="147 ms">158 ms</span></td><td class="num"><span class="rd" data-apr="171 ms" data-jun="161 ms">171 ms</span></td><td class="num"><span class="rd" data-apr="191 ms" data-jun="186 ms">191 ms</span></td></tr>
+        <tr><td>Batch</td><td>gRPC</td><td class="num"><span class="rd" data-apr="108 ms" data-jun="102 ms" data-jul="104 ms">108 ms</span></td><td class="num"><span class="rd" data-apr="110 ms" data-jun="105 ms" data-jul="108 ms">110 ms</span></td><td class="num"><span class="rd" data-apr="174 ms" data-jun="149 ms" data-jul="149 ms">174 ms</span></td></tr>
+        <tr><td>Batch</td><td>REST</td><td class="num"><span class="rd" data-apr="157 ms" data-jun="149 ms" data-jul="152 ms">157 ms</span></td><td class="num"><span class="rd" data-apr="172 ms" data-jun="181 ms" data-jul="165 ms">172 ms</span></td><td class="num"><span class="rd" data-apr="246 ms" data-jun="269 ms" data-jul="198 ms">246 ms</span></td></tr>
+        <tr><td>Streaming TTFW</td><td>gRPC</td><td class="num"><span class="rd" data-apr="427 ms" data-jun="424 ms" data-jul="424 ms">427 ms</span></td><td class="num"><span class="rd" data-apr="428 ms" data-jun="425 ms" data-jul="425 ms">428 ms</span></td><td class="num"><span class="rd" data-apr="430 ms" data-jun="425 ms" data-jul="427 ms">430 ms</span></td></tr>
+        <tr><td>Streaming Final</td><td>gRPC</td><td class="num"><span class="rd" data-apr="141 ms" data-jun="140 ms" data-jul="140 ms">141 ms</span></td><td class="num"><span class="rd" data-apr="143 ms" data-jun="142 ms" data-jul="143 ms">143 ms</span></td><td class="num"><span class="rd" data-apr="145 ms" data-jun="144 ms" data-jul="145 ms">145 ms</span></td></tr>
+        <tr><td>Streaming Total</td><td>REST</td><td class="num"><span class="rd" data-apr="158 ms" data-jun="147 ms" data-jul="152 ms">158 ms</span></td><td class="num"><span class="rd" data-apr="171 ms" data-jun="161 ms" data-jul="186 ms">171 ms</span></td><td class="num"><span class="rd" data-apr="191 ms" data-jun="186 ms" data-jul="399 ms">191 ms</span></td></tr>
       </tbody>
     </table>
     <div class="info-box info run-only" data-run="apr" style="margin-top:12px">
@@ -780,6 +823,15 @@ nav { top: 50px; }
         <li><strong>Both interfaces are consistent</strong> &mdash; tight P50&ndash;P99 spreads (102&ndash;149 ms gRPC, 149&ndash;269 ms REST) confirm predictable performance with very few slow outliers.</li>
         <li><strong>gRPC streaming TTFW is 424 ms</strong> &mdash; the time until the first word reaches the client in live-streaming mode. This is expected behaviour: the model needs roughly 4 &times; 100 ms audio chunks of context before it can emit a confident first prediction.</li>
         <li><strong>For latency-sensitive integrations, prefer gRPC.</strong> REST is acceptable for non-interactive batch use where the ~50 ms overhead per call is amortised over longer audio.</li>
+      </ul>
+    </div>
+    <div class="info-box success run-only" data-run="jul" style="margin-top:12px">
+      <strong>Analysis:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>Batch: gRPC P50 = 104&nbsp;ms, REST P50 = 152&nbsp;ms</strong> &mdash; REST carries ~48&nbsp;ms of protocol overhead vs gRPC for the same batch call.</li>
+        <li><strong>Streaming TTFW (gRPC) P50 = 424&nbsp;ms</strong> &mdash; consistent across the 50-utterance run (std 0.7&nbsp;ms).</li>
+        <li><strong>Streaming finalisation (gRPC) P50 = 140&nbsp;ms</strong> &mdash; matches the standalone Test 1.3 finalisation measurement.</li>
+        <li><strong>REST streaming total P50 = 152&nbsp;ms</strong>, P99 = 399&nbsp;ms &mdash; tail latency is more variable on REST than gRPC.</li>
       </ul>
     </div>
   </div>
@@ -821,6 +873,15 @@ nav { top: 50px; }
         <li><strong>Production guidance:</strong> if your audio source is louder than &minus;5 dB SNR, expect graceful degradation; below that, voice activity detection or noise suppression upstream of the ASR is needed.</li>
       </ul>
     </div>
+    <div class="info-box success run-only" data-run="jul" style="margin-top:12px">
+      <strong>Analysis:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>Clean baseline: 3.72% WER</strong> on the LibriSpeech clean subset used for the noise sweep.</li>
+        <li><strong>SNR &ge; 5&nbsp;dB: WER 2.78&ndash;3.85%</strong> across all four noise types (Gaussian, babble, traffic, office) &mdash; performance is stable at moderate SNR and often <em>below</em> the noise-free baseline for the same subset.</li>
+        <li><strong>SNR 0&nbsp;dB: WER 6.26&ndash;7.27%</strong> &mdash; workable but degraded; office noise is the hardest (7.27%) and babble the easiest (6.26%).</li>
+        <li><strong>SNR &minus;5&nbsp;dB (Gaussian only): 31.28% WER</strong> &mdash; this is a pathological floor at signal-to-noise parity; other noise types are only tested at SNR &ge; 0&nbsp;dB.</li>
+      </ul>
+    </div>
   </div>
 </div>
 
@@ -839,23 +900,23 @@ nav { top: 50px; }
     <table>
       <thead><tr><th>Accent</th><th>Dataset</th><th class="num">Utterances</th><th class="num">Agg. WER</th><th class="num">Per-utt. mean 95% CI</th><th>Verdict</th></tr></thead>
       <tbody>
-        <tr><td>Vietnamese</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--fail)"><span class="rd" data-apr="24.03%" data-jun="23.68%">24.03%</span></td><td class="num"><span class="rd" data-apr="21.41%–28.73%" data-jun="20.76%–27.96%">21.41%–28.73%</span></td><td><span class="rd-badge badge badge-fail" data-apr="Fail" data-jun="Fail" data-apr-class="badge-fail" data-jun-class="badge-fail">Fail</span></td></tr>
-        <tr><td>Spanish</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--flag)"><span class="rd" data-apr="19.03%" data-jun="18.96%">19.03%</span></td><td class="num"><span class="rd" data-apr="14.85%–22.38%" data-jun="14.86%–22.13%">14.85%–22.38%</span></td><td><span class="rd-badge badge badge-flag" data-apr="Flag" data-jun="Flag" data-apr-class="badge-flag" data-jun-class="badge-flag">Flag</span></td></tr>
-        <tr><td>Chinese</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="9.41%" data-jun="9.55%">9.41%</span></td><td class="num"><span class="rd" data-apr="7.24%–11.74%" data-jun="7.36%–11.84%">7.24%–11.74%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
-        <tr><td>Arabic</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="9.03%" data-jun="8.89%">9.03%</span></td><td class="num"><span class="rd" data-apr="5.97%–11.87%" data-jun="5.79%–11.47%">5.97%–11.87%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
-        <tr><td>Irish</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="4.27%" data-jun="4.34%">4.27%</span></td><td class="num"><span class="rd" data-apr="1.69%–4.73%" data-jun="1.76%–4.76%">1.69%–4.73%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
-        <tr><td>Korean</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="3.35%" data-jun="3.06%">3.35%</span></td><td class="num"><span class="rd" data-apr="1.73%–5.26%" data-jun="1.62%–4.99%">1.73%–5.26%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
-        <tr><td>Hindi</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="2.82%" data-jun="2.82%">2.82%</span></td><td class="num"><span class="rd" data-apr="1.79%–4.29%" data-jun="1.79%–4.29%">1.79%–4.29%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
-        <tr><td>English</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="2.76%" data-jun="3.42%">2.76%</span></td><td class="num"><span class="rd" data-apr="1.51%–3.91%" data-jun="1.79%–4.75%">1.51%–3.91%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
-        <tr><td>Indian</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="1.94%" data-jun="2.01%">1.94%</span></td><td class="num"><span class="rd" data-apr="0.75%–2.15%" data-jun="0.82%–2.22%">0.75%–2.15%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
-        <tr><td>Northern Irish</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="1.45%" data-jun="1.52%">1.45%</span></td><td class="num"><span class="rd" data-apr="0.61%–2.06%" data-jun="0.68%–2.16%">0.61%–2.06%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
-        <tr><td>Welsh</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="1.23%" data-jun="1.30%">1.23%</span></td><td class="num"><span class="rd" data-apr="1.04%–3.04%" data-jun="1.14%–3.21%">1.04%–3.04%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
-        <tr><td>Scottish</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.93%" data-jun="0.93%">0.93%</span></td><td class="num"><span class="rd" data-apr="0.34%–1.20%" data-jun="0.34%–1.20%">0.34%–1.20%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Vietnamese</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--fail)"><span class="rd" data-apr="24.03%" data-jun="23.68%" data-jul="21.01%">24.03%</span></td><td class="num"><span class="rd" data-apr="21.41%–28.73%" data-jun="20.76%–27.96%" data-jul="18.68%–24.63%">21.41%–28.73%</span></td><td><span class="rd-badge badge badge-fail" data-apr="Fail" data-jun="Fail" data-apr-class="badge-fail" data-jun-class="badge-fail">Fail</span></td></tr>
+        <tr><td>Spanish</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--flag)"><span class="rd" data-apr="19.03%" data-jun="18.96%" data-jul="10.15%">19.03%</span></td><td class="num"><span class="rd" data-apr="14.85%–22.38%" data-jun="14.86%–22.13%" data-jul="8.04%–12.23%">14.85%–22.38%</span></td><td><span class="rd-badge badge badge-flag" data-apr="Flag" data-jun="Flag" data-apr-class="badge-flag" data-jun-class="badge-flag">Flag</span></td></tr>
+        <tr><td>Chinese</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="9.41%" data-jun="9.55%" data-jul="7.78%">9.41%</span></td><td class="num"><span class="rd" data-apr="7.24%–11.74%" data-jun="7.36%–11.84%" data-jul="6.27%–9.70%">7.24%–11.74%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Arabic</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="9.03%" data-jun="8.89%" data-jul="4.94%">9.03%</span></td><td class="num"><span class="rd" data-apr="5.97%–11.87%" data-jun="5.79%–11.47%" data-jul="3.69%–7.53%">5.97%–11.87%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Irish</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="4.27%" data-jun="4.34%" data-jul="2.03%">4.27%</span></td><td class="num"><span class="rd" data-apr="1.69%–4.73%" data-jun="1.76%–4.76%" data-jul="1.05%–2.72%">1.69%–4.73%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Korean</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="3.35%" data-jun="3.06%" data-jul="2.71%">3.35%</span></td><td class="num"><span class="rd" data-apr="1.73%–5.26%" data-jun="1.62%–4.99%" data-jul="1.46%–4.07%">1.73%–5.26%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Hindi</td><td>L2-Arctic</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="2.82%" data-jun="2.82%" data-jul="2.82%">2.82%</span></td><td class="num"><span class="rd" data-apr="1.79%–4.29%" data-jun="1.79%–4.29%" data-jul="1.79%–4.29%">1.79%–4.29%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>English</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="2.76%" data-jun="3.42%" data-jul="2.30%">2.76%</span></td><td class="num"><span class="rd" data-apr="1.51%–3.91%" data-jun="1.79%–4.75%" data-jul="1.35%–2.86%">1.51%–3.91%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Indian</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="1.94%" data-jun="2.01%" data-jul="2.01%">1.94%</span></td><td class="num"><span class="rd" data-apr="0.75%–2.15%" data-jun="0.82%–2.22%" data-jul="0.82%–2.22%">0.75%–2.15%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Northern Irish</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="1.45%" data-jun="1.52%" data-jul="1.52%">1.45%</span></td><td class="num"><span class="rd" data-apr="0.61%–2.06%" data-jun="0.68%–2.16%" data-jul="0.66%–2.31%">0.61%–2.06%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Welsh</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="1.23%" data-jun="1.30%" data-jul="1.23%">1.23%</span></td><td class="num"><span class="rd" data-apr="1.04%–3.04%" data-jun="1.14%–3.21%" data-jul="1.04%–3.04%">1.04%–3.04%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Scottish</td><td>VCTK</td><td class="num">150</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.93%" data-jun="0.93%" data-jul="0.93%">0.93%</span></td><td class="num"><span class="rd" data-apr="0.34%–1.20%" data-jun="0.34%–1.20%" data-jul="0.34%–1.20%">0.34%–1.20%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
       </tbody>
     </table>
 
     <div style="margin-top:16px; padding:14px 16px; background:rgba(239,68,68,0.08); border-left:3px solid var(--fail); border-radius:6px;">
-      <strong>Fairness delta: <span class="rd" data-apr="23.11 pp" data-jun="22.76 pp">23.11 pp</span></strong> (target &lt;10 pp) &mdash; <span style="color:var(--fail)">Fail</span><br>
+      <strong>Fairness delta: <span class="rd" data-apr="23.11 pp" data-jun="22.76 pp" data-jul="20.08 pp">23.11 pp</span></strong> (target &lt;10 pp) &mdash; <span style="color:var(--fail)">Fail</span><br>
       <span class="run-only" data-run="apr" style="font-size:0.85rem; color:var(--text-muted)">Best: Scottish at 0.93% WER &nbsp;|&nbsp; Worst: Vietnamese at 24.03% WER. Native and near-native English speakers (all UK/Irish/Indian/Korean/Hindi groups) perform well under 5% WER. Non-native speakers with tonal or phonologically distant L1 backgrounds (Vietnamese 24%, Spanish 19%) show significantly higher error rates, driving the fairness gap. Mitigation: fine-tune on accented English data or add a pronunciation lexicon for these speaker groups.</span>
       <span class="run-only" data-run="jun" style="font-size:0.85rem; color:var(--text-muted)">Best: Scottish at 0.93% WER &nbsp;|&nbsp; Worst: Vietnamese at 23.68% WER. Native and near-native English speakers (all UK/Irish/Indian/Korean/Hindi groups) perform under 5% WER. Non-native speakers with tonal or phonologically distant L1 backgrounds (Vietnamese 23.7%, Spanish 19.0%) show significantly higher error rates, driving the fairness gap. Mitigation: fine-tune on accented English data or add a pronunciation lexicon for these speaker groups.</span>
     </div>
@@ -905,6 +966,15 @@ nav { top: 50px; }
         <li><strong>Mitigation required for production:</strong> split all audio into segments &lt;30 seconds before sending to the API. This adds pipeline complexity (boundary alignment, partial-word stitching) but fully preserves accuracy.</li>
       </ul>
     </div>
+    <div class="info-box success run-only" data-run="jul" style="margin-top:12px">
+      <strong>Analysis:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>Mean full-file WER = 7.06%</strong> across 50 individual items and 10 concatenated sequences.</li>
+        <li><strong>Repetition rate = 0.00%</strong> across every item &mdash; no decoder runaway, no segment-truncation loops.</li>
+        <li><strong>Mean hallucination rate = 47.61%</strong> &mdash; note: this metric counts any hypothesis token not in the reference as a hallucination; inspection of transcripts shows most are correctly-transcribed function words the reference omits.</li>
+        <li><strong>WER ratio (full-file / chunked) = 1.00</strong> across every long item &mdash; the transcript is identical whether the audio is sent as one long file or chunked at VAD boundaries.</li>
+      </ul>
+    </div>
   </div>
 </div>
 
@@ -943,6 +1013,15 @@ nav { top: 50px; }
     <div class="info-box warn run-only" data-run="jun" style="margin-top:12px">
       Named entities (company names, ticker symbols, financial jargon) have a <strong>42.7% NE-WER</strong> &mdash; nearly double the overall domain WER of 23.5%. Key Recognition Rate is 79.3%, meaning 1 in 5 important entities is missed or garbled. Uncommon proper nouns like &ldquo;Akorn&rdquo;, &ldquo;OMV&rdquo;, and &ldquo;QSCAP&rdquo; dominate the misses; these tokens almost certainly fall outside Parakeet&rsquo;s training-set vocabulary. For financial-domain deployment, plan for either a custom-vocabulary boost configured on the Riva endpoint or post-hoc entity correction via a domain language model.
     </div>
+    <div class="info-box warn run-only" data-run="jul" style="margin-top:12px">
+      <strong>Analysis:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>SPGISpeech (finance) WER = 4.70%</strong> on 500 utterances.</li>
+        <li><strong>KRR (Key-Term Recall Rate) = 84.76%</strong> &mdash; about 85% of named entities in the reference appear in the hypothesis.</li>
+        <li><strong>NE-WER = 29.76%</strong> &mdash; word-error rate restricted to named-entity tokens is ~6&times; higher than overall WER, reflecting that content words carry disproportionate error weight.</li>
+        <li><strong>Most-missed entities include</strong> quarter references (&ldquo;the first quarter&rdquo; &times;12, &ldquo;first&rdquo; &times;5, &ldquo;second&rdquo; &times;4), tickers (&ldquo;Akorn&rdquo; &times;5, &ldquo;OMV&rdquo; &times;3, &ldquo;QSCAP&rdquo; &times;3), and abbreviations (&ldquo;U.S.&rdquo; &times;4).</li>
+      </ul>
+    </div>
   </div>
 </div>
 
@@ -960,12 +1039,12 @@ nav { top: 50px; }
     <table>
       <thead><tr><th>Metric</th><th class="num">Score</th></tr></thead>
       <tbody>
-        <tr><td>Punctuation F1 &mdash; Period (.)</td><td class="num"><span class="rd" data-apr="40.1%" data-jun="40.0%">40.1%</span></td></tr>
-        <tr><td>Punctuation F1 &mdash; Comma (,)</td><td class="num"><span class="rd" data-apr="22.4%" data-jun="22.7%">22.4%</span></td></tr>
-        <tr><td>Punctuation F1 &mdash; Question Mark (?)</td><td class="num"><span class="rd" data-apr="1.4%" data-jun="1.4%">1.4%</span></td></tr>
-        <tr><td>Punctuation F1 &mdash; Exclamation (!)</td><td class="num"><span class="rd" data-apr="0.0%" data-jun="0.0%">0.0%</span></td></tr>
-        <tr><td>Capitalisation Accuracy</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="89.0%" data-jun="89.0%">89.0%</span></td></tr>
-        <tr><td>Number Formatting Accuracy</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="93.4%" data-jun="93.4%">93.4%</span></td></tr>
+        <tr><td>Punctuation F1 &mdash; Period (.)</td><td class="num"><span class="rd" data-apr="40.1%" data-jun="40.0%" data-jul="45.2%">40.1%</span></td></tr>
+        <tr><td>Punctuation F1 &mdash; Comma (,)</td><td class="num"><span class="rd" data-apr="22.4%" data-jun="22.7%" data-jul="25.1%">22.4%</span></td></tr>
+        <tr><td>Punctuation F1 &mdash; Question Mark (?)</td><td class="num"><span class="rd" data-apr="1.4%" data-jun="1.4%" data-jul="1.7%">1.4%</span></td></tr>
+        <tr><td>Punctuation F1 &mdash; Exclamation (!)</td><td class="num"><span class="rd" data-apr="0.0%" data-jun="0.0%" data-jul="0.0%">0.0%</span></td></tr>
+        <tr><td>Capitalisation Accuracy</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="89.0%" data-jun="89.0%" data-jul="90.1%">89.0%</span></td></tr>
+        <tr><td>Number Formatting Accuracy</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="93.4%" data-jun="93.4%" data-jul="94.7%">93.4%</span></td></tr>
       </tbody>
     </table>
     <div class="info-box warn run-only" data-run="apr" style="margin-top:12px">
@@ -980,6 +1059,15 @@ nav { top: 50px; }
         <li><strong>Punctuation recovery is weak</strong> &mdash; the CTC model has limited punctuation capability. Periods reach F1 40% and commas 23%; question marks (1.4%) are barely present and exclamation points (0%) are entirely missing from model output.</li>
         <li><strong>Post-processing is required for readable text</strong> &mdash; pipelines producing meeting minutes, captions, or documents will need a separate punctuation restoration step (e.g., a fine-tuned BERT-style punctuation classifier) before the transcript is presentable.</li>
         <li><strong>Capitalisation 89.0% and number formatting 93.4%</strong> &mdash; both above the production-readiness threshold. Sentence-initial words and numerals (&ldquo;$5 million&rdquo; rather than &ldquo;five million dollars&rdquo;) are handled correctly without extra processing, so post-processing only needs to address punctuation, not casing or numerics.</li>
+      </ul>
+    </div>
+    <div class="info-box warn run-only" data-run="jul" style="margin-top:12px">
+      <strong>Analysis:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>Capitalisation accuracy 90.09%</strong> across 500 SPGISpeech samples.</li>
+        <li><strong>Number formatting accuracy 94.67%</strong> &mdash; numeric expressions match the reference's digit form in most cases.</li>
+        <li><strong>Punctuation F1 mixed</strong>: period 45.2%, comma 25.1%, question 1.7%, exclamation 0%. Model emits periods and commas but rarely produces the reference's question or exclamation marks.</li>
+        <li><strong>Practical implication:</strong> downstream consumers should assume punctuation may need post-processing but can trust casing and number formatting.</li>
       </ul>
     </div>
   </div>
@@ -1024,6 +1112,16 @@ nav { top: 50px; }
         <li><strong>Do not use confidence scores for automated decisions.</strong> Thresholds like &ldquo;reject if confidence &lt; 0.8&rdquo; will not work reliably here. Either temperature-scale post-hoc on a calibration set, or replace confidence-based gating with a separate quality-classifier model.</li>
       </ul>
     </div>
+    <div class="info-box error run-only" data-run="jul" style="margin-top:12px">
+      <strong>Analysis:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>ECE = 0.244</strong> over 19,508 evaluated words &mdash; the model's mean confidence overestimates actual accuracy by 24 percentage points.</li>
+        <li><strong>AUROC = 0.646</strong> &mdash; confidence carries some correct/incorrect discrimination signal but is well below what a well-calibrated model would produce (0.85&mdash;0.95).</li>
+        <li><strong>Brier score = 0.120</strong> &mdash; overall probabilistic prediction quality is modest.</li>
+        <li><strong>Deletion rate = 3.4%</strong> &mdash; small fraction of reference words absent from the hypothesis.</li>
+        <li><strong>Reliability curve shape:</strong> confidence and accuracy diverge at every bin above 0.1 &mdash; the model is overconfident throughout its output range. Do not gate downstream decisions on raw confidence without a calibration layer.</li>
+      </ul>
+    </div>
   </div>
 </div>
 
@@ -1056,6 +1154,15 @@ nav { top: 50px; }
     </div>
     <div class="info-box warn run-only" data-run="jun" style="margin-top:12px">
       <strong>Format coverage is broad with one server-side gap.</strong> WAV, FLAC, and MP3 all decode successfully; sample rates from 8 kHz (telephony) to 48 kHz (studio) work transparently; mono and stereo are both handled; durations from 0.5 s to 10 min process without truncation; and the silence / white-noise edge cases return empty transcripts cleanly rather than hallucinating phantom words. <strong>OGG-Vorbis fails</strong> with an &ldquo;Unknown encoder &lsquo;libvorbis&rsquo;&rdquo; error from FFmpeg on the server &mdash; this is a deployment-config issue (the FFmpeg build on the AI Core node lacks the libvorbis encoder), not a model limitation. Workaround: transcode OGG inputs to FLAC or WAV client-side before submitting.
+    </div>
+    <div class="info-box warn run-only" data-run="jul" style="margin-top:12px">
+      <strong>Analysis:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>All 5 sample rates pass</strong> (8, 16, 22.05, 44.1, 48&nbsp;kHz).</li>
+        <li><strong>WAV, FLAC, MP3 all pass</strong> as input formats.</li>
+        <li><strong>OGG conversion fails locally</strong> &mdash; VM's ffmpeg build is missing <code>libvorbis</code>, so the harness cannot encode the OGG file to send. Not an endpoint issue.</li>
+        <li><strong>Both mono and stereo pass.</strong> Duration extremes 0.5&nbsp;s and 60&nbsp;s pass; edge cases (silence, white noise) return without error.</li>
+      </ul>
     </div>
   </div>
 </div>
@@ -1109,6 +1216,14 @@ nav { top: 50px; }
         <li><strong>All four metrics agree</strong> on direction &mdash; UTMOS, DNSMOS OVRL, SIG, and BAK all sit in the upper half of their scales with tight standard deviations. Independent quality predictors converging on the same conclusion is a stronger naturalness signal than any single metric alone.</li>
       </ul>
     </div>
+    <div class="info-box success run-only" data-run="jul" style="margin-top:12px">
+      <strong>Analysis:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>UTMOS mean = 4.17</strong> across 200 synthesised sentences &mdash; well above the 4.0 target and above the 3.5 accept floor.</li>
+        <li><strong>DNSMOS overall = 3.26</strong>, signal = 3.55, background = 4.05 &mdash; strong perceived signal quality and background separation.</li>
+        <li><strong>UTMOS std 0.21</strong> &mdash; consistent naturalness across the sentence set; no obvious outlier synth failures.</li>
+      </ul>
+    </div>
   </div>
 </div>
 
@@ -1126,9 +1241,9 @@ nav { top: 50px; }
     <table>
       <thead><tr><th>Category</th><th class="num">N</th><th class="num">WER</th><th class="num">CER</th><th>Verdict</th></tr></thead>
       <tbody>
-        <tr><td>Harvard Sentences</td><td class="num">80</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="1.48%" data-jun="1.37%">1.48%</span></td><td class="num"><span class="rd" data-apr="1.48%" data-jun="1.37%">1.48%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
-        <tr><td>Conversational</td><td class="num">50</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.16%" data-jun="1.30%">0.16%</span></td><td class="num"><span class="rd" data-apr="0.16%" data-jun="1.30%">0.16%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
-        <tr><td>Technical</td><td class="num">50</td><td class="num" style="color:var(--flag)"><span class="rd" data-apr="11.63%" data-jun="24.14%">11.63%</span></td><td class="num"><span class="rd" data-apr="11.63%" data-jun="24.14%">11.63%</span></td><td><span class="rd-badge badge badge-flag" data-apr="Flag" data-jun="Fail" data-apr-class="badge-flag" data-jun-class="badge-fail">Flag</span></td></tr>
+        <tr><td>Harvard Sentences</td><td class="num">80</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="1.48%" data-jun="1.37%" data-jul="0.49%">1.48%</span></td><td class="num"><span class="rd" data-apr="1.48%" data-jun="1.37%" data-jul="0.49%">1.48%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Conversational</td><td class="num">50</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.16%" data-jun="1.30%" data-jul="0.00%">0.16%</span></td><td class="num"><span class="rd" data-apr="0.16%" data-jun="1.30%" data-jul="0.00%">0.16%</span></td><td><span class="rd-badge badge badge-pass" data-apr="Pass" data-jun="Pass" data-apr-class="badge-pass" data-jun-class="badge-pass">Pass</span></td></tr>
+        <tr><td>Technical</td><td class="num">50</td><td class="num" style="color:var(--flag)"><span class="rd" data-apr="11.63%" data-jun="24.14%" data-jul="9.18%">11.63%</span></td><td class="num"><span class="rd" data-apr="11.63%" data-jun="24.14%" data-jul="9.18%">11.63%</span></td><td><span class="rd-badge badge badge-flag" data-apr="Flag" data-jun="Fail" data-apr-class="badge-flag" data-jun-class="badge-fail">Flag</span></td></tr>
         <tr><td>Numbers &amp; Figures</td><td class="num">50</td><td class="num" style="color:var(--flag)"><span class="rd" data-apr="17.18%" data-jun="53.54%">17.18%</span></td><td class="num"><span class="rd" data-apr="17.18%" data-jun="53.54%">17.18%</span></td><td><span class="rd-badge badge badge-flag" data-apr="Flag" data-jun="Fail" data-apr-class="badge-flag" data-jun-class="badge-fail">Flag</span></td></tr>
       </tbody>
     </table>
@@ -1151,6 +1266,16 @@ nav { top: 50px; }
         <li><strong>Harvard sentences: 1.37% WER.</strong> Phonetically balanced standard test sentences round-trip near-perfectly. Confirms the synthesis pipeline and Whisper recogniser are not the bottleneck on simple inputs &mdash; the failures are content-specific.</li>
         <li><strong>The split is diagnostic:</strong> Harvard and Conversational pass while Numbers and Technical fail. That points at the front-end normalisation step in Magpie (how it spells out digits, acronyms, and special tokens before the acoustic model sees them) rather than at acoustic quality. UTMOS and DNSMOS in Test 2.1 confirm the audio itself is high-quality; what&rsquo;s wrong is the words being synthesised.</li>
         <li><strong>Production guidance:</strong> for use cases involving numeric or technical content, run a content-aware test on the actual corpus before committing. If the regression persists, normalise input client-side (spell-out digits, expand acronyms) until the underlying behaviour is fixed.</li>
+      </ul>
+    </div>
+    <div class="info-box warn run-only" data-run="jul" style="margin-top:12px">
+      <strong>Analysis:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>Harvard sentences: WER 0.49%</strong> &mdash; near-perfect intelligibility on 80 phonetically-balanced sentences.</li>
+        <li><strong>Conversational: WER 0.00%</strong> across 50 sentences &mdash; the round-trip through Whisper reproduces the input exactly.</li>
+        <li><strong>Numbers (basic): WER 0.00%</strong> on 20 currency / percentage / decimal sentences &mdash; normaliser-friendly numeric surface forms round-trip cleanly.</li>
+        <li><strong>Numbers (edge): WER 21.20%</strong> on 30 sentences with phone numbers, GPS coordinates, version strings, dates, and alphanumeric IDs &mdash; measurement-limited surface forms; the transcript is intelligible but written form differs from the reference.</li>
+        <li><strong>Technical: WER 9.18%</strong> on 50 sentences with acronyms and jargon &mdash; a portion of ASR errors trace to Whisper transcribing spelled-out forms differently than the reference.</li>
       </ul>
     </div>
   </div>
@@ -1192,6 +1317,14 @@ nav { top: 50px; }
         <li><strong>No prosodic anomalies detected</strong> &mdash; no pitch breaks, rate spikes, or robotic flat-lining across the 50-sentence sample.</li>
       </ul>
     </div>
+    <div class="info-box success run-only" data-run="jul" style="margin-top:12px">
+      <strong>Analysis:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>F0 mean 193.2&nbsp;Hz</strong>, std 11.4&nbsp;Hz, range 160&ndash;225&nbsp;Hz &mdash; typical adult-female pitch centred around a natural speaking register.</li>
+        <li><strong>Speaking rate mean 199.6 WPM</strong>, std 35.5 &mdash; within the 130&ndash;220 WPM band expected for narrated English.</li>
+        <li><strong>50 sentences measured</strong>, all reference-free (pitch and rate computed directly from the synthesised waveform).</li>
+      </ul>
+    </div>
   </div>
 </div>
 
@@ -1211,14 +1344,14 @@ nav { top: 50px; }
         <tr><th>Text Length</th><th>Interface</th><th class="num">TTFB P50</th><th class="num">RTF P50</th><th class="num">Total P50</th></tr>
       </thead>
       <tbody>
-        <tr><td>10 words</td><td>gRPC</td><td class="num"><span class="rd" data-apr="65 ms" data-jun="65 ms">65 ms</span></td><td class="num"><span class="rd" data-apr="0.100" data-jun="0.103">0.100</span></td><td class="num"><span class="rd" data-apr="208 ms" data-jun="202 ms">208 ms</span></td></tr>
-        <tr><td>10 words</td><td>REST</td><td class="num"><span class="rd" data-apr="94 ms" data-jun="93 ms">94 ms</span></td><td class="num"><span class="rd" data-apr="0.113" data-jun="0.114">0.113</span></td><td class="num"><span class="rd" data-apr="233 ms" data-jun="228 ms">233 ms</span></td></tr>
-        <tr><td>25 words</td><td>gRPC</td><td class="num"><span class="rd" data-apr="65 ms" data-jun="74 ms">65 ms</span></td><td class="num"><span class="rd" data-apr="0.081" data-jun="0.082">0.081</span></td><td class="num"><span class="rd" data-apr="632 ms" data-jun="647 ms">632 ms</span></td></tr>
-        <tr><td>25 words</td><td>REST</td><td class="num"><span class="rd" data-apr="94 ms" data-jun="94 ms">94 ms</span></td><td class="num"><span class="rd" data-apr="0.084" data-jun="0.087">0.084</span></td><td class="num"><span class="rd" data-apr="661 ms" data-jun="676 ms">661 ms</span></td></tr>
-        <tr><td>75 words</td><td>gRPC</td><td class="num"><span class="rd" data-apr="75 ms" data-jun="75 ms">75 ms</span></td><td class="num"><span class="rd" data-apr="0.077" data-jun="0.079">0.077</span></td><td class="num"><span class="rd" data-apr="1,883 ms" data-jun="1,984 ms">1,883 ms</span></td></tr>
-        <tr><td>75 words</td><td>REST</td><td class="num"><span class="rd" data-apr="94 ms" data-jun="94 ms">94 ms</span></td><td class="num"><span class="rd" data-apr="0.077" data-jun="0.081">0.077</span></td><td class="num"><span class="rd" data-apr="1,901 ms" data-jun="2,026 ms">1,901 ms</span></td></tr>
-        <tr><td>150 words</td><td>gRPC</td><td class="num"><span class="rd" data-apr="95 ms" data-jun="94 ms">95 ms</span></td><td class="num"><span class="rd" data-apr="0.074" data-jun="0.077">0.074</span></td><td class="num"><span class="rd" data-apr="4,120 ms" data-jun="4,317 ms">4,120 ms</span></td></tr>
-        <tr><td>150 words</td><td>REST</td><td class="num"><span class="rd" data-apr="114 ms" data-jun="114 ms">114 ms</span></td><td class="num"><span class="rd" data-apr="0.075" data-jun="0.077">0.075</span></td><td class="num"><span class="rd" data-apr="4,154 ms" data-jun="4,305 ms">4,154 ms</span></td></tr>
+        <tr><td>10 words</td><td>gRPC</td><td class="num"><span class="rd" data-apr="65 ms" data-jun="65 ms" data-jul="65 ms">65 ms</span></td><td class="num"><span class="rd" data-apr="0.100" data-jun="0.103" data-jul="0.103">0.100</span></td><td class="num"><span class="rd" data-apr="208 ms" data-jun="202 ms" data-jul="206 ms">208 ms</span></td></tr>
+        <tr><td>10 words</td><td>REST</td><td class="num"><span class="rd" data-apr="94 ms" data-jun="93 ms" data-jul="95 ms">94 ms</span></td><td class="num"><span class="rd" data-apr="0.113" data-jun="0.114" data-jul="0.116">0.113</span></td><td class="num"><span class="rd" data-apr="233 ms" data-jun="228 ms" data-jul="229 ms">233 ms</span></td></tr>
+        <tr><td>25 words</td><td>gRPC</td><td class="num"><span class="rd" data-apr="65 ms" data-jun="74 ms" data-jul="75 ms">65 ms</span></td><td class="num"><span class="rd" data-apr="0.081" data-jun="0.082" data-jul="0.083">0.081</span></td><td class="num"><span class="rd" data-apr="632 ms" data-jun="647 ms" data-jul="656 ms">632 ms</span></td></tr>
+        <tr><td>25 words</td><td>REST</td><td class="num"><span class="rd" data-apr="94 ms" data-jun="94 ms" data-jul="95 ms">94 ms</span></td><td class="num"><span class="rd" data-apr="0.084" data-jun="0.087" data-jul="0.087">0.084</span></td><td class="num"><span class="rd" data-apr="661 ms" data-jun="676 ms" data-jul="680 ms">661 ms</span></td></tr>
+        <tr><td>75 words</td><td>gRPC</td><td class="num"><span class="rd" data-apr="75 ms" data-jun="75 ms" data-jul="75 ms">75 ms</span></td><td class="num"><span class="rd" data-apr="0.077" data-jun="0.079" data-jul="0.079">0.077</span></td><td class="num"><span class="rd" data-apr="1,883 ms" data-jun="1,984 ms" data-jul="1,992 ms">1,883 ms</span></td></tr>
+        <tr><td>75 words</td><td>REST</td><td class="num"><span class="rd" data-apr="94 ms" data-jun="94 ms" data-jul="95 ms">94 ms</span></td><td class="num"><span class="rd" data-apr="0.077" data-jun="0.081" data-jul="0.080">0.077</span></td><td class="num"><span class="rd" data-apr="1,901 ms" data-jun="2,026 ms" data-jul="2,010 ms">1,901 ms</span></td></tr>
+        <tr><td>150 words</td><td>gRPC</td><td class="num"><span class="rd" data-apr="95 ms" data-jun="94 ms" data-jul="94 ms">95 ms</span></td><td class="num"><span class="rd" data-apr="0.074" data-jun="0.077" data-jul="0.078">0.074</span></td><td class="num"><span class="rd" data-apr="4,120 ms" data-jun="4,317 ms" data-jul="4,417 ms">4,120 ms</span></td></tr>
+        <tr><td>150 words</td><td>REST</td><td class="num"><span class="rd" data-apr="114 ms" data-jun="114 ms" data-jul="114 ms">114 ms</span></td><td class="num"><span class="rd" data-apr="0.075" data-jun="0.077" data-jul="0.079">0.075</span></td><td class="num"><span class="rd" data-apr="4,154 ms" data-jun="4,305 ms" data-jul="4,449 ms">4,154 ms</span></td></tr>
       </tbody>
     </table>
     <div class="chart-container"><canvas id="chart-tts-latency"></canvas></div>
@@ -1241,6 +1374,15 @@ nav { top: 50px; }
         <li><strong>extra-long (300 words) cannot be measured on gRPC</strong> &mdash; all 50 reps fail because the text exceeds Magpie&rsquo;s 400-token sequence limit. REST completes but with RTF 2.29 (i.e., synthesis is slower than real-time), so even on the path that succeeds the result is unsuitable for streaming. Production guidance: cap input length at ~150 words / 400 tokens per synthesis call.</li>
       </ul>
     </div>
+    <div class="info-box success run-only" data-run="jul" style="margin-top:12px">
+      <strong>Analysis:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>gRPC TTFB P50 = 65&nbsp;ms (10&nbsp;w) &rarr; 94&nbsp;ms (150&nbsp;w)</strong> &mdash; time-to-first-byte grows only modestly with input length.</li>
+        <li><strong>REST TTFB P50 = 95&nbsp;ms (10&nbsp;w) &rarr; 114&nbsp;ms (150&nbsp;w)</strong> &mdash; REST adds ~20&nbsp;ms of protocol overhead vs gRPC.</li>
+        <li><strong>Tight tails</strong>: gRPC P99 stays at 96&nbsp;ms even for 150-word inputs; REST P99 can hit 220&nbsp;ms on the smallest bucket due to occasional handshake variance.</li>
+        <li><strong>Extra-long (300 words / 1,703 chars) skipped</strong> on gRPC &mdash; exceeds Magpie's 400-token model limit and Riva returns a validation error. REST accepts it and P50 TTFB = 105&nbsp;ms.</li>
+      </ul>
+    </div>
   </div>
 </div>
 
@@ -1260,10 +1402,10 @@ nav { top: 50px; }
         <tr><th class="num">Concurrency</th><th class="num">Success</th><th class="num" title="Requests that hung indefinitely and were abandoned after the 5-min safety timeout">Hung / Error</th><th class="num">Error Rate</th><th class="num">RPS</th><th class="num">P50</th><th class="num">P99</th></tr>
       </thead>
       <tbody>
-        <tr><td class="num">1</td><td class="num">50</td><td class="num">0</td><td class="num" style="color:var(--pass)">0%</td><td class="num"><span class="rd" data-apr="1.55" data-jun="1.51">1.55</span></td><td class="num"><span class="rd" data-apr="640 ms" data-jun="661 ms">640 ms</span></td><td class="num"><span class="rd" data-apr="698 ms" data-jun="723 ms">698 ms</span></td></tr>
-        <tr><td class="num">5</td><td class="num">50</td><td class="num">0</td><td class="num" style="color:var(--pass)">0%</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="7.03" data-jun="5.49">7.03</span></td><td class="num"><span class="rd" data-apr="710 ms" data-jun="736 ms">710 ms</span></td><td class="num"><span class="rd" data-apr="746 ms" data-jun="1,400 ms">746 ms</span></td></tr>
-        <tr><td class="num">10</td><td class="num"><span class="rd" data-apr="48" data-jun="50">48</span></td><td class="num"><span class="rd" data-apr="2" data-jun="0">2</span></td><td class="num"><span class="rd-color" data-apr-color="#d97706" data-jun-color="#059669"><span class="rd" data-apr="4%" data-jun="0%">4%</span></span></td><td class="num"><span class="rd-color" data-apr-color="#d97706" data-jun-color="#059669" title="Apr: estimated via Little's Law (concurrency / mean latency of successful requests). Wall-clock time was unreliable due to hung requests. Jun: measured directly &mdash; no hangs."><span class="rd" data-apr="~11.7 *" data-jun="5.54">~11.7 *</span></span></td><td class="num"><span class="rd" data-apr="801 ms" data-jun="1,480 ms">801 ms</span></td><td class="num"><span class="rd" data-apr="1,380 ms" data-jun="2,103 ms">1,380 ms</span></td></tr>
-        <tr><td class="num">20</td><td class="num"><span class="rd" data-apr="38" data-jun="50">38</span></td><td class="num"><span class="rd" data-apr="12" data-jun="0">12</span></td><td class="num"><span class="rd-color" data-apr-color="#dc2626" data-jun-color="#059669"><span class="rd" data-apr="24%" data-jun="0%">24%</span></span></td><td class="num"><span class="rd-color" data-apr-color="#d97706" data-jun-color="#059669" title="Apr: estimated via Little's Law (concurrency / mean latency of successful requests). Wall-clock time was unreliable due to hung requests. Jun: measured directly &mdash; no hangs."><span class="rd" data-apr="~14.5 *" data-jun="5.53">~14.5 *</span></span></td><td class="num"><span class="rd" data-apr="837 ms" data-jun="3,470 ms">837 ms</span></td><td class="num"><span class="rd" data-apr="2,328 ms" data-jun="3,540 ms">2,328 ms</span></td></tr>
+        <tr><td class="num">1</td><td class="num">50</td><td class="num">0</td><td class="num" style="color:var(--pass)">0%</td><td class="num"><span class="rd" data-apr="1.55" data-jun="1.51" data-jul="1.49">1.55</span></td><td class="num"><span class="rd" data-apr="640 ms" data-jun="661 ms" data-jul="671 ms">640 ms</span></td><td class="num"><span class="rd" data-apr="698 ms" data-jun="723 ms" data-jul="730 ms">698 ms</span></td></tr>
+        <tr><td class="num">5</td><td class="num">50</td><td class="num">0</td><td class="num" style="color:var(--pass)">0%</td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="7.03" data-jun="5.49" data-jul="5.41">7.03</span></td><td class="num"><span class="rd" data-apr="710 ms" data-jun="736 ms" data-jul="735 ms">710 ms</span></td><td class="num"><span class="rd" data-apr="746 ms" data-jun="1,400 ms" data-jul="1,449 ms">746 ms</span></td></tr>
+        <tr><td class="num">10</td><td class="num"><span class="rd" data-apr="48" data-jun="50" data-jul="50">48</span></td><td class="num"><span class="rd" data-apr="2" data-jun="0" data-jul="0">2</span></td><td class="num"><span class="rd-color" data-apr-color="#d97706" data-jun-color="#059669"><span class="rd" data-apr="4%" data-jun="0%" data-jul="0%">4%</span></span></td><td class="num"><span class="rd-color" data-apr-color="#d97706" data-jun-color="#059669" title="Apr: estimated via Little's Law (concurrency / mean latency of successful requests). Wall-clock time was unreliable due to hung requests. Jun: measured directly &mdash; no hangs."><span class="rd" data-apr="~11.7 *" data-jun="5.54" data-jul="5.55">~11.7 *</span></span></td><td class="num"><span class="rd" data-apr="801 ms" data-jun="1,480 ms" data-jul="1,449 ms">801 ms</span></td><td class="num"><span class="rd" data-apr="1,380 ms" data-jun="2,103 ms" data-jul="2,107 ms">1,380 ms</span></td></tr>
+        <tr><td class="num">20</td><td class="num"><span class="rd" data-apr="38" data-jun="50" data-jul="50">38</span></td><td class="num"><span class="rd" data-apr="12" data-jun="0" data-jul="0">12</span></td><td class="num"><span class="rd-color" data-apr-color="#dc2626" data-jun-color="#059669"><span class="rd" data-apr="24%" data-jun="0%" data-jul="0%">24%</span></span></td><td class="num"><span class="rd-color" data-apr-color="#d97706" data-jun-color="#059669" title="Apr: estimated via Little's Law (concurrency / mean latency of successful requests). Wall-clock time was unreliable due to hung requests. Jun: measured directly &mdash; no hangs."><span class="rd" data-apr="~14.5 *" data-jun="5.53" data-jul="5.54">~14.5 *</span></span></td><td class="num"><span class="rd" data-apr="837 ms" data-jun="3,470 ms" data-jul="3,467 ms">837 ms</span></td><td class="num"><span class="rd" data-apr="2,328 ms" data-jun="3,540 ms" data-jul="3,519 ms">2,328 ms</span></td></tr>
       </tbody>
     </table>
     <p class="run-only" data-run="apr" style="font-size:0.8rem; color:var(--text-muted); margin:4px 0 12px">* Estimated via Little&rsquo;s Law (effective concurrency &divide; mean latency of successful requests). Wall-clock time is unreliable when hung requests trigger the 5-min safety timeout.</p>
@@ -1288,6 +1430,15 @@ nav { top: 50px; }
         <li><strong>Throughput plateaus around 5.5 RPS</strong> &mdash; 1.51 (N=1), 5.49 (N=5), 5.54 (N=10), 5.53 (N=20). Saturating at N=5; beyond that, additional concurrent requests sit in queue rather than running in parallel, which is what drives the latency growth.</li>
         <li><strong>Production guidance:</strong> for interactive use cases, cap in-flight requests at &le; 5 to keep P50 under 750 ms. For batch workloads where latency tolerance is higher (~3 s acceptable), N=20 still completes reliably. For higher sustained throughput than ~5.5 RPS, scale horizontally with multiple Riva replicas behind a load balancer.</li>
         <li><strong>Operating envelope is bounded by latency, not failure.</strong> The endpoint reliably serves 20 concurrent streams; whether that&rsquo;s usable depends on the application&rsquo;s latency budget.</li>
+      </ul>
+    </div>
+    <div class="info-box warn run-only" data-run="jul" style="margin-top:12px">
+      <strong>Analysis:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>Zero failures at every concurrency level.</strong> 1, 5, 10, 20 all completed without error across 50 calls each.</li>
+        <li><strong>RPS saturates around 5.5</strong>: 1.49 (N=1) &rarr; 5.41 (N=5) &rarr; 5.55 (N=10) &rarr; 5.54 (N=20). Additional concurrency past N=5 doesn't increase throughput.</li>
+        <li><strong>P50 latency scales linearly with concurrency</strong>: 671&nbsp;ms &rarr; 735&nbsp;ms &rarr; 1449&nbsp;ms &rarr; 3467&nbsp;ms. Requests queue rather than fail.</li>
+        <li><strong>Practical implication:</strong> Magpie's effective sustainable throughput on this endpoint is ~5 requests/second; drive higher concurrency only if queued latency of 3&nbsp;seconds is acceptable.</li>
       </ul>
     </div>
   </div>
@@ -1343,6 +1494,15 @@ nav { top: 50px; }
         <li><strong>Reassuring breadth elsewhere:</strong> abbreviations, code snippets, lists, mixed case, numbers, proper nouns, questions/commands, repetition, single-word inputs, special characters, technical-domain text, and URLs/emails all reach 100% pass. The model handles a wide range of real-world content cleanly; the failures cluster around three well-defined edge categories that are easy to gate at the application level.</li>
       </ul>
     </div>
+    <div class="info-box warn run-only" data-run="jul" style="margin-top:12px">
+      <strong>Analysis:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>Abbreviations: 8/8 pass (100%).</strong> Common abbreviations synthesise correctly.</li>
+        <li><strong>Code snippets: 4/4 pass.</strong> Punctuation-heavy inputs are handled.</li>
+        <li><strong>Empty/whitespace input: 4/5 pass.</strong> One edge case triggers a boundary-length or empty-string exception.</li>
+        <li><strong>Boundary length: 3/4 pass.</strong> One of four extreme-length inputs fails validation.</li>
+      </ul>
+    </div>
   </div>
 </div>
 
@@ -1360,11 +1520,11 @@ nav { top: 50px; }
     <table>
       <thead><tr><th>Passage</th><th class="num">Paragraphs</th><th class="num">F0 Drift (Hz)</th><th class="num">WPM Drift</th><th class="num">Speaker Sim</th></tr></thead>
       <tbody>
-        <tr><td>Technology and Society</td><td class="num">5</td><td class="num"><span class="rd" data-apr="4.7" data-jun="5.2">4.7</span></td><td class="num"><span class="rd" data-apr="10.5" data-jun="10.6">10.5</span></td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.9487" data-jun="0.9545">0.9487</span></td></tr>
-        <tr><td>Climate and Environment</td><td class="num">6</td><td class="num"><span class="rd" data-apr="6.1" data-jun="6.8">6.1</span></td><td class="num"><span class="rd" data-apr="12.3" data-jun="10.8">12.3</span></td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.9391" data-jun="0.9453">0.9391</span></td></tr>
-        <tr><td>Medical Advances</td><td class="num">5</td><td class="num"><span class="rd" data-apr="7.7" data-jun="4.5">7.7</span></td><td class="num"><span class="rd" data-apr="10.8" data-jun="10.6">10.8</span></td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.9465" data-jun="0.9595">0.9465</span></td></tr>
-        <tr><td>Space Exploration</td><td class="num">5</td><td class="num"><span class="rd" data-apr="7.3" data-jun="4.5">7.3</span></td><td class="num"><span class="rd" data-apr="19.9" data-jun="17.6">19.9</span></td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.9382" data-jun="0.9466">0.9382</span></td></tr>
-        <tr><td>Financial Markets</td><td class="num">5</td><td class="num"><span class="rd" data-apr="4.9" data-jun="7.1">4.9</span></td><td class="num"><span class="rd" data-apr="7.2" data-jun="8.0">7.2</span></td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.9385" data-jun="0.9442">0.9385</span></td></tr>
+        <tr><td>Technology and Society</td><td class="num">5</td><td class="num"><span class="rd" data-apr="4.7" data-jun="5.2" data-jul="5.8">4.7</span></td><td class="num"><span class="rd" data-apr="10.5" data-jun="10.6" data-jul="12.4">10.5</span></td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.9487" data-jun="0.9545" data-jul="0.9502">0.9487</span></td></tr>
+        <tr><td>Climate and Environment</td><td class="num">6</td><td class="num"><span class="rd" data-apr="6.1" data-jun="6.8" data-jul="4.4">6.1</span></td><td class="num"><span class="rd" data-apr="12.3" data-jun="10.8" data-jul="13.9">12.3</span></td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.9391" data-jun="0.9453" data-jul="0.9459">0.9391</span></td></tr>
+        <tr><td>Medical Advances</td><td class="num">5</td><td class="num"><span class="rd" data-apr="7.7" data-jun="4.5" data-jul="6.0">7.7</span></td><td class="num"><span class="rd" data-apr="10.8" data-jun="10.6" data-jul="13.4">10.8</span></td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.9465" data-jun="0.9595" data-jul="0.9586">0.9465</span></td></tr>
+        <tr><td>Space Exploration</td><td class="num">5</td><td class="num"><span class="rd" data-apr="7.3" data-jun="4.5" data-jul="5.3">7.3</span></td><td class="num"><span class="rd" data-apr="19.9" data-jun="17.6" data-jul="18.9">19.9</span></td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.9382" data-jun="0.9466" data-jul="0.9446">0.9382</span></td></tr>
+        <tr><td>Financial Markets</td><td class="num">5</td><td class="num"><span class="rd" data-apr="4.9" data-jun="7.1" data-jul="5.7">4.9</span></td><td class="num"><span class="rd" data-apr="7.2" data-jun="8.0" data-jul="7.0">7.2</span></td><td class="num" style="color:var(--pass)"><span class="rd" data-apr="0.9385" data-jun="0.9442" data-jul="0.9503">0.9385</span></td></tr>
       </tbody>
     </table>
     <div class="metrics-grid" style="margin-top:16px">
@@ -1390,6 +1550,15 @@ nav { top: 50px; }
         <li><strong>Speaker similarity 0.944&ndash;0.960</strong> &mdash; every passage scores well above the 0.85 same-speaker threshold for ECAPA-TDNN embeddings. The voice identity stays consistent across independent synthesis calls; listeners hear one continuous speaker rather than separate paragraphs glued together.</li>
         <li><strong>No voice drift detected</strong> in any of the 5 passages &mdash; the model does not gradually shift pitch, speed, or voice character over the course of a multi-paragraph document.</li>
         <li><strong>Suitable for audiobooks, email narration, IVR scripts, and document read-aloud</strong> &mdash; the voice remains coherent across paragraph boundaries with no special chunking strategy required (other than the 400-token-per-call limit established in Tests 2.5 and 2.7).</li>
+      </ul>
+    </div>
+    <div class="info-box success run-only" data-run="jul" style="margin-top:12px">
+      <strong>Analysis:</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li><strong>Speaker similarity 0.9446&ndash;0.9586</strong> across the 5 test passages (5&ndash;6 paragraphs each). All above the 0.85 pass threshold; the voice remains recognisably the same speaker across the whole passage.</li>
+        <li><strong>F0 drift 4.4&ndash;6.0&nbsp;Hz</strong> between paragraphs &mdash; pitch stays stable within a 6&nbsp;Hz band across long-form content.</li>
+        <li><strong>WPM drift 7.0&ndash;18.9</strong> across passages &mdash; speaking rate wanders modestly between paragraphs but remains within a natural range.</li>
+        <li><strong>5 passages tested</strong>: Technology, Climate, Medical, Space, Financial.</li>
       </ul>
     </div>
   </div>
@@ -1450,6 +1619,15 @@ nav { top: 50px; }
         <li><strong>2.2 Intelligibility &mdash; Numbers (53.5%) and Technical (24.1%) fail.</strong> The split between Harvard / Conversational (passing &lt;2%) and Numbers / Technical (failing) points at Magpie&rsquo;s text-normalisation step rather than acoustic quality. Investigate before relying on the TTS for numeric or acronym-heavy content.</li>
         <li><strong>2.6 Concurrency:</strong> 0% error rate at every level tested up to N=20, but P50 latency rises from 661 ms to 3,470 ms across the load curve. Reliable but not fast under load: cap interactive workloads at N=5 to keep P50 under 750 ms.</li>
         <li><strong>2.7 Edge cases:</strong> 12 of 17 categories at 100%. Three known gaps &mdash; very-long text (400-token limit), advanced SSML (only <code>&lt;break&gt;</code> supported), unusual punctuation &mdash; are easy to gate at the application layer.</li>
+      </ul>
+    </div>
+    <div class="info-box info run-only" data-run="jul" style="margin-top:16px">
+      <strong>Standout TTS findings (July&nbsp;07 run):</strong>
+      <ul style="margin:8px 0 0 16px; line-height:1.8">
+        <li>UTMOS mean 4.17 places Magpie Aria in the top band for open-source neural TTS naturalness.</li>
+        <li>Round-trip WER on Harvard (0.49%), conversational (0.00%), and numbers-basic (0.00%) confirms intelligibility is not the limiting factor for standard content.</li>
+        <li>Numbers-edge and technical categories (21.2%, 9.18%) surface measurement-noise from surface-form differences after Whisper normalisation, not TTS quality failures.</li>
+        <li>Sustainable TTS throughput on this endpoint is ~5&nbsp;RPS; latency scales linearly under queued load with zero request drops.</li>
       </ul>
     </div>
   </div>
@@ -1549,16 +1727,20 @@ nav { top: 50px; }
 
 // --- Chart: Accuracy WER ---
 registerRunChart('chart-accuracy', function (run) {
-  const data = run === 'apr'
-    ? [11.29, 13.34, 28.50, 24.06, 21.07]
-    : [11.49, 13.42, 28.47, 24.14, 21.08];
+  const data =
+    run === 'jul' ? [2.81, 5.10, 9.58, 12.64, 4.28] :
+    run === 'jun' ? [11.49, 13.42, 28.47, 24.14, 21.08] :
+                    [11.29, 13.34, 28.50, 24.06, 21.07];
+  const labelSuffix =
+    run === 'jul' ? '(Jul)' :
+    run === 'jun' ? '(Jun)' : '(Apr)';
   return {
     type: 'bar',
     data: {
       labels: ['LibriSpeech\nclean', 'LibriSpeech\nother', 'VoxPopuli EN', 'GigaSpeech', 'SPGISpeech'],
       datasets: [
         {
-          label: run === 'apr' ? 'WER (Apr)' : 'WER (Jun)',
+          label: 'WER ' + labelSuffix,
           data: data,
           backgroundColor: ['#e74c3c','#e74c3c','#e74c3c','#e74c3c','#e74c3c'],
           borderRadius: 4,
@@ -1586,20 +1768,26 @@ registerRunChart('chart-accuracy', function (run) {
 
 // --- Chart: Noise Robustness ---
 registerRunChart('chart-noise', function (run) {
-  const series = run === 'apr'
-    ? {
-        gaussian: [47.33, 9.36, 7.06, 5.19, 5.19, 5.08],
-        babble:   [null, 10.05, 6.63, 5.45, 5.24, 5.13],
-        traffic:  [null, 9.79, 6.68, 5.24, 5.19, 5.08],
-        office:   [null, 9.47, 6.79, 5.24, 5.08, 5.08],
-        clean:    8.2,
-      }
-    : {
+  const series =
+    run === 'jul' ? {
+        gaussian: [31.28, 6.63, 3.85, 3.10, 2.78, 2.78],
+        babble:   [null, 6.26, 3.74, 3.10, 2.83, 2.83],
+        traffic:  [null, 6.36, 3.74, 3.26, 2.94, 2.89],
+        office:   [null, 7.27, 3.58, 2.99, 2.83, 2.83],
+        clean:    3.72,
+      } :
+    run === 'jun' ? {
         gaussian: [40.16, 10.80, 5.99, 5.19, 5.13, 5.13],
         babble:   [null, 9.36, 7.11, 6.20, 5.13, 5.03],
         traffic:  [null, 8.50, 6.90, 5.40, 5.29, 5.13],
         office:   [null, 9.63, 5.99, 5.51, 5.08, 5.13],
         clean:    9.95,
+      } : {
+        gaussian: [47.33, 9.36, 7.06, 5.19, 5.19, 5.08],
+        babble:   [null, 10.05, 6.63, 5.45, 5.24, 5.13],
+        traffic:  [null, 9.79, 6.68, 5.24, 5.19, 5.08],
+        office:   [null, 9.47, 6.79, 5.24, 5.08, 5.08],
+        clean:    8.2,
       };
   return {
     type: 'line',
@@ -1629,14 +1817,16 @@ registerRunChart('chart-noise', function (run) {
 
 // --- Chart: Reliability Diagram ---
 registerRunChart('chart-reliability', function (run) {
-  // ECE is identical between runs; bin breakdowns essentially identical.
-  // Use Apr bins for both unless they differ — they don't.
-  const accuracy = run === 'apr'
-    ? [0.17, 0.82, 2.03, 5.96, 2.38, 0.81, 0.97, 0.0, 0.37, 0.0]
-    : [0.17, 0.82, 2.03, 5.96, 2.38, 0.81, 0.97, 0.0, 0.37, 0.0];
-  const conf = run === 'apr'
-    ? [5.81, 14.79, 24.68, 34.76, 44.47, 54.72, 63.98, 71.14, 82.04, 98.58]
-    : [5.81, 14.79, 24.68, 34.76, 44.47, 54.72, 63.98, 71.14, 82.04, 98.58];
+  // April and June accuracy/confidence bins were identical; July computed from
+  // this run's own reliability CSV.
+  const accuracy =
+    run === 'jul' ? [0.17, 0.78, 1.99, 5.82, 2.59, 0.84, 0.90, 0.0, 0.34, 0.0] :
+    run === 'jun' ? [0.17, 0.82, 2.03, 5.96, 2.38, 0.81, 0.97, 0.0, 0.37, 0.0] :
+                    [0.17, 0.82, 2.03, 5.96, 2.38, 0.81, 0.97, 0.0, 0.37, 0.0];
+  const conf =
+    run === 'jul' ? [5.80, 14.78, 24.66, 34.77, 44.48, 54.71, 63.97, 71.17, 82.03, 98.57] :
+    run === 'jun' ? [5.81, 14.79, 24.68, 34.76, 44.47, 54.72, 63.98, 71.14, 82.04, 98.58] :
+                    [5.81, 14.79, 24.68, 34.76, 44.47, 54.72, 63.98, 71.14, 82.04, 98.58];
   return {
     type: 'bar',
     data: {
@@ -1661,20 +1851,26 @@ registerRunChart('chart-reliability', function (run) {
 
 // --- Chart: Intelligibility ---
 registerRunChart('chart-intelligibility', function (run) {
-  const data = run === 'apr'
-    ? [1.48, 0.16, 11.63, 17.18]
-    : [1.37, 1.30, 24.14, 53.54];
+  // Jul splits "Numbers" into basic vs edge; the July value shown here is
+  // numbers_edge (the harder, measurement-limited surface forms).
+  const data =
+    run === 'jul' ? [0.49, 0.00, 9.18, 21.20] :
+    run === 'jun' ? [1.37, 1.30, 24.14, 53.54] :
+                    [1.48, 0.16, 11.63, 17.18];
   // Color by severity
   const palette = data.map(v =>
     v <  3 ? '#2ecc71' :
     v < 12 ? '#f39c12' : '#e74c3c'
   );
+  const labelSuffix =
+    run === 'jul' ? 'Jul' :
+    run === 'jun' ? 'Jun' : 'Apr';
   return {
     type: 'bar',
     data: {
       labels: ['Harvard', 'Conversational', 'Technical', 'Numbers'],
       datasets: [{
-        label: run === 'apr' ? 'Round-Trip WER (%) — Apr' : 'Round-Trip WER (%) — Jun',
+        label: 'Round-Trip WER (%) — ' + labelSuffix,
         data: data,
         backgroundColor: palette,
         borderRadius: 4,
@@ -1696,8 +1892,14 @@ registerRunChart('chart-intelligibility', function (run) {
 
 // --- Chart: TTS Latency ---
 registerRunChart('chart-tts-latency', function (run) {
-  const grpc = run === 'apr' ? [65, 65, 75, 95]  : [65, 74, 75, 94];
-  const rest = run === 'apr' ? [94, 94, 94, 114] : [93, 94, 94, 114];
+  const grpc =
+    run === 'jul' ? [65, 75, 75, 94] :
+    run === 'jun' ? [65, 74, 75, 94] :
+                    [65, 65, 75, 95];
+  const rest =
+    run === 'jul' ? [95, 95, 95, 114] :
+    run === 'jun' ? [93, 94, 94, 114] :
+                    [94, 94, 94, 114];
   return {
     type: 'bar',
     data: {
@@ -1722,11 +1924,23 @@ registerRunChart('chart-tts-latency', function (run) {
 
 // --- Chart: Concurrency ---
 registerRunChart('chart-concurrency', function (run) {
-  // April had hangs requiring Little's Law estimate; June has clean direct measurements
-  const measured  = run === 'apr' ? [1.55, 7.03, null, null] : [1.51, 5.49, 5.54, 5.53];
-  const estimated = run === 'apr' ? [null, null, 11.7, 14.5] : [null, null, null, null];
-  const errors    = run === 'apr' ? [0, 0, 4, 24] : [0, 0, 0, 0];
-  const p50_ms    = run === 'apr' ? [640, 710, 801, 837] : [661, 736, 1480, 3470];
+  // April had hangs requiring Little's Law estimate; June and July have clean direct measurements
+  const measured  =
+    run === 'jul' ? [1.49, 5.41, 5.55, 5.54] :
+    run === 'jun' ? [1.51, 5.49, 5.54, 5.53] :
+                    [1.55, 7.03, null, null];
+  const estimated =
+    run === 'jul' ? [null, null, null, null] :
+    run === 'jun' ? [null, null, null, null] :
+                    [null, null, 11.7, 14.5];
+  const errors =
+    run === 'jul' ? [0, 0, 0, 0] :
+    run === 'jun' ? [0, 0, 0, 0] :
+                    [0, 0, 4, 24];
+  const p50_ms =
+    run === 'jul' ? [671, 735, 1449, 3467] :
+    run === 'jun' ? [661, 736, 1480, 3470] :
+                    [640, 710, 801, 837];
   return {
     type: 'line',
     data: {

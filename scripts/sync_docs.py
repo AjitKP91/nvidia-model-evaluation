@@ -441,8 +441,12 @@ CARD_RE = re.compile(
 )
 ROW_RE = re.compile(r"<tr>(.*?)</tr>", re.DOTALL)
 TD_TEXT_RE = re.compile(r"<td[^>]*>(.*?)</td>", re.DOTALL)
+# Cell regex: `data-apr` and `data-jun` are required (present since April/June
+# published), `data-jul` is optional so unsynced cells still match. Groups:
+#   (1) apr value  (2) jun value  (3) jul value or "" if absent  (4) display text
 RD_RE = re.compile(
-    r'<span\s+class="rd[^"]*"\s+data-apr="([^"]*)"\s+data-jun="([^"]*)"[^>]*>'
+    r'<span\s+class="rd[^"]*"\s+data-apr="([^"]*)"\s+data-jun="([^"]*)"'
+    r'(?:\s+data-jul="([^"]*)")?[^>]*>'
     r"(.*?)</span>",
     re.DOTALL,
 )
@@ -514,19 +518,26 @@ def apply_numeric_specs(
                                             "card_id": card_id, **s})
                         continue
                     rd_m = rd_iter[col]
-                apr_val, jun_val, _ = rd_m.group(1), rd_m.group(2), rd_m.group(3)
-                old = jun_val if run == "jun" else apr_val
+                apr_val = rd_m.group(1)
+                jun_val = rd_m.group(2)
+                jul_val = rd_m.group(3) or ""  # optional — "" if cell not yet Jul-synced
+                old = {"apr": apr_val, "jun": jun_val, "jul": jul_val}[run]
                 new_val = s["value"]
                 if old != new_val:
                     applied.append((card_id, s["row_key"], s["col"], old, new_val))
+                # Preserve non-active columns verbatim. Only the active run's
+                # value is rewritten — Apr and Jun cells stay untouched when
+                # syncing --run jul.
                 new_apr = new_val if run == "apr" else apr_val
                 new_jun = new_val if run == "jun" else jun_val
+                new_jul = new_val if run == "jul" else jul_val
                 disp = new_apr
                 cls_match = re.match(r'<span\s+class="(rd[^"]*)"', rd_m.group(0))
                 cls = cls_match.group(1) if cls_match else "rd"
                 new_span = (
                     f'<span class="{cls}" '
-                    f'data-apr="{new_apr}" data-jun="{new_jun}">{disp}</span>'
+                    f'data-apr="{new_apr}" data-jun="{new_jun}" '
+                    f'data-jul="{new_jul}">{disp}</span>'
                 )
                 replacements.append((rd_m.start(), rd_m.end(), new_span))
             new_inner = inner
@@ -547,19 +558,23 @@ def apply_numeric_specs(
                     missing.append({"reason": "no-rd-in-card",
                                     "card_id": card_id, **s})
                     return m.group(0)
-                apr_val, jun_val, _ = rd_m.group(1), rd_m.group(2), rd_m.group(3)
-                old = jun_val if run == "jun" else apr_val
+                apr_val = rd_m.group(1)
+                jun_val = rd_m.group(2)
+                jul_val = rd_m.group(3) or ""
+                old = {"apr": apr_val, "jun": jun_val, "jul": jul_val}[run]
                 new_val = s["value"]
                 if old != new_val:
                     applied.append((card_id, ("card", label), 0, old, new_val))
                 new_apr = new_val if run == "apr" else apr_val
                 new_jun = new_val if run == "jun" else jun_val
+                new_jul = new_val if run == "jul" else jul_val
                 disp = new_apr
                 cls_match = re.match(r'<span\s+class="(rd[^"]*)"', rd_m.group(0))
                 cls = cls_match.group(1) if cls_match else "rd"
                 new_span = (
                     f'<span class="{cls}" '
-                    f'data-apr="{new_apr}" data-jun="{new_jun}">{disp}</span>'
+                    f'data-apr="{new_apr}" data-jun="{new_jun}" '
+                    f'data-jul="{new_jul}">{disp}</span>'
                 )
                 new_value_html = (
                     value_html[: rd_m.start()] + new_span + value_html[rd_m.end():]
@@ -575,22 +590,29 @@ def apply_numeric_specs(
             simple = re.compile(
                 r"(<strong>\s*" + re.escape(label) + r":\s*"
                 r'<span\s+class="(rd[^"]*)"\s+'
-                r'data-apr="([^"]*)"\s+data-jun="([^"]*)"[^>]*>)([^<]*)(</span>)',
+                r'data-apr="([^"]*)"\s+data-jun="([^"]*)"'
+                r'(?:\s+data-jul="([^"]*)")?[^>]*>)([^<]*)(</span>)',
                 re.DOTALL,
             )
 
             def repl(mm, _s=s, _label=label):
-                _, cls, apr_val, jun_val, _disp, _ = mm.group(1, 2, 3, 4, 5, 6)
-                old = jun_val if run == "jun" else apr_val
+                _, cls, apr_val, jun_val, jul_val_maybe, _disp, _ = (
+                    mm.group(1), mm.group(2), mm.group(3), mm.group(4),
+                    mm.group(5), mm.group(6), mm.group(7),
+                )
+                jul_val = jul_val_maybe or ""
+                old = {"apr": apr_val, "jun": jun_val, "jul": jul_val}[run]
                 new_val = _s["value"]
                 if old != new_val:
                     applied.append((card_id, ("strong", _label), 0, old, new_val))
                 new_apr = new_val if run == "apr" else apr_val
                 new_jun = new_val if run == "jun" else jun_val
+                new_jul = new_val if run == "jul" else jul_val
                 disp = new_apr
                 return (
                     f'<strong>{_label}: <span class="{cls}" '
-                    f'data-apr="{new_apr}" data-jun="{new_jun}">{disp}</span>'
+                    f'data-apr="{new_apr}" data-jun="{new_jun}" '
+                    f'data-jul="{new_jul}">{disp}</span>'
                 )
             body = simple.sub(repl, body)
         return body
@@ -959,9 +981,14 @@ Constraints:
 
 
 def _build_prompt(test: dict, april_box: str, ctx: dict, run: str) -> str:
+    run_labels = {
+        "apr": "April baseline",
+        "jun": "June re-evaluation",
+        "jul": "July re-evaluation",
+    }
     return PROMPT_TEMPLATE.format(
         run=run,
-        run_label="June re-evaluation" if run == "jun" else "April baseline",
+        run_label=run_labels.get(run, "April baseline"),
         test_label=test["label"], card_id=test["card_id"], tone=test["tone"],
         april_box=april_box.strip(),
         csv=ctx["csv"] or "(no CSV data found)",
@@ -1346,7 +1373,7 @@ def main() -> int:
         description=__doc__.split("\n\n")[0],
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    p.add_argument("--run", choices=["apr", "jun"], required=True,
+    p.add_argument("--run", choices=["apr", "jun", "jul"], required=True,
                    help="Which run column to update")
     p.add_argument("--results-dir", required=True,
                    help="Path to results/<run-id>/ containing the summary CSVs")

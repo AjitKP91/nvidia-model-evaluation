@@ -435,8 +435,19 @@ def build_numeric_specs(results_dir: Path) -> list[dict]:
 # ── HTML patcher (numeric cells) ─────────────────────────────────────────
 
 
+# Card body regex.
+#
+# Terminated by a lookahead (not a literal closing </div></div>) because some
+# cards contain nested `<div class="info-tip-content">…</div></div>` structures
+# for tooltips, which trip up a naive `</div></div>` non-greedy match — the
+# match closes at the tooltip's inner nesting instead of the card's outer one,
+# truncating the body and causing metric-cards further down to be skipped by
+# `patch_metric_card`. We instead consume until the next card / section header
+# / footer / script / </body>, which reliably delimits each card.
 CARD_RE = re.compile(
-    r'<div class="card"[^>]*\sid="([^"]+)"[^>]*>(.*?)</div>\s*</div>',
+    r'<div class="card"[^>]*\sid="([^"]+)"[^>]*>'
+    r'(.*?)'
+    r'(?=<div class="card"[^>]*\sid=|<h2 class="section-title"|<footer|<script|</body>)',
     re.DOTALL,
 )
 ROW_RE = re.compile(r"<tr>(.*?)</tr>", re.DOTALL)

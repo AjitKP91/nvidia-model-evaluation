@@ -1,0 +1,79 @@
+{
+  "connectivity": {
+    "grpc_stt": {
+      "status": "error",
+      "error": "<_InactiveRpcError of RPC that terminated with:\n\tstatus = StatusCode.UNAVAILABLE\n\tdetails = \"no healthy upstream\"\n\tdebug_error_string = \"UNKNOWN:Error received from peer  {grpc_status:14, grpc_message:\"no healthy upstream\"}\"\n>"
+    },
+    "grpc_tts": {
+      "status": "ok",
+      "latency_s": 0.5527479820884764,
+      "audio_len_bytes": 88064
+    },
+    "rest_stt": {
+      "status": "error",
+      "error": "503 Server Error: Service Unavailable for url: https://nim-parakeet.ai.preprod-eu-cc.eu-central-1.aws.ml.hana.ondemand.com/v1/audio/transcriptions"
+    },
+    "rest_tts": {
+      "status": "ok",
+      "latency_s": 0.2359670288860798
+    },
+    "network_rtt_s": 0.02696061786264181
+  },
+  "stt_schema": {
+    "phase": "stt_schema",
+    "error": "<_InactiveRpcError of RPC that terminated with:\n\tstatus = StatusCode.UNAVAILABLE\n\tdetails = \"no healthy upstream\"\n\tdebug_error_string = \"UNKNOWN:Error received from peer  {grpc_message:\"no healthy upstream\", grpc_status:14}\"\n>",
+    "error_type": "_InactiveRpcError",
+    "traceback": "Traceback (most recent call last):\n  File \"/home/akpsapadmin/nvidia-model-evaluation/eval/phase0/discovery.py\", line 377, in _run_subphase\n    results[name] = fn(*args, **kwargs)\n  File \"/home/akpsapadmin/nvidia-model-evaluation/eval/phase0/discovery.py\", line 113, in discover_stt_schema\n    result = stt_client.recognize_batch(audio_bytes, sr)\n  File \"/home/akpsapadmin/nvidia-model-evaluation/eval/utils.py\", line 147, in wrapper\n    return func(*args, **kwargs)\n  File \"/home/akpsapadmin/nvidia-model-evaluation/eval/stt/client.py\", line 60, in recognize_batch\n    response = self.asr_service.offline_recognize(audio_bytes, config)\n  File \"/home/akpsapadmin/nvidia-model-evaluation/.venv/lib/python3.10/site-packages/riva/client/asr.py\", line 485, in offline_recognize\n    return func(request, metadata=self.auth.get_auth_metadata())\n  File \"/home/akpsapadmin/nvidia-model-evaluation/.venv/lib/python3.10/site-packages/grpc/_channel.py\", line 1159, in __call__\n    return _end_unary_response_blocking(state, call, False, None)\n  File \"/home/akpsapadmin/nvidia-model-evaluation/.venv/lib/python3.10/site-packages/grpc/_channel.py\", line 990, in _end_unary_response_blocking\n    raise _InactiveRpcError(state)  # pytype: disable=not-instantiable\ngrpc._channel._InactiveRpcError: <_InactiveRpcError of RPC that terminated with:\n\tstatus = StatusCode.UNAVAILABLE\n\tdetails = \"no healthy upstream\"\n\tdebug_error_string = \"UNKNOWN:Error received from peer  {grpc_message:\"no healthy upstream\", grpc_status:14}\"\n>\n"
+  },
+  "stt_streaming_schema": {
+    "phase": "stt_streaming_schema",
+    "error": "<_MultiThreadedRendezvous of RPC that terminated with:\n\tstatus = StatusCode.UNAVAILABLE\n\tdetails = \"no healthy upstream\"\n\tdebug_error_string = \"UNKNOWN:Error received from peer  {grpc_status:14, grpc_message:\"no healthy upstream\"}\"\n>",
+    "error_type": "_MultiThreadedRendezvous",
+    "traceback": "Traceback (most recent call last):\n  File \"/home/akpsapadmin/nvidia-model-evaluation/eval/phase0/discovery.py\", line 377, in _run_subphase\n    results[name] = fn(*args, **kwargs)\n  File \"/home/akpsapadmin/nvidia-model-evaluation/eval/phase0/discovery.py\", line 137, in discover_stt_streaming_schema\n    result = stt_client.stream_recognize(str(sine_path))\n  File \"/home/akpsapadmin/nvidia-model-evaluation/eval/utils.py\", line 147, in wrapper\n    return func(*args, **kwargs)\n  File \"/home/akpsapadmin/nvidia-model-evaluation/eval/stt/client.py\", line 217, in stream_recognize\n    for response in responses:\n  File \"/home/akpsapadmin/nvidia-model-evaluation/.venv/lib/python3.10/site-packages/riva/client/asr.py\", line 443, in streaming_response_generator\n    for response in self.stub.StreamingRecognize(generator, metadata=self.auth.get_auth_metadata()):\n  File \"/home/akpsapadmin/nvidia-model-evaluation/.venv/lib/python3.10/site-packages/grpc/_channel.py\", line 538, in __next__\n    return self._next()\n  File \"/home/akpsapadmin/nvidia-model-evaluation/.venv/lib/python3.10/site-packages/grpc/_channel.py\", line 956, in _next\n    raise self\ngrpc._channel._MultiThreadedRendezvous: <_MultiThreadedRendezvous of RPC that terminated with:\n\tstatus = StatusCode.UNAVAILABLE\n\tdetails = \"no healthy upstream\"\n\tdebug_error_string = \"UNKNOWN:Error received from peer  {grpc_status:14, grpc_message:\"no healthy upstream\"}\"\n>\n"
+  },
+  "tts_schema": {
+    "batch_audio_bytes": 71680,
+    "batch_audio_duration_s": 1.6253968253968254,
+    "batch_latency_s": 0.18752920581027865,
+    "sample_rate": 22050,
+    "stream_ttfb": 0.06321177817881107,
+    "stream_n_chunks": 15,
+    "stream_audio_duration_s": 1.6253968253968254,
+    "stream_total_latency_s": 0.17717682104557753,
+    "sample_saved": "results/run-07-07-26/riva/phase0/tts_sample.wav"
+  },
+  "parameters": {
+    "stt_sample_rates": {
+      "8000": "error: <_InactiveRpcError of RPC that terminated with:\n\tstatus = StatusCode.UNAVAILABLE\n\tdetails = \"no healthy upstream\"\n\tdebug_error_string = \"UNKNOWN:Error received from peer  {grpc_message:\"no healthy upstream\", grpc_status:14}\"\n>",
+      "16000": "error: <_InactiveRpcError of RPC that terminated with:\n\tstatus = StatusCode.UNAVAILABLE\n\tdetails = \"no healthy upstream\"\n\tdebug_error_string = \"UNKNOWN:Error received from peer  {grpc_status:14, grpc_message:\"no healthy upstream\"}\"\n>",
+      "22050": "error: <_InactiveRpcError of RPC that terminated with:\n\tstatus = StatusCode.UNAVAILABLE\n\tdetails = \"no healthy upstream\"\n\tdebug_error_string = \"UNKNOWN:Error received from peer  {grpc_message:\"no healthy upstream\", grpc_status:14}\"\n>",
+      "44100": "error: <_InactiveRpcError of RPC that terminated with:\n\tstatus = StatusCode.UNAVAILABLE\n\tdetails = \"no healthy upstream\"\n\tdebug_error_string = \"UNKNOWN:Error received from peer  {grpc_message:\"no healthy upstream\", grpc_status:14}\"\n>",
+      "48000": "error: <_InactiveRpcError of RPC that terminated with:\n\tstatus = StatusCode.UNAVAILABLE\n\tdetails = \"no healthy upstream\"\n\tdebug_error_string = \"UNKNOWN:Error received from peer  {grpc_status:14, grpc_message:\"no healthy upstream\"}\"\n>"
+    },
+    "tts_ssml": "supported"
+  },
+  "smoke_tests": {
+    "stt_10s": {
+      "status": "fail",
+      "error": "<_InactiveRpcError of RPC that terminated with:\n\tstatus = StatusCode.UNAVAILABLE\n\tdetails = \"no healthy upstream\"\n\tdebug_error_string = \"UNKNOWN:Error received from peer ipv4:130.214.133.214:443 {grpc_message:\"no healthy upstream\", grpc_status:14}\"\n>"
+    },
+    "stt_60s": {
+      "status": "fail",
+      "error": "<_InactiveRpcError of RPC that terminated with:\n\tstatus = StatusCode.UNAVAILABLE\n\tdetails = \"no healthy upstream\"\n\tdebug_error_string = \"UNKNOWN:Error received from peer ipv4:130.214.133.214:443 {grpc_message:\"no healthy upstream\", grpc_status:14}\"\n>"
+    },
+    "tts_rest": {
+      "status": "pass",
+      "audio_duration_s": 4.829750566893424
+    },
+    "tts_grpc_stream": {
+      "status": "pass",
+      "ttfb_s": 0.0652530980296433
+    }
+  },
+  "cold_start": {
+    "phase": "cold_start",
+    "error": "<_InactiveRpcError of RPC that terminated with:\n\tstatus = StatusCode.UNAVAILABLE\n\tdetails = \"no healthy upstream\"\n\tdebug_error_string = \"UNKNOWN:Error received from peer ipv4:130.214.133.214:443 {grpc_message:\"no healthy upstream\", grpc_status:14}\"\n>",
+    "error_type": "_InactiveRpcError",
+    "traceback": "Traceback (most recent call last):\n  File \"/home/akpsapadmin/nvidia-model-evaluation/eval/phase0/discovery.py\", line 377, in _run_subphase\n    results[name] = fn(*args, **kwargs)\n  File \"/home/akpsapadmin/nvidia-model-evaluation/eval/phase0/discovery.py\", line 311, in cold_start_test\n    stt_client.recognize_batch(audio_bytes, sr)\n  File \"/home/akpsapadmin/nvidia-model-evaluation/eval/utils.py\", line 147, in wrapper\n    return func(*args, **kwargs)\n  File \"/home/akpsapadmin/nvidia-model-evaluation/eval/stt/client.py\", line 60, in recognize_batch\n    response = self.asr_service.offline_recognize(audio_bytes, config)\n  File \"/home/akpsapadmin/nvidia-model-evaluation/.venv/lib/python3.10/site-packages/riva/client/asr.py\", line 485, in offline_recognize\n    return func(request, metadata=self.auth.get_auth_metadata())\n  File \"/home/akpsapadmin/nvidia-model-evaluation/.venv/lib/python3.10/site-packages/grpc/_channel.py\", line 1159, in __call__\n    return _end_unary_response_blocking(state, call, False, None)\n  File \"/home/akpsapadmin/nvidia-model-evaluation/.venv/lib/python3.10/site-packages/grpc/_channel.py\", line 990, in _end_unary_response_blocking\n    raise _InactiveRpcError(state)  # pytype: disable=not-instantiable\ngrpc._channel._InactiveRpcError: <_InactiveRpcError of RPC that terminated with:\n\tstatus = StatusCode.UNAVAILABLE\n\tdetails = \"no healthy upstream\"\n\tdebug_error_string = \"UNKNOWN:Error received from peer ipv4:130.214.133.214:443 {grpc_message:\"no healthy upstream\", grpc_status:14}\"\n>\n"
+  }
+}

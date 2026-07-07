@@ -1,0 +1,60 @@
+{"id": "longform_0", "duration_s": 6.119875, "full_wer": 0.07692307692307693, "chunked_wer": 0.07692307692307693, "wer_ratio": 1.0, "hallucination_rate": 0.5384615384615384, "repetition_rate": 0.0, "elapsed_s": 0.14221801282837987}
+{"id": "longform_1", "duration_s": 19.38, "full_wer": 0.0, "chunked_wer": 0.0, "wer_ratio": null, "hallucination_rate": 0.5476190476190477, "repetition_rate": 0.0, "elapsed_s": 0.09884075168520212}
+{"id": "longform_2", "duration_s": 5.06, "full_wer": 0.06666666666666667, "chunked_wer": 0.06666666666666667, "wer_ratio": 1.0, "hallucination_rate": 0.9285714285714286, "repetition_rate": 0.0, "elapsed_s": 0.04948111902922392}
+{"id": "longform_3", "duration_s": 4.5599375, "full_wer": 0.0, "chunked_wer": 0.0, "wer_ratio": null, "hallucination_rate": 0.0, "repetition_rate": 0.0, "elapsed_s": 0.03493916802108288}
+{"id": "longform_4", "duration_s": 21.18, "full_wer": 0.13043478260869565, "chunked_wer": 0.13043478260869565, "wer_ratio": 1.0, "hallucination_rate": 0.7446808510638298, "repetition_rate": 0.0, "elapsed_s": 0.09084508800879121}
+{"id": "longform_5", "duration_s": 15.977625, "full_wer": 0.11904761904761904, "chunked_wer": 0.11904761904761904, "wer_ratio": 1.0, "hallucination_rate": 0.375, "repetition_rate": 0.0, "elapsed_s": 0.08146079676225781}
+{"id": "longform_6", "duration_s": 5.9790625, "full_wer": 0.16666666666666666, "chunked_wer": 0.16666666666666666, "wer_ratio": 1.0, "hallucination_rate": 0.7647058823529411, "repetition_rate": 0.0, "elapsed_s": 0.04717493895441294}
+{"id": "longform_7", "duration_s": 11.1799375, "full_wer": 0.0, "chunked_wer": 0.0, "wer_ratio": null, "hallucination_rate": 0.34615384615384615, "repetition_rate": 0.0, "elapsed_s": 0.06810505036264658}
+{"id": "longform_8", "duration_s": 1.059875, "full_wer": 0.0, "chunked_wer": 0.0, "wer_ratio": null, "hallucination_rate": 0.0, "repetition_rate": 0.0, "elapsed_s": 0.031762680038809776}
+{"id": "longform_9", "duration_s": 13.52, "full_wer": 0.0, "chunked_wer": 0.0, "wer_ratio": null, "hallucination_rate": 0.0, "repetition_rate": 0.0, "elapsed_s": 0.06925478996708989}
+{"id": "longform_10", "duration_s": 5.6994375, "full_wer": 0.0, "chunked_wer": 0.0, "wer_ratio": null, "hallucination_rate": 0.0, "repetition_rate": 0.0, "elapsed_s": 0.04938402818515897}
+{"id": "longform_11", "duration_s": 12.5190625, "full_wer": 0.06451612903225806, "chunked_wer": 0.06451612903225806, "wer_ratio": 1.0, "hallucination_rate": 0.6774193548387096, "repetition_rate": 0.0, "elapsed_s": 0.07136492524296045}
+{"id": "longform_12", "duration_s": 5.44, "full_wer": 0.0, "chunked_wer": 0.0, "wer_ratio": null, "hallucination_rate": 0.42857142857142855, "repetition_rate": 0.0, "elapsed_s": 0.04732844606041908}
+{"id": "longform_13", "duration_s": 8.28, "full_wer": 0.038461538461538464, "chunked_wer": 0.038461538461538464, "wer_ratio": 1.0, "hallucination_rate": 0.3076923076923077, "repetition_rate": 0.0, "elapsed_s": 0.05528054991737008}
+{"id": "longform_14", "duration_s": 2.399875, "full_wer": 0.0, "chunked_wer": 0.0, "wer_ratio": null, "hallucination_rate": 0.7777777777777778, "repetition_rate": 0.0, "elapsed_s": 0.03263499075546861}
+{"id": "longform_15", "duration_s": 9.94, "full_wer": 0.36, "chunked_wer": 0.36, "wer_ratio": 1.0, "hallucination_rate": 0.9047619047619048, "repetition_rate": 0.0, "elapsed_s": 0.060412473045289516}
+{"id": "longform_16", "duration_s": 7.7999375, "full_wer": 0.3333333333333333, "chunked_wer": 0.3333333333333333, "wer_ratio": 1.0, "hallucination_rate": 0.7586206896551724, "repetition_rate": 0.0, "elapsed_s": 0.05439401185140014}
+{"id": "longform_17", "duration_s": 2.5795625, "full_wer": 0.0, "chunked_wer": 0.0, "wer_ratio": null, "hallucination_rate": 0.0, "repetition_rate": 0.0, "elapsed_s": 0.033577864058315754}
+{"id": "longform_18", "duration_s": 13.11875, "full_wer": 0.19047619047619047, "chunked_wer": 0.19047619047619047, "wer_ratio": 1.0, "hallucination_rate": 0.6428571428571429, "repetition_rate": 0.0, "elapsed_s": 0.07510921312496066}
+{"id": "longform_19", "duration_s": 11.66, "full_wer": 0.02857142857142857, "chunked_wer": 0.02857142857142857, "wer_ratio": 1.0, "hallucination_rate": 0.5428571428571428, "repetition_rate": 0.0, "elapsed_s": 0.0687475330196321}
+{"id": "longform_20", "duration_s": 8.599875, "full_wer": 0.0, "chunked_wer": 0.0, "wer_ratio": null, "hallucination_rate": 0.0, "repetition_rate": 0.0, "elapsed_s": 0.05036609433591366}
+{"id": "longform_21", "duration_s": 5.28, "full_wer": 0.1, "chunked_wer": 0.1, "wer_ratio": 1.0, "hallucination_rate": 0.8181818181818182, "repetition_rate": 0.0, "elapsed_s": 0.04474654980003834}
+{"id": "longform_22", "duration_s": 12.2199375, "full_wer": 0.11764705882352941, "chunked_wer": 0.11764705882352941, "wer_ratio": 1.0, "hallucination_rate": 0.6129032258064516, "repetition_rate": 0.0, "elapsed_s": 0.06920063914731145}
+{"id": "longform_23", "duration_s": 9.6199375, "full_wer": 0.08571428571428572, "chunked_wer": 0.08571428571428572, "wer_ratio": 1.0, "hallucination_rate": 0.47058823529411764, "repetition_rate": 0.0, "elapsed_s": 0.06903271516785026}
+{"id": "longform_24", "duration_s": 6.779, "full_wer": 0.0, "chunked_wer": 0.0, "wer_ratio": null, "hallucination_rate": 0.4444444444444444, "repetition_rate": 0.0, "elapsed_s": 0.049599019810557365}
+{"id": "longform_25", "duration_s": 7.6190625, "full_wer": 0.0, "chunked_wer": 0.0, "wer_ratio": null, "hallucination_rate": 0.4090909090909091, "repetition_rate": 0.0, "elapsed_s": 0.05126584600657225}
+{"id": "longform_26", "duration_s": 8.4590625, "full_wer": 0.09523809523809523, "chunked_wer": 0.09523809523809523, "wer_ratio": 1.0, "hallucination_rate": 0.3333333333333333, "repetition_rate": 0.0, "elapsed_s": 0.053761019837111235}
+{"id": "longform_27", "duration_s": 8.7198125, "full_wer": 0.15, "chunked_wer": 0.15, "wer_ratio": 1.0, "hallucination_rate": 0.5, "repetition_rate": 0.0, "elapsed_s": 0.05426765792071819}
+{"id": "longform_28", "duration_s": 4.879125, "full_wer": 0.21428571428571427, "chunked_wer": 0.21428571428571427, "wer_ratio": 1.0, "hallucination_rate": 0.75, "repetition_rate": 0.0, "elapsed_s": 0.045846347231417894}
+{"id": "longform_29", "duration_s": 15.3375, "full_wer": 0.06451612903225806, "chunked_wer": 0.06451612903225806, "wer_ratio": 1.0, "hallucination_rate": 0.375, "repetition_rate": 0.0, "elapsed_s": 0.07989409705623984}
+{"id": "longform_30", "duration_s": 19.5784375, "full_wer": 0.05555555555555555, "chunked_wer": 0.05555555555555555, "wer_ratio": 1.0, "hallucination_rate": 0.5094339622641509, "repetition_rate": 0.0, "elapsed_s": 0.09218457993119955}
+{"id": "longform_31", "duration_s": 11.3799375, "full_wer": 0.13333333333333333, "chunked_wer": 0.13333333333333333, "wer_ratio": 1.0, "hallucination_rate": 0.5517241379310345, "repetition_rate": 0.0, "elapsed_s": 0.07129965210333467}
+{"id": "longform_32", "duration_s": 2.0998125, "full_wer": 0.0, "chunked_wer": 0.0, "wer_ratio": null, "hallucination_rate": 0.0, "repetition_rate": 0.0, "elapsed_s": 0.033080643974244595}
+{"id": "longform_33", "duration_s": 3.0596875, "full_wer": 0.0, "chunked_wer": 0.0, "wer_ratio": null, "hallucination_rate": 0.0, "repetition_rate": 0.0, "elapsed_s": 0.03399077383801341}
+{"id": "longform_34", "duration_s": 5.8400625, "full_wer": 0.3333333333333333, "chunked_wer": 0.3333333333333333, "wer_ratio": 1.0, "hallucination_rate": 1.0, "repetition_rate": 0.0, "elapsed_s": 0.04876867821440101}
+{"id": "longform_35", "duration_s": 1.279875, "full_wer": 0.0, "chunked_wer": 0.0, "wer_ratio": null, "hallucination_rate": 0.0, "repetition_rate": 0.0, "elapsed_s": 0.03069463511928916}
+{"id": "longform_36", "duration_s": 2.7396875, "full_wer": 0.3333333333333333, "chunked_wer": 0.3333333333333333, "wer_ratio": 1.0, "hallucination_rate": 1.0, "repetition_rate": 0.0, "elapsed_s": 0.033918220084160566}
+{"id": "longform_37", "duration_s": 6.0, "full_wer": 0.0, "chunked_wer": 0.0, "wer_ratio": null, "hallucination_rate": 0.0, "repetition_rate": 0.0, "elapsed_s": 0.04562367033213377}
+{"id": "longform_38", "duration_s": 4.7400625, "full_wer": 0.0625, "chunked_wer": 0.0625, "wer_ratio": 1.0, "hallucination_rate": 0.5294117647058824, "repetition_rate": 0.0, "elapsed_s": 0.040243884082883596}
+{"id": "longform_39", "duration_s": 5.719125, "full_wer": 0.0625, "chunked_wer": 0.0625, "wer_ratio": 1.0, "hallucination_rate": 0.29411764705882354, "repetition_rate": 0.0, "elapsed_s": 0.04939997708424926}
+{"id": "longform_40", "duration_s": 10.6799375, "full_wer": 0.0, "chunked_wer": 0.0, "wer_ratio": null, "hallucination_rate": 0.4583333333333333, "repetition_rate": 0.0, "elapsed_s": 0.065660011023283}
+{"id": "longform_41", "duration_s": 19.7, "full_wer": 0.12, "chunked_wer": 0.12, "wer_ratio": 1.0, "hallucination_rate": 0.42857142857142855, "repetition_rate": 0.0, "elapsed_s": 0.08762086974456906}
+{"id": "longform_42", "duration_s": 1.3999375, "full_wer": 0.0, "chunked_wer": 0.0, "wer_ratio": null, "hallucination_rate": 0.0, "repetition_rate": 0.0, "elapsed_s": 0.031273216009140015}
+{"id": "longform_43", "duration_s": 10.219125, "full_wer": 0.037037037037037035, "chunked_wer": 0.037037037037037035, "wer_ratio": 1.0, "hallucination_rate": 0.25925925925925924, "repetition_rate": 0.0, "elapsed_s": 0.06785340001806617}
+{"id": "longform_44", "duration_s": 8.039375, "full_wer": 0.1, "chunked_wer": 0.1, "wer_ratio": 1.0, "hallucination_rate": 0.7142857142857143, "repetition_rate": 0.0, "elapsed_s": 0.053687822073698044}
+{"id": "longform_45", "duration_s": 9.5789375, "full_wer": 0.08, "chunked_wer": 0.08, "wer_ratio": 1.0, "hallucination_rate": 0.7307692307692307, "repetition_rate": 0.0, "elapsed_s": 0.05050022481009364}
+{"id": "longform_46", "duration_s": 12.258125, "full_wer": 0.1, "chunked_wer": 0.1, "wer_ratio": 1.0, "hallucination_rate": 0.7666666666666667, "repetition_rate": 0.0, "elapsed_s": 0.06349973194301128}
+{"id": "longform_47", "duration_s": 14.72, "full_wer": 0.030303030303030304, "chunked_wer": 0.030303030303030304, "wer_ratio": 1.0, "hallucination_rate": 0.5151515151515151, "repetition_rate": 0.0, "elapsed_s": 0.08012565923854709}
+{"id": "longform_48", "duration_s": 2.08, "full_wer": 0.0, "chunked_wer": 0.0, "wer_ratio": null, "hallucination_rate": 0.0, "repetition_rate": 0.0, "elapsed_s": 0.032994543202221394}
+{"id": "longform_49", "duration_s": 3.8, "full_wer": 0.1111111111111111, "chunked_wer": 0.1111111111111111, "wer_ratio": 1.0, "hallucination_rate": 0.8888888888888888, "repetition_rate": 0.0, "elapsed_s": 0.035545251332223415}
+{"id": "concat_0", "duration_s": 91.525, "full_wer": 0.01593625498007968, "hallucination_rate": 0.5577689243027888, "repetition_rate": 0.0}
+{"id": "concat_1", "duration_s": 72.9600625, "full_wer": 0.04736842105263158, "hallucination_rate": 0.656084656084656, "repetition_rate": 0.0}
+{"id": "concat_2", "duration_s": 53.215, "full_wer": 0.03680981595092025, "hallucination_rate": 0.6748466257668712, "repetition_rate": 0.0}
+{"id": "concat_3", "duration_s": 58.175, "full_wer": 0.04142011834319527, "hallucination_rate": 0.6488095238095238, "repetition_rate": 0.0}
+{"id": "concat_4", "duration_s": 52.39, "full_wer": 0.056338028169014086, "hallucination_rate": 0.6330935251798561, "repetition_rate": 0.0}
+{"id": "concat_5", "duration_s": 77.59, "full_wer": 0.015384615384615385, "hallucination_rate": 0.5743589743589743, "repetition_rate": 0.0}
+{"id": "concat_6", "duration_s": 42.24, "full_wer": 0.027522935779816515, "hallucination_rate": 0.6238532110091743, "repetition_rate": 0.0}
+{"id": "concat_7", "duration_s": 53.845, "full_wer": 0.015151515151515152, "hallucination_rate": 0.5984848484848485, "repetition_rate": 0.0}
+{"id": "concat_8", "duration_s": 92.36, "full_wer": 0.0034965034965034965, "hallucination_rate": 0.45454545454545453, "repetition_rate": 0.0}
+{"id": "concat_9", "duration_s": 76.265, "full_wer": 0.017167381974248927, "hallucination_rate": 0.4978540772532189, "repetition_rate": 0.0}

@@ -31,21 +31,20 @@ stt:
   supports_batch: false
   # REST inference proxy returns HTTP 500 for this deployment.
   supports_rest: false
-  # Test 1.12 (multilingual, FLEURS) runs every SAP Joule language by default.
-  # The model (Nemotron-3.5-Transcribe) auto-detects language, so the per-request
-  # code is only a hint. To restrict the run, list language keys here, e.g.:
-  #   multilingual_languages: [en, de, ja, ar, th]
-  multilingual_languages: []
-  # Opt-in per-language depth for the Tier-A tests (1.5 noise, 1.9 output
-  # quality). These languages are measured on FLEURS IN ADDITION to the
-  # unchanged English pass. Empty = English-only (original behaviour). e.g.:
-  #   multilingual_extra_languages: [de, ja, es]
-  multilingual_extra_languages: []
-  # Opt-in spot-check languages for the Tier-B tests (1.2 performance,
-  # 1.7 long-form, 1.10 confidence). Representative set, not exhaustive.
-  # Empty = English-only (original behaviour). e.g.:
-  #   spot_check_languages: [en, de, ja, th, ar]
-  spot_check_languages: []
+  # Test 1.12 (multilingual, FLEURS) — MULTILINGUAL RUN: all 18 SAP Joule
+  # languages (15 GA + 3 preview). The model (Nemotron-3.5-Transcribe)
+  # auto-detects language, so the per-request code is only a hint. Empty = all
+  # Joule; listed explicitly here to make the multilingual run intent clear.
+  multilingual_languages: [en, de, fr, es, pt, nl, pl, ko, el, ja, zh, vi, th, id, ar, cs, it, tr]
+  # Tier-A per-language depth (1.5 noise, 1.9 output quality), measured on FLEURS
+  # IN ADDITION to the unchanged English pass. MULTILINGUAL RUN: all 18 Joule.
+  # Languages the endpoint returns blank for (th/ar/id on this deployment) record
+  # a graceful no_output row, never a fabricated score.
+  multilingual_extra_languages: [en, de, fr, es, pt, nl, pl, ko, el, ja, zh, vi, th, id, ar, cs, it, tr]
+  # Tier-B spot-checks (1.2 performance, 1.7 long-form, 1.10 confidence) — a
+  # representative set spanning scripts/resource levels, not all 18 (these tests
+  # are language-sensitive but second-order; full breadth isn't worth the cost).
+  spot_check_languages: [en, de, ja, th, ar]
 
 tts:
   grpc_uri: realtime.ai.staging.eu-west-1.mlf-aws-dev.com:443
@@ -63,9 +62,9 @@ tts:
   supports_rest: false
   # Per-language TTS passes (2.1 naturalness, 2.2 intelligibility, 2.3 prosody,
   # 2.9 acceptance). Keys from en|fr|es — the only languages Magpie TTS
-  # Multilingual supports. Empty = English-only (original behaviour).
+  # Multilingual supports. MULTILINGUAL RUN: all three.
   # Run 2.9 first to confirm the deployment actually exposes fr/es voices.
-  multilingual_languages: []
+  multilingual_languages: [en, fr, es]
   # Override documented voice names if this deployment serves different voice
   # strings, e.g. {fr: "Some.Other.Voice"}. Empty = use the documented voices.
   voice_overrides: {}

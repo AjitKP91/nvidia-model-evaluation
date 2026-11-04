@@ -338,7 +338,17 @@ from contextlib import contextmanager
 
 @contextmanager
 def load_dataset_tmp(path: str, split: str, name=None, limit: int | None = None, **kwargs):
-    """Download a HF dataset to a temp dir, convert to an in-memory list, delete cache.
+    """Load a HF dataset into an in-memory list, reusing the persistent HF cache.
+
+    By default this uses the standard HuggingFace cache (``HF_HOME``, which
+    ``scripts/download_datasets.sh`` populates into ``~/hf_home/datasets``), so a
+    dataset downloaded once is **reused** on every subsequent run instead of
+    being re-fetched. Newly-fetched datasets persist there too.
+
+    Set ``EVAL_EPHEMERAL_DATASETS=1`` to restore the old behaviour: download to a
+    throwaway ``/tmp`` dir and delete it after loading (minimises disk at the cost
+    of re-downloading every run). Clear the persistent cache with
+    ``scripts/clean.sh`` or ``rm -rf ~/hf_home/datasets``.
 
     Usage:
         with load_dataset_tmp("openslr/librispeech_asr", "test", name="clean") as examples:
@@ -351,14 +361,19 @@ def load_dataset_tmp(path: str, split: str, name=None, limit: int | None = None,
 
     from datasets import load_dataset
 
-    cache_dir = tempfile.mkdtemp(prefix="eval_ds_", dir="/tmp")
+    ephemeral = os.environ.get("EVAL_EPHEMERAL_DATASETS", "") == "1"
+    cache_dir = tempfile.mkdtemp(prefix="eval_ds_", dir="/tmp") if ephemeral else None
     try:
-        kw: dict = {"split": split, "token": os.environ.get("HF_TOKEN") or True, "cache_dir": cache_dir, **kwargs}
+        kw: dict = {"split": split, "token": os.environ.get("HF_TOKEN") or True, **kwargs}
+        if cache_dir is not None:
+            kw["cache_dir"] = cache_dir  # ephemeral: force a throwaway cache
+        # else: cache_dir omitted ⇒ HF uses HF_HOME (persistent, reused across runs)
         if name is not None:
             kw["name"] = name
         ds = load_dataset(path, **kw)
         data = list(itertools.islice(ds, limit)) if limit is not None else list(ds)
         del ds
     finally:
-        shutil.rmtree(cache_dir, ignore_errors=True)
+        if cache_dir is not None:
+            shutil.rmtree(cache_dir, ignore_errors=True)
     yield data

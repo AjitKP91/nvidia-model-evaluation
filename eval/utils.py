@@ -210,20 +210,48 @@ def audio_duration(path: str | Path) -> float:
 def write_jsonl(path: str | Path, record: dict) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    line = json.dumps(record, default=str)
+    # Guard against a prior partial line (e.g. an interrupted or disk-full write)
+    # merging with this record into one unparseable line: if the file doesn't end
+    # in a newline, start a fresh line first. Cheap — one seek per append.
+    prefix = ""
+    if path.exists() and path.stat().st_size > 0:
+        with open(path, "rb") as f:
+            f.seek(-1, 2)  # 2 == os.SEEK_END
+            if f.read(1) != b"\n":
+                prefix = "\n"
     with open(path, "a") as f:
-        f.write(json.dumps(record, default=str) + "\n")
+        f.write(prefix + line + "\n")
 
 
 def read_jsonl(path: str | Path) -> list[dict]:
+    """Read a JSONL file, tolerating malformed lines.
+
+    A partial line left by an interrupted or disk-full write (the classic
+    ``json.decoder.JSONDecodeError: Unterminated string`` on resume) is skipped
+    with a warning instead of crashing the whole test. The affected item simply
+    re-runs, since it was never recorded as completed.
+    """
     path = Path(path)
     if not path.exists():
         return []
     records = []
+    skipped = 0
     with open(path) as f:
         for line in f:
             line = line.strip()
-            if line:
+            if not line:
+                continue
+            try:
                 records.append(json.loads(line))
+            except json.JSONDecodeError:
+                skipped += 1
+    if skipped:
+        logger.warning(
+            "read_jsonl: skipped %d malformed line(s) in %s (likely a partial "
+            "write from an interrupted/disk-full run; those items will re-run).",
+            skipped, path,
+        )
     return records
 
 
@@ -337,18 +365,26 @@ from contextlib import contextmanager
 
 
 @contextmanager
-def load_dataset_tmp(path: str, split: str, name=None, limit: int | None = None, **kwargs):
-    """Load a HF dataset into an in-memory list, reusing the persistent HF cache.
+def load_dataset_tmp(path: str, split: str, name=None, limit: int | None = None,
+                     streaming: bool = True, **kwargs):
+    """Stream a HF dataset into an in-memory list WITHOUT caching it to disk.
 
-    By default this uses the standard HuggingFace cache (``HF_HOME``, which
-    ``scripts/download_datasets.sh`` populates into ``~/hf_home/datasets``), so a
-    dataset downloaded once is **reused** on every subsequent run instead of
-    being re-fetched. Newly-fetched datasets persist there too.
+    Uses ``streaming=True`` by default: HuggingFace fetches shards lazily over the
+    network and nothing is written to the dataset cache. This keeps disk usage
+    FLAT regardless of corpus size — essential because several script-based
+    builders (``facebook/voxpopuli``, ``openslr/librispeech_asr``) otherwise
+    download the ENTIRE config (all splits, 100+ GB) just to serve one test
+    split, which repeatedly filled the VM disk and corrupted result files.
 
-    Set ``EVAL_EPHEMERAL_DATASETS=1`` to restore the old behaviour: download to a
-    throwaway ``/tmp`` dir and delete it after loading (minimises disk at the cost
-    of re-downloading every run). Clear the persistent cache with
-    ``scripts/clean.sh`` or ``rm -rf ~/hf_home/datasets``.
+    Only the items actually read cross the network: with ``limit`` set exactly
+    ``limit`` examples are pulled; without it the full split is streamed once into
+    a list. Re-runs re-stream (cheap when the VM is in-region) rather than relying
+    on a multi-hundred-GB on-disk cache, so there is nothing to pre-download and
+    nothing to clean up.
+
+    Pass ``streaming=False`` only for a caller that genuinely needs the full
+    map-style dataset materialised to the HF cache (random access to the raw
+    dataset object). STT accuracy/perf/etc. just iterate, so streaming is correct.
 
     Usage:
         with load_dataset_tmp("openslr/librispeech_asr", "test", name="clean") as examples:
@@ -356,24 +392,18 @@ def load_dataset_tmp(path: str, split: str, name=None, limit: int | None = None,
     """
     import itertools
     import os
-    import shutil
-    import tempfile
 
     from datasets import load_dataset
 
-    ephemeral = os.environ.get("EVAL_EPHEMERAL_DATASETS", "") == "1"
-    cache_dir = tempfile.mkdtemp(prefix="eval_ds_", dir="/tmp") if ephemeral else None
-    try:
-        kw: dict = {"split": split, "token": os.environ.get("HF_TOKEN") or True, **kwargs}
-        if cache_dir is not None:
-            kw["cache_dir"] = cache_dir  # ephemeral: force a throwaway cache
-        # else: cache_dir omitted ⇒ HF uses HF_HOME (persistent, reused across runs)
-        if name is not None:
-            kw["name"] = name
-        ds = load_dataset(path, **kw)
-        data = list(itertools.islice(ds, limit)) if limit is not None else list(ds)
-        del ds
-    finally:
-        if cache_dir is not None:
-            shutil.rmtree(cache_dir, ignore_errors=True)
+    kw: dict = {
+        "split": split,
+        "token": os.environ.get("HF_TOKEN") or True,
+        "streaming": streaming,
+        **kwargs,
+    }
+    if name is not None:
+        kw["name"] = name
+    ds = load_dataset(path, **kw)
+    data = list(itertools.islice(ds, limit)) if limit is not None else list(ds)
+    del ds
     yield data

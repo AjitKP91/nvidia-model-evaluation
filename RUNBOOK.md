@@ -23,13 +23,45 @@ STT tests load datasets directly from HuggingFace. Several are gated and require
 
 > Tests skip gracefully if a dataset is unavailable — it is not a fatal error.
 
+### 1.2 SAP AI Core credentials (`.env`)
+
+The harness authenticates to the AI Core gateway with an OAuth Bearer token. For a full
+(~7 hour) run, use the **client-credentials flow** so tokens are minted and **auto-refreshed** —
+a static token expires in ~4 h and would kill a long run mid-way.
+
+Credentials live in a git-ignored `.env` at the repo root (`.gitignore` covers `.env` / `*.env`).
+**Never put the secret values in `config.yaml` or `config.py`** — only in `.env` or the shell.
+
+1. Copy the template and fill in real values:
+   ```bash
+   cp .env.example .env
+   # then edit .env
+   ```
+2. Set the client-credentials (recommended — auto-refreshing):
+   ```
+   AICORE_CLIENT_ID=<service-key clientid>
+   AICORE_CLIENT_SECRET=<service-key clientsecret>
+   AICORE_AUTH_URL=https://<subdomain>.authentication.<region>.hana.ondemand.com
+   ```
+   (The harness appends `/oauth/token` and uses `grant_type=client_credentials`.)
+3. *Or* set a static token for short/single-test runs only:
+   ```
+   AICORE_BEARER_TOKEN=eyJ...    # used verbatim, no refresh, expires ~4h
+   ```
+   If `AICORE_BEARER_TOKEN` is set it **takes priority** over the client-credentials vars.
+
+> **`.env` is git-ignored, so it does not sync via `git clone`/`git pull`.** Copy it to the VM
+> separately (`scp .env <vm-user>@<vm-ip>:~/nvidia-model-evaluation/.env`) or recreate it there
+> from `.env.example`. `config.py::_load_dotenv()` loads it automatically on every run; real
+> shell env vars override the file, so CI/secret-manager injection still works.
+
 ---
 
 ## 2. Where to Run What
 
 | Task | Where | Why |
 |------|-------|-----|
-| All 20 eval tests (phase0, stt, tts) | **Azure VM** | Same region as AI Core → clean latency numbers |
+| All eval tests (phase0 + 13 STT + 9 TTS) | **Azure VM** | Same region as AI Core → clean latency numbers |
 | Whisper transcription (local GPU) | **Azure VM** | NC24ads A100 handles large-v3 in real time |
 | UTMOS / SpeechBrain scoring | **Azure VM** | GPU-accelerated; takes hours on CPU |
 | Viewing the HTML report | Laptop | Copy `results/report.html` back via SCP |
@@ -98,12 +130,13 @@ Available names: `librispeech_clean`, `librispeech_other`, `tedlium`, `gigaspeec
 
 ## 4. Configure Endpoints
 
-Edit `eval/config.yaml` with your actual AI Core values. Each service has its own `grpc_uri`:
+Edit `eval/config.yaml` with your actual AI Core values. Each service has its own `grpc_uri`.
+**Endpoints and env-var *names* go here; secret *values* go in `.env` (see §1.2).**
 
 ```yaml
 riva:
   use_ssl: true
-  auth_token_env: AICORE_BEARER_TOKEN
+  auth_token_env: AICORE_BEARER_TOKEN   # env-var NAME only (value lives in .env)
 
 stt:
   grpc_uri: <parakeet-host>:443        # gRPC host:port (no https://)
@@ -112,6 +145,10 @@ stt:
   language_code: en-US
   auth_header: Authorization
   request_timeout_s: 120
+  # Opt-in multilingual depth (default [] = English-only, byte-for-byte unchanged):
+  multilingual_languages: []           # FLEURS accuracy/acceptance (1.12/1.13)
+  multilingual_extra_languages: []     # Tier-A per-language 1.5 + 1.9
+  spot_check_languages: []             # Tier-B spot-checks 1.2 / 1.7 / 1.10
 
 tts:
   grpc_uri: <magpie-host>:443          # gRPC host:port (no https://)
@@ -122,13 +159,26 @@ tts:
   auth_header: Authorization
   request_timeout_s: 60
   sample_rate: 22050
+  supports_rest: false                 # this gateway is gRPC-streaming only
+  # Opt-in multilingual TTS (default [] = English-only). Magpie supports en/fr/es,
+  # each with its own voice. Run Test 2.9 first to see which the deployment exposes:
+  multilingual_languages: []           # subset of [en, fr, es]
+  voice_overrides: {}                  # lang key → deployed voice string, if different
 ```
+
+> Auto-detect note: `multilingual_languages` keys are `en|fr|es` for TTS and the FLEURS
+> language keys for STT. Leaving every list empty reproduces the English-only behaviour exactly.
 
 ---
 
 ## 5. Running the Evaluation
 
-Use `start_eval.sh` — it handles everything: pulls latest code, asks for your AICORE token, and runs the eval inside a persistent tmux session so SSH disconnects don't interrupt it.
+Use `start_eval.sh` — it handles everything: pulls latest code, resolves credentials, and runs
+the eval inside a persistent tmux session so SSH disconnects don't interrupt it.
+
+**Credentials:** if a `.env` with client-credentials exists (§1.2), the script uses it and
+auto-refreshes tokens for the whole run — just press **Enter** at the token prompt. If you have
+no `.env`, it prompts for a static `AICORE_BEARER_TOKEN` instead (fine for short runs).
 
 ```bash
 bash scripts/start_eval.sh           # run everything (phase0 + stt + tts + report)
@@ -160,7 +210,9 @@ If you prefer to run commands directly (e.g., for a single test):
 ```bash
 source .venv/bin/activate
 export HF_HOME=~/hf_home
-export AICORE_BEARER_TOKEN="eyJ..."
+# Credentials: either rely on .env (client-credentials auto-refresh, recommended)
+# or export a static token for this shell:
+export AICORE_BEARER_TOKEN="eyJ..."   # optional if .env has client-credentials
 
 # Pre-download datasets (if not done yet):
 python -m eval.run download
@@ -168,6 +220,7 @@ python -m eval.run download
 # Single test:
 python -m eval.run stt --test accuracy
 python -m eval.run tts --test naturalness
+python -m eval.run tts --test tts_language_acceptance   # 2.9 — run first for multilingual
 
 # Full run:
 python -m eval.run all
@@ -177,10 +230,19 @@ python -m eval.run all --dry-run
 ```
 
 Available STT test names:
-`accuracy`, `performance`, `streaming`, `rest_vs_grpc`, `noise_robustness`, `accent`, `long_form`, `domain`, `output_quality`, `confidence`, `format_robustness`
+`accuracy`, `performance`, `streaming`, `rest_vs_grpc`, `noise_robustness`, `accent`,
+`long_form`, `domain`, `output_quality`, `confidence`, `format_robustness`, `multilingual`,
+`language_acceptance`
 
 Available TTS test names:
-`naturalness`, `intelligibility`, `prosody`, `signal_quality`, `latency`, `concurrency`, `edge_cases`, `long_form`
+`naturalness`, `intelligibility`, `prosody`, `signal_quality`, `latency`, `concurrency`,
+`edge_cases`, `long_form`, `tts_language_acceptance`
+
+> **Multilingual tip:** set `tts.multilingual_languages: [en, fr, es]` in `config.yaml`, then run
+> `tts_language_acceptance` (2.9) **first** — it probes which languages this deployment actually
+> synthesizes (Whisper language-ID). Only run 2.1/2.2/2.3 per-language on whatever passes; a
+> language the deployment won't synthesize is recorded as a `wrong_language`/`empty` serving gap,
+> not a faked score. Numeric IDs also work: `--test 1.13`, `--test 2.9`.
 
 ---
 
@@ -205,18 +267,36 @@ results/
 │   ├── accuracy/
 │   │   ├── calls.jsonl           # Per-utterance results
 │   │   └── summary.csv           # Dataset-level WER/CER/etc.
-│   ├── streaming/
-│   │   ├── calls.jsonl
-│   │   └── summary.csv
+│   ├── multilingual/             # 1.12 — per-language FLEURS accuracy
+│   ├── language_acceptance/      # 1.13 — per-language ok/empty/error gate
+│   │   ├── <langkey>.jsonl       # per-language calls (opt-in depth tests)
+│   │   ├── summary.csv
+│   │   └── summary_<langkey>.csv # per-language summaries (1.5/1.9/etc.)
 │   └── ...                       # One folder per test
 ├── tts/
 │   ├── naturalness/
 │   │   ├── calls.jsonl
 │   │   ├── summary.csv
+│   │   ├── summary_<langkey>.csv # per-language DNSMOS (fr/es; UTMOS en-only)
 │   │   └── synth_0001.wav        # Synthesized audio files
+│   ├── language_acceptance/      # 2.9 — per-language synth+Whisper gate
 │   └── ...
+├── run.log                       # Full run log (tee'd, append mode)
 └── report.html                   # Full evaluation report (open in browser)
 ```
+
+The dated per-run layout is `results/run-<DD-MM-YY>/riva/...`. A standalone, richer HTML report
+(`docs/full-report.html`) can be regenerated with stdlib-only Python (no venv needed):
+
+```bash
+python3 eval/report/generate_full_report.py \
+    --run results/run-<DD-MM-YY>/riva \
+    --acceptance results/run-<DD-MM-YY>/riva/stt/language_acceptance/language_acceptance.csv \
+    --out docs/full-report.html
+```
+
+> The 40-language acceptance matrix (Test 1.13) is produced by the harness itself on every
+> `stt`/`all` run, so there's nothing to pre-seed — point `--acceptance` at the dated run dir.
 
 Copy the report to your laptop:
 
@@ -253,10 +333,11 @@ bash scripts/clean.sh --full --data
 First time on a new VM:
   bash scripts/setup.sh                  # ~15 min
   bash scripts/download_datasets.sh      # ~30-60 min (downloads ~20-40 GB)
+  cp .env.example .env                   # fill in AI Core client-credentials (§1.2)
   # edit eval/config.yaml with endpoints
 
 Every eval run:
-  bash scripts/start_eval.sh             # enter token → runs in tmux
+  bash scripts/start_eval.sh             # Enter at prompt (uses .env) → runs in tmux
 
 After a run (clean results, keep datasets):
   bash scripts/clean.sh
@@ -293,15 +374,18 @@ python -m eval.run tts --log-level WARNING
 | 1.9 Output Quality | ~2,000 utterances | 30 min |
 | 1.10 Confidence | ~1,000 utterances | 20 min |
 | 1.11 Format Robustness | ~200 calls | 10 min |
-| 2.1 Naturalness | 200 synths + UTMOS | 30–45 min |
+| 1.12 Multilingual Accuracy | FLEURS × Joule langs | 30–60 min (per enabled subset) |
+| 1.13 Language Acceptance | ~3 clips × 40 langs | 10–15 min |
+| 2.1 Naturalness | 200 synths + UTMOS/DNSMOS | 30–45 min |
 | 2.2 Intelligibility | 350 synths + Whisper | 45–60 min |
-| 2.3 Prosody | 50 synths | 10 min |
-| 2.4 Signal Quality | 50 synths | 10 min |
+| 2.3 Prosody | 50 synths (reference-free) | 10 min |
+| 2.4 Signal Quality | **N/A — no synthesis** | <1 min |
 | 2.5 Latency | 500 calls | 20 min |
 | 2.6 Concurrency | 500 calls | 15 min |
 | 2.7 Edge Cases | ~100 calls | 15 min |
 | 2.8 Long Form TTS | ~30 synths + ECAPA | 20 min |
-| **Total** | | **~7 hours** |
+| 2.9 Language Acceptance | ~3 synths × enabled langs + Whisper | 5–10 min |
+| **Total** | | **~7–8 hours** (English-only; multilingual subsets add time) |
 
 ---
 
@@ -311,7 +395,10 @@ python -m eval.run tts --log-level WARNING
 ```bash
 export AICORE_BEARER_TOKEN="eyJ..."
 ```
-Tokens from AI Core expire. If you get 401 errors mid-run, fetch a new token and re-export — the harness retries automatically.
+A static token from AI Core expires in ~4 h. If you get 401s mid-run, the cleanest fix is to use
+the **client-credentials flow** instead (see §1.2): put `AICORE_CLIENT_ID` / `AICORE_CLIENT_SECRET`
+/ `AICORE_AUTH_URL` in `.env` and leave `AICORE_BEARER_TOKEN` unset — the harness then mints and
+auto-refreshes tokens for the whole run. (A static token, if set, always wins over `.env`.)
 
 ### `grpc._channel._InactiveRpcError: StatusCode.UNAVAILABLE`
 The gRPC endpoint is unreachable. Check:
@@ -331,7 +418,8 @@ setuptools may be missing from the venv:
 .venv/bin/pip install setuptools --no-cache-dir
 ```
 Always use `.venv/bin/pip` (not plain `pip`) to target the venv.
-F0 metrics in TTS Test 2.3 are skipped automatically if pyworld is unavailable.
+TTS Test 2.3 (reference-free prosody) uses `librosa`; if pyworld is unavailable the F0 path falls
+back gracefully. (Test 2.4 Signal Quality is N/A — it runs no synthesis and needs no audio libs.)
 
 ### `omegaconf` / `invalid-installed-package` error during pip install
 pip 24+ rejects `omegaconf 2.0.6` (pulled in by `fairseq`/`utmos`). Fix:

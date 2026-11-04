@@ -1,4 +1,11 @@
-"""Test 1.4 — REST vs gRPC Comparison."""
+"""Test 1.4 — REST vs gRPC Comparison.
+
+ENGLISH-ONLY BY DESIGN: this compares two transport interfaces (REST vs gRPC)
+on identical audio. The result is a property of the serving stack, not of the
+spoken language, so it is not parameterised by language. (On this endpoint REST
+is disabled anyway — stt.supports_rest = false.) See
+docs/multilingual-test-gap-analysis.md.
+"""
 from __future__ import annotations
 
 import logging
@@ -22,6 +29,14 @@ N_REPS = 50
 def run(config: Config) -> dict:
     results_dir = Path(config.evaluation.results_dir) / "stt" / "rest_vs_grpc"
     results_dir.mkdir(parents=True, exist_ok=True)
+
+    if not config.stt.supports_rest:
+        logger.warning(
+            "Test 1.4 skipped: stt.supports_rest is false "
+            "(REST inference proxy unavailable on this endpoint)."
+        )
+        return {"test": "1.4", "name": "rest_vs_grpc", "status": "skipped",
+                "reason": "stt.supports_rest is false", "results": {}}
 
     stt_client = STTClient(config)
 

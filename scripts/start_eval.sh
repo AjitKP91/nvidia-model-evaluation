@@ -2,7 +2,11 @@
 # Start the evaluation in a persistent tmux session.
 # Writes into a dated per-provider dir: results/run-<DD-MM-YY>/riva/
 # so historical runs (like results/run-09-06-26/) stay untouched.
-# Asks for the AICORE bearer token, then launches inside tmux so SSH drops don't kill it.
+# Credentials: prefers the client-credentials flow in .env (AICORE_CLIENT_ID /
+# AICORE_CLIENT_SECRET / AICORE_AUTH_URL), which the harness auto-refreshes so a
+# multi-hour run never dies on token expiry. If no .env is present it falls back
+# to prompting for a static AICORE_BEARER_TOKEN (expires ~4h — not for full runs).
+# Launches inside tmux so SSH drops don't kill it.
 # Usage: bash scripts/start_eval.sh [all|stt|tts|phase0|report]
 set -euo pipefail
 
@@ -26,13 +30,27 @@ echo ""
 echo "Pulling latest code..."
 git pull
 
-# ── Ask for AICORE token ─────────────────────────────────────────────────────
-echo ""
-read -rsp "Paste your AICORE_BEARER_TOKEN (input hidden): " AICORE_TOKEN
-echo ""
-if [ -z "$AICORE_TOKEN" ]; then
-    echo "ERROR: token cannot be empty."
-    exit 1
+# ── Resolve AI Core credentials ──────────────────────────────────────────────
+# Preferred: a .env at repo root with client-credentials — the harness mints and
+# auto-refreshes tokens (survives a ~7h full run). Fallback: prompt for a static
+# bearer token (expires ~4h; fine for short/single-test runs only).
+AICORE_TOKEN=""
+if [ -f "$REPO_DIR/.env" ] && grep -q '^[[:space:]]*AICORE_CLIENT_ID=.\+' "$REPO_DIR/.env"; then
+    echo ""
+    echo "Found .env with client-credentials — tokens will be auto-refreshed."
+    echo "(Press Enter to use .env, or paste a static AICORE_BEARER_TOKEN to override.)"
+    read -rsp "Token (optional, input hidden): " AICORE_TOKEN
+    echo ""
+else
+    echo ""
+    echo "No .env client-credentials found."
+    read -rsp "Paste your AICORE_BEARER_TOKEN (input hidden): " AICORE_TOKEN
+    echo ""
+    if [ -z "$AICORE_TOKEN" ]; then
+        echo "ERROR: no .env client-credentials and no token provided."
+        echo "       Create .env from .env.example, or paste a bearer token."
+        exit 1
+    fi
 fi
 
 # ── Compute per-run, per-provider results directory ──────────────────────────
@@ -62,7 +80,9 @@ source "$REPO_DIR/.venv/bin/activate"
 export HF_HOME=~/hf_home
 export TORCH_HOME=~/torch_home
 export PIP_CACHE_DIR=~/pip_cache
-export AICORE_BEARER_TOKEN="$AICORE_TOKEN"
+${AICORE_TOKEN:+export AICORE_BEARER_TOKEN="$AICORE_TOKEN"}
+# No AICORE_BEARER_TOKEN exported here ⇒ the harness reads client-credentials
+# from .env and auto-refreshes tokens for the whole run.
 # Make PyTorch bundled CUDA visible (fixes UTMOS libcudart error)
 TORCH_LIB="\$(python -c 'import torch, os; print(os.path.dirname(torch.__file__))')/lib"
 export LD_LIBRARY_PATH="\$TORCH_LIB:\${LD_LIBRARY_PATH:-}"

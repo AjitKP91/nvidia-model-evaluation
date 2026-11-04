@@ -1,4 +1,22 @@
-"""Test 2.4 — Audio Signal Quality (MCD / PESQ / STOI)."""
+"""Test 2.4 — Audio Signal Quality (MCD / PESQ / STOI).
+
+**STATUS: N/A for this model — reported, not computed.**
+
+MCD, PESQ and STOI are *full-reference* (intrusive) metrics: each needs a
+ground-truth recording of the **same speaker uttering the same text**, time-
+aligned to the system output. The model under test synthesises a fixed
+synthetic persona ("Aria") that has no corresponding human recording, so no
+dataset can supply a valid reference. Scoring Aria against a different speaker
+(e.g. LJSpeech) measures *voice mismatch*, not signal quality — a large,
+meaningless number. We therefore mark 2.4 N/A and rely on 2.1 (UTMOS/DNSMOS,
+reference-free) and 2.2 (round-trip WER) for audio quality.
+
+The only legitimate way to run these metrics on this kind of model is
+copy-synthesis / zero-shot voice cloning against held-out recordings of a real
+speaker (VCTK/LibriTTS), which requires a different NIM deployment exposing an
+``audio_prompt`` / P-Flow cloning path. The intrusive implementation is kept
+below (``_run_intrusive``) for that future deployment but is **not** called.
+"""
 from __future__ import annotations
 
 import logging
@@ -16,6 +34,15 @@ from eval.utils import save_summary_csv, write_jsonl
 logger = logging.getLogger("eval.tts.signal_quality")
 
 TARGET_SR = 16000
+
+_NA_REASON = (
+    "Intrusive MCD/PESQ/STOI require a same-speaker, same-text ground-truth "
+    "recording aligned to the output. None exists for a fixed synthetic voice "
+    "(Aria), so any score would measure speaker mismatch, not quality. "
+    "Use 2.1 (UTMOS/DNSMOS) and 2.2 (round-trip WER) instead. Valid only via "
+    "zero-shot voice cloning against held-out real-speaker audio, which needs "
+    "a different NIM deployment."
+)
 
 
 def compute_mcd(ref_path: str, syn_path: str, n_mfcc: int = 13) -> float:
@@ -64,6 +91,26 @@ def compute_stoi_score(ref_path: str, syn_path: str) -> float | None:
 
 
 def run(config: Config) -> dict:
+    """Mark 2.4 N/A — intrusive metrics are invalid for a fixed synthetic voice.
+
+    Writes a one-row summary.csv recording the N/A status and rationale so the
+    report and any downstream tooling see an explicit, honest result rather than
+    a fabricated score. Does NOT synthesise audio or compute MCD/PESQ/STOI.
+    """
+    results_dir = Path(config.evaluation.results_dir) / "tts" / "signal_quality"
+    results_dir.mkdir(parents=True, exist_ok=True)
+
+    logger.info("=== Test 2.4: Audio Signal Quality — N/A ===")
+    logger.info("%s", _NA_REASON)
+
+    summary = {"test": "2.4", "name": "signal_quality", "status": "n/a", "reason": _NA_REASON}
+    save_summary_csv(results_dir / "summary.csv", [summary])
+    return summary
+
+
+def _run_intrusive(config: Config) -> dict:
+    """Intrusive MCD/PESQ/STOI implementation — kept for a future zero-shot
+    voice-cloning deployment. NOT invoked by ``run`` (see module docstring)."""
     results_dir = Path(config.evaluation.results_dir) / "tts" / "signal_quality"
     results_dir.mkdir(parents=True, exist_ok=True)
 

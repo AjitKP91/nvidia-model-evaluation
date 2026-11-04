@@ -1,4 +1,15 @@
-"""Test 1.6 — Accent & Dialect Robustness."""
+"""Test 1.6 — Accent & Dialect Robustness.
+
+MULTILINGUAL GAP (flagged, intentionally not faked): this test measures accent
+and dialect variation within English (Common Voice EN + L2-ARCTIC). Extending it
+to per-language dialect fairness — e.g. es-ES vs es-419, or MSA vs ar-EG
+(Egyptian) — needs per-locale accented corpora that FLEURS does not provide
+(FLEURS ships one variety per language: es_419, ar_eg, ...). We deliberately do
+NOT synthesise multilingual accent numbers from FLEURS, because a single-variety
+read-speech set cannot measure cross-dialect fairness. See
+docs/multilingual-test-gap-analysis.md. Note es-ES/es-419 and MSA/ar-EG dialect
+coverage lives here, not in the FLEURS-based tests (1.5/1.9/1.12).
+"""
 from __future__ import annotations
 
 import json

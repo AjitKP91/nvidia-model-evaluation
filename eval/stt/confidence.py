@@ -13,9 +13,13 @@ from tqdm import tqdm
 
 from eval.config import Config
 from eval.stt.client import STTClient
+from eval.stt.fleurs_common import fleurs_load, get_audio_and_ref, pcm16_bytes, resolve_languages
 from eval.utils import NORMALIZE_FOR_WER, get_completed_ids, load_dataset_tmp, save_summary_csv, write_jsonl
 
 logger = logging.getLogger("eval.stt.confidence")
+
+# Per-language FLEURS clip budget for opt-in Tier-B calibration spot-checks.
+PER_LANG_CONF_LIMIT = 300
 
 
 def _compute_word_correctness(reference: str, hypothesis: str) -> list[tuple[str, int]]:
@@ -115,9 +119,39 @@ def run(config: Config) -> dict:
         except Exception as e:
             logger.warning("Failed %s: %s", item_id, e)
 
+    summary = _calibration_summary(all_confidences, all_labels, deletion_count, total_ref_words)
+    if summary is None:
+        return {"test": "1.10", "name": "confidence_calibration", "results": {}}
+
+    save_summary_csv(results_dir / "summary.csv", [summary])
+    logger.info("ECE=%.4f, AUROC=%.4f, Brier=%.4f, Deletion rate=%.2f%%",
+        summary["ece"], summary["auroc"] or 0, summary["brier_score"], summary["deletion_rate"] * 100)
+
+    # ---- Opt-in Tier-B spot-check languages (FLEURS) ----
+    spot = resolve_languages(getattr(config.stt, "spot_check_languages", []) or [])
+    per_language: dict[str, dict] = {}
+    for lang in spot:
+        try:
+            per_language[lang["key"]] = _run_language_conf(lang, config, stt_client, results_dir)
+        except Exception as e:  # pragma: no cover - defensive
+            logger.error("Language %s failed in 1.10: %s", lang["key"], e)
+            per_language[lang["key"]] = {"status": "error", "error": str(e)}
+    if per_language:
+        summary["per_language"] = per_language
+
+    return {"test": "1.10", "name": "confidence_calibration", "results": summary}
+
+
+def _calibration_summary(all_confidences, all_labels, deletion_count, total_ref_words) -> dict | None:
+    """Compute ECE / AUROC / Brier from paired confidence & correctness arrays.
+
+    Returns None when there are fewer than 100 confidence points (same guard the
+    English pass always used). Deterministic — extracting it preserves the
+    original English output exactly.
+    """
     if len(all_confidences) < 100:
         logger.warning("Not enough confidence data (%d points)", len(all_confidences))
-        return {"test": "1.10", "name": "confidence_calibration", "results": {}}
+        return None
 
     confidences = np.array(all_confidences)
     labels = np.array(all_labels)
@@ -158,7 +192,7 @@ def run(config: Config) -> dict:
 
     deletion_rate = deletion_count / total_ref_words if total_ref_words > 0 else 0
 
-    summary = {
+    return {
         "ece": round(float(ece), 4),
         "auroc": round(float(auroc), 4) if auroc else None,
         "brier_score": round(float(brier), 4),
@@ -167,8 +201,87 @@ def run(config: Config) -> dict:
         "bins": bin_details,
     }
 
-    save_summary_csv(results_dir / "summary.csv", [summary])
-    logger.info("ECE=%.4f, AUROC=%.4f, Brier=%.4f, Deletion rate=%.2f%%",
-        ece, auroc or 0, brier, deletion_rate * 100)
 
-    return {"test": "1.10", "name": "confidence_calibration", "results": summary}
+def _run_language_conf(lang: dict, config: Config, stt_client: STTClient, results_dir: Path) -> dict:
+    """Opt-in per-language confidence-calibration spot-check on FLEURS.
+
+    Item IDs are language-tagged (``{key}_{i}``) and written to a per-language
+    JSONL so resume never collides across languages. Reuses the same
+    ECE/AUROC/Brier logic as the English pass. Languages that return empty
+    transcripts or too few confidence points record a graceful status instead of
+    a fabricated calibration.
+    """
+    key = lang["key"]
+    jsonl_path = results_dir / f"{key}.jsonl"
+    logger.info("--- 1.10 spot-check language=%s (FLEURS %s) ---", key, lang["fleurs"])
+
+    try:
+        with fleurs_load(lang, limit=PER_LANG_CONF_LIMIT) as examples:
+            pass
+    except Exception as e:
+        logger.error("FLEURS load failed for %s: %s", key, e)
+        return {"status": "load_failed"}
+
+    if not examples:
+        return {"status": "load_failed"}
+
+    all_confidences, all_labels = [], []
+    deletion_count = total_ref_words = 0
+    non_empty = 0
+    completed = get_completed_ids(jsonl_path)
+
+    for i, example in enumerate(tqdm(examples, desc=f"conf:{key}")):
+        item_id = f"{key}_{i}"
+        if item_id in completed:
+            continue
+        audio, sr, ref = get_audio_and_ref(example)
+        try:
+            result = stt_client.recognize_batch(pcm16_bytes(audio), sr, enable_word_times=True, language_code=lang["model_lang"])
+            hyp = result["transcript"]
+            confidence = result["confidence"]
+            if (hyp or "").strip():
+                non_empty += 1
+            if confidence is None or confidence == 0:
+                continue
+
+            word_labels = _compute_word_correctness(ref, hyp)
+            hyp_words = hyp.split()
+            ref_words = ref.split()
+            total_ref_words += len(ref_words)
+            deletion_count += max(0, len(ref_words) - len(hyp_words))
+
+            word_confs = result.get("words", [])
+            if word_confs and len(word_confs) == len(hyp_words):
+                for wc, label in zip(word_confs, word_labels):
+                    conf = wc.get("confidence")
+                    if conf is not None:
+                        all_confidences.append(conf)
+                        all_labels.append(label)
+            else:
+                for label in word_labels:
+                    all_confidences.append(confidence)
+                    all_labels.append(label)
+
+            write_jsonl(jsonl_path, {
+                "id": item_id,
+                "language": key,
+                "reference": ref,
+                "hypothesis": hyp,
+                "utterance_confidence": confidence,
+                "n_correct_words": sum(word_labels),
+                "n_total_hyp_words": len(word_labels),
+            })
+        except Exception as e:
+            logger.warning("Failed %s: %s", item_id, e)
+
+    if non_empty == 0:
+        logger.warning("Language %s returns empty transcripts; recording no_output", key)
+        return {"status": "no_output"}
+
+    summary = _calibration_summary(all_confidences, all_labels, deletion_count, total_ref_words)
+    if summary is None:
+        return {"status": "insufficient_data", "n_points": len(all_confidences)}
+    save_summary_csv(results_dir / f"{key}_summary.csv", [summary])
+    logger.info("[%s] ECE=%.4f, AUROC=%.4f, Brier=%.4f", key,
+                summary["ece"], summary["auroc"] or 0, summary["brier_score"])
+    return summary

@@ -19,7 +19,8 @@ def _run_stt_all(config):
     from eval.stt import (
         accuracy, performance, streaming, rest_vs_grpc,
         noise_robustness, accent, long_form, domain,
-        output_quality, confidence, format_robustness,
+        output_quality, confidence, format_robustness, multilingual,
+        language_acceptance,
     )
     results = []
     tests = [
@@ -34,6 +35,8 @@ def _run_stt_all(config):
         ("1.9", output_quality),
         ("1.10", confidence),
         ("1.11", format_robustness),
+        ("1.12", multilingual),
+        ("1.13", language_acceptance),
     ]
     for tid, mod in tests:
         logging.getLogger("eval.run").info("--- Running STT Test %s ---", tid)
@@ -49,7 +52,7 @@ def _run_stt_all(config):
 def _run_tts_all(config):
     from eval.tts import (
         naturalness, intelligibility, prosody, signal_quality,
-        latency, concurrency, edge_cases, long_form,
+        latency, concurrency, edge_cases, long_form, tts_language_acceptance,
     )
     results = []
     tests = [
@@ -61,6 +64,7 @@ def _run_tts_all(config):
         ("2.6", concurrency),
         ("2.7", edge_cases),
         ("2.8", long_form),
+        ("2.9", tts_language_acceptance),
     ]
     for tid, mod in tests:
         logging.getLogger("eval.run").info("--- Running TTS Test %s ---", tid)
@@ -86,6 +90,8 @@ def _run_single_stt(name: str, config):
         "output_quality": "eval.stt.output_quality",
         "confidence": "eval.stt.confidence",
         "format_robustness": "eval.stt.format_robustness",
+        "multilingual": "eval.stt.multilingual",
+        "language_acceptance": "eval.stt.language_acceptance",
     }
     key = name.replace("stt.", "").replace("1.", "").strip()
     # Allow numeric IDs like "1.1" -> "accuracy"
@@ -93,6 +99,7 @@ def _run_single_stt(name: str, config):
         "1": "accuracy", "2": "performance", "3": "streaming", "4": "rest_vs_grpc",
         "5": "noise_robustness", "6": "accent", "7": "long_form", "8": "domain",
         "9": "output_quality", "10": "confidence", "11": "format_robustness",
+        "12": "multilingual", "13": "language_acceptance",
     }
     if key in num_map:
         key = num_map[key]
@@ -114,12 +121,13 @@ def _run_single_tts(name: str, config):
         "concurrency": "eval.tts.concurrency",
         "edge_cases": "eval.tts.edge_cases",
         "long_form": "eval.tts.long_form",
+        "tts_language_acceptance": "eval.tts.tts_language_acceptance",
     }
     key = name.replace("tts.", "").replace("2.", "").strip()
     num_map = {
         "1": "naturalness", "2": "intelligibility", "3": "prosody",
         "4": "signal_quality", "5": "latency", "6": "concurrency",
-        "7": "edge_cases", "8": "long_form",
+        "7": "edge_cases", "8": "long_form", "9": "tts_language_acceptance",
     }
     if key in num_map:
         key = num_map[key]

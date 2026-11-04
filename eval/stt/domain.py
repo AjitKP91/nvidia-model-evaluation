@@ -1,4 +1,13 @@
-"""Test 1.8 — Domain-Specific Vocabulary."""
+"""Test 1.8 — Domain-Specific Vocabulary.
+
+MULTILINGUAL GAP (flagged, intentionally not faked): key-term recall, named-
+entity WER, and OOV rate here are measured on English financial/domain corpora.
+There is no equivalent multilingual domain corpus with curated term lists in the
+Joule languages, so a per-language version would require sourcing (or building)
+domain glossaries + matched audio per language. We deliberately do NOT fabricate
+multilingual domain numbers from FLEURS (general read speech has no domain term
+list). See docs/multilingual-test-gap-analysis.md.
+"""
 from __future__ import annotations
 
 import logging

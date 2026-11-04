@@ -20,3 +20,9 @@ data/l2_arctic/
 # IDE
 .vscode/
 .idea/
+
+# Playwright MCP scratch output
+.playwright-mcp/
+
+# Generated tmux launcher (may contain a pasted bearer token)
+scripts/_tmux_launcher.sh

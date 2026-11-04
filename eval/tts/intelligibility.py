@@ -15,8 +15,17 @@ from tqdm import tqdm
 
 from eval.config import Config
 from eval.data.tts_test_sets import get_intelligibility_sentences
+from eval.stt.fleurs_common import fleurs_load, get_audio_and_ref
 from eval.tts.client import TTSClient
-from eval.utils import NORMALIZE_FOR_WER, get_completed_ids, read_jsonl, save_summary_csv, write_jsonl
+from eval.tts.tts_languages import resolve_tts_languages
+from eval.utils import (
+    NORMALIZE_FOR_WER,
+    get_completed_ids,
+    read_jsonl,
+    save_summary_csv,
+    score_pair,
+    write_jsonl,
+)
 
 logger = logging.getLogger("eval.tts.intelligibility")
 
@@ -88,17 +97,63 @@ def run(config: Config) -> dict:
     results_dir.mkdir(parents=True, exist_ok=True)
 
     tts_client = TTSClient(config)
-    jsonl_path = results_dir / "calls.jsonl"
 
     logger.info("=== Test 2.2: Intelligibility (Round-Trip WER) ===")
 
-    categories = get_intelligibility_sentences()
-    logger.info("Categories: %s", list(categories.keys()))
-
-    # Load Whisper once
+    # Load Whisper once — shared by the English pass and any per-language passes.
     import whisper
     logger.info("Loading Whisper large-v3...")
     whisper_model = whisper.load_model("large-v3")
+
+    try:
+        english = _run_english(tts_client, whisper_model, results_dir)
+
+        per_language: list[dict] = []
+        langs = resolve_tts_languages(
+            getattr(config.tts, "multilingual_languages", []),
+            getattr(config.tts, "voice_overrides", {}),
+        )
+        for lang in langs:
+            if lang["key"] == "en":
+                continue  # English is the fixed-category pass above
+            per_language.append(_run_language(tts_client, whisper_model, lang, results_dir))
+    finally:
+        _release_whisper(whisper_model)
+
+    results = {"test": "2.2", "name": "intelligibility", "results": english}
+    if per_language:
+        results["per_language"] = per_language
+    return results
+
+
+def _release_whisper(whisper_model) -> None:
+    """Delete the Whisper model and its on-disk cache (~3 GB)."""
+    logger.info("Releasing Whisper model and cleaning cache...")
+    del whisper_model
+    gc.collect()
+    try:
+        import torch
+        torch.cuda.empty_cache()
+    except Exception:
+        pass
+    whisper_cache = Path.home() / ".cache" / "whisper"
+    for f in sorted(whisper_cache.glob("large-v3*")):
+        try:
+            f.unlink()
+            logger.info("Deleted Whisper cache file: %s", f)
+        except Exception:
+            pass
+
+
+def _run_english(tts_client: TTSClient, whisper_model, results_dir: Path) -> list[dict]:
+    """Original English round-trip WER over the fixed sentence categories.
+
+    Behaviour-preserving: same calls.jsonl / summary.csv records as before.
+    """
+    jsonl_path = results_dir / "calls.jsonl"
+
+    categories = get_intelligibility_sentences()
+    logger.info("Categories: %s", list(categories.keys()))
 
     completed = get_completed_ids(jsonl_path)
     seeded = _seed_categories_from_jsonl(jsonl_path)
@@ -176,22 +231,84 @@ def run(config: Config) -> dict:
             logger.info("  %s: WER=%.2f%% CER=%.2f%%", category, agg_wer * 100, agg_cer * 100)
 
     save_summary_csv(results_dir / "summary.csv", summary_rows)
+    return summary_rows
 
-    # Delete Whisper model cache — large (~3 GB) and not needed after this test.
-    logger.info("Releasing Whisper model and cleaning cache...")
-    del whisper_model
-    gc.collect()
+
+def _run_language(tts_client: TTSClient, whisper_model, lang: dict, results_dir: Path, limit: int = 50) -> dict:
+    """Per-language round-trip WER on FLEURS text, synthesised with the
+    language's voice+locale and transcribed with Whisper (language hint).
+
+    All supported TTS languages (en/fr/es) are Latin-script ⇒ WER throughout;
+    ``score_pair`` applies the correct per-language normalisation.
+    """
+    key = lang["key"]
+    jsonl_path = results_dir / f"{key}.jsonl"
+    completed = get_completed_ids(jsonl_path)
+
     try:
-        import torch
-        torch.cuda.empty_cache()
-    except Exception:
-        pass
-    whisper_cache = Path.home() / ".cache" / "whisper"
-    for f in sorted(whisper_cache.glob("large-v3*")):
-        try:
-            f.unlink()
-            logger.info("Deleted Whisper cache file: %s", f)
-        except Exception:
-            pass
+        with fleurs_load(lang, limit=limit) as examples:
+            texts = [get_audio_and_ref(ex, field="raw_transcription")[2] for ex in examples]
+    except Exception as e:
+        logger.warning("Intelligibility %s: FLEURS load failed: %s", key, e)
+        return {"language": key, "status": "load_failed", "reason": str(e)}
 
-    return {"test": "2.2", "name": "intelligibility", "results": summary_rows}
+    texts = [t for t in texts if t.strip()][:limit]
+
+    # Reseed refs/hyps from prior rows so resume-only runs still aggregate.
+    refs: list[str] = []
+    hyps: list[str] = []
+    for r in read_jsonl(jsonl_path):
+        if r.get("original_text") is not None and r.get("whisper_transcript") is not None:
+            refs.append(r["original_text"])
+            hyps.append(r["whisper_transcript"])
+
+    for i, text in enumerate(tqdm(texts, desc=f"intelligibility ({key})")):
+        item_id = f"{key}_{i}"
+        if item_id in completed:
+            continue
+        wav_path = results_dir / f"synth_{key}_{i:04d}.wav"
+        try:
+            tts_client.save_synthesis(
+                text, str(wav_path),
+                language_code=lang["language_code"], voice_name=lang["voice_name"],
+            )
+            if not wav_path.exists() or wav_path.stat().st_size == 0:
+                write_jsonl(jsonl_path, {"id": item_id, "language": key,
+                                         "original_text": text, "status": "no_output"})
+                continue
+            result = whisper_model.transcribe(str(wav_path), language=key)
+            hyp = result.get("text", "")
+            wav_path.unlink(missing_ok=True)
+
+            s = score_pair(text, hyp, key)
+            refs.append(text)
+            hyps.append(hyp)
+            write_jsonl(jsonl_path, {
+                "id": item_id,
+                "language": key,
+                "original_text": text,
+                "whisper_transcript": hyp,
+                "wer": s["primary_value"],
+            })
+        except Exception as e:
+            wav_path.unlink(missing_ok=True)
+            logger.warning("Failed %s_%d: %s", key, i, e)
+            write_jsonl(jsonl_path, {"id": item_id, "language": key,
+                                     "original_text": text, "status": "error", "error": str(e)})
+
+    if not refs:
+        summary = {"language": key, "status": "no_output", "n_sentences": len(texts)}
+        save_summary_csv(results_dir / f"summary_{key}.csv", [summary])
+        return summary
+
+    agg = score_pair(refs, hyps, key)
+    summary = {
+        "language": key,
+        "n_sentences": len(refs),
+        "round_trip_wer": round(agg["primary_value"], 4) if agg["primary_value"] is not None else None,
+        "metric": agg["primary"],
+    }
+    save_summary_csv(results_dir / f"summary_{key}.csv", [summary])
+    logger.info("  %s: round-trip WER=%.2f%% (n=%d)", key,
+                (summary["round_trip_wer"] or 0) * 100, len(refs))
+    return summary

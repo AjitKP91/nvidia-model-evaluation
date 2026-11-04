@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+import certifi
 import numpy as np
 import requests
 import soundfile as sf
@@ -82,22 +83,43 @@ class TTSClient:
         self.tts_cfg = config.tts
         self.riva_cfg = config.riva
 
+        # No metadata_args: avoids riva.client's duplicate-authorization bug on
+        # the SAP AI Core gateway (rejected as "Token is invalid"). Metadata is
+        # attached via self.auth.metadata so it is sent once per call and can be
+        # rotated on token refresh. See STTClient for the full explanation.
         self.auth = riva.client.Auth(
             uri=self.tts_cfg.grpc_uri,
             use_ssl=self.riva_cfg.use_ssl,
-            metadata_args=[
-                ["authorization", f"Bearer {self.riva_cfg.auth_token}"]
-            ],
+            ssl_root_cert=certifi.where(),
         )
+        self._apply_token()
         self.tts_service = riva.client.SpeechSynthesisService(self.auth)
         self.sample_rate = self.tts_cfg.sample_rate
+
+    def _apply_token(self) -> None:
+        """Refresh the per-call auth metadata with a currently-valid token."""
+        md = [("ai-resource-group", self.riva_cfg.resource_group)]
+        if self.tts_cfg.deployment_id:
+            md.append(("deployment-id", self.tts_cfg.deployment_id))
+        md.append(("authorization", f"Bearer {self.riva_cfg.auth_token}"))
+        self.auth.metadata = md
 
     # ------------------------------------------------------------------
     # gRPC batch
     # ------------------------------------------------------------------
 
     @retry_with_backoff(reraise_if=_is_permanent_tts_error)
-    def synthesize_batch(self, text: str) -> dict[str, Any]:
+    def synthesize_batch(
+        self,
+        text: str,
+        language_code: str | None = None,
+        voice_name: str | None = None,
+    ) -> dict[str, Any]:
+        # Default to the configured (English) voice/locale ⇒ existing callers
+        # are unchanged; multilingual callers pass a per-language voice+locale.
+        voice_name = voice_name or self.tts_cfg.voice_name
+        language_code = language_code or self.tts_cfg.language_code
+        self._apply_token()
         start = time.perf_counter()
         # Hard deadline: riva.client doesn't honour per-call timeouts, so we
         # bound the wall-clock here. A hung server/stream raises TimeoutError
@@ -105,8 +127,8 @@ class TTSClient:
         response = _call_with_deadline(
             lambda: self.tts_service.synthesize(
                 text,
-                voice_name=self.tts_cfg.voice_name,
-                language_code=self.tts_cfg.language_code,
+                voice_name=voice_name,
+                language_code=language_code,
                 sample_rate_hz=self.sample_rate,
             ),
             timeout_s=self.tts_cfg.request_timeout_s,
@@ -129,8 +151,15 @@ class TTSClient:
     # REST batch
     # ------------------------------------------------------------------
 
-    @retry_with_backoff(reraise_if=_is_permanent_tts_error)
+    @retry_with_backoff(
+        reraise_if=lambda e: isinstance(e, NotImplementedError) or _is_permanent_tts_error(e)
+    )
     def synthesize_batch_rest(self, text: str) -> dict[str, Any]:
+        if not self.tts_cfg.supports_rest:
+            raise NotImplementedError(
+                "REST synthesis is not available on this endpoint "
+                "(tts.supports_rest is false)."
+            )
         headers = {
             self.tts_cfg.auth_header: f"Bearer {self.riva_cfg.auth_token}",
         }
@@ -169,7 +198,15 @@ class TTSClient:
     # ------------------------------------------------------------------
 
     @retry_with_backoff(reraise_if=_is_permanent_tts_error)
-    def synthesize_stream(self, text: str) -> dict[str, Any]:
+    def synthesize_stream(
+        self,
+        text: str,
+        language_code: str | None = None,
+        voice_name: str | None = None,
+    ) -> dict[str, Any]:
+        voice_name = voice_name or self.tts_cfg.voice_name
+        language_code = language_code or self.tts_cfg.language_code
+        self._apply_token()
         start = time.perf_counter()
 
         def _consume() -> dict[str, Any]:
@@ -178,8 +215,8 @@ class TTSClient:
             chunk_times: list[float] = []
             responses = self.tts_service.synthesize_online(
                 text,
-                voice_name=self.tts_cfg.voice_name,
-                language_code=self.tts_cfg.language_code,
+                voice_name=voice_name,
+                language_code=language_code,
                 sample_rate_hz=self.sample_rate,
             )
             for resp in responses:
@@ -225,8 +262,15 @@ class TTSClient:
     # REST streaming
     # ------------------------------------------------------------------
 
-    @retry_with_backoff(reraise_if=_is_permanent_tts_error)
+    @retry_with_backoff(
+        reraise_if=lambda e: isinstance(e, NotImplementedError) or _is_permanent_tts_error(e)
+    )
     def synthesize_stream_rest(self, text: str) -> dict[str, Any]:
+        if not self.tts_cfg.supports_rest:
+            raise NotImplementedError(
+                "REST streaming synthesis is not available on this endpoint "
+                "(tts.supports_rest is false)."
+            )
         headers = {
             self.tts_cfg.auth_header: f"Bearer {self.riva_cfg.auth_token}",
         }
@@ -280,12 +324,19 @@ class TTSClient:
     # ------------------------------------------------------------------
 
     def save_synthesis(
-        self, text: str, output_path: str | Path, interface: str = "grpc"
+        self,
+        text: str,
+        output_path: str | Path,
+        interface: str = "grpc",
+        language_code: str | None = None,
+        voice_name: str | None = None,
     ) -> dict[str, Any]:
         if interface == "rest":
             result = self.synthesize_batch_rest(text)
         else:
-            result = self.synthesize_batch(text)
+            result = self.synthesize_batch(
+                text, language_code=language_code, voice_name=voice_name
+            )
 
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)

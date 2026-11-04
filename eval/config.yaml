@@ -1,21 +1,58 @@
 # nvidia-riva-client gRPC connection
+#
+# SAP AI Core staging: a SINGLE gRPC gateway host fronts all models; the model
+# is selected by the `deployment-id` metadata (+ `ai-resource-group`), not by a
+# per-model hostname. Auth is a short-lived XSUAA Bearer token.
+#
+# Auth — provide EITHER:
+#   export AICORE_BEARER_TOKEN=<jwt>          # static, no refresh (expires ~12h)
+# OR (recommended for long runs — auto-refreshes):
+#   export AICORE_CLIENT_ID=<clientid>
+#   export AICORE_CLIENT_SECRET=<clientsecret>
+#   export AICORE_AUTH_URL=https://staging-llm-access.authentication.sap.hana.ondemand.com
 riva:
   use_ssl: true
   auth_token_env: AICORE_BEARER_TOKEN
+  resource_group: default
+  client_id_env: AICORE_CLIENT_ID
+  client_secret_env: AICORE_CLIENT_SECRET
+  auth_url_env: AICORE_AUTH_URL
 
 stt:
-  grpc_uri: nim-parakeet.ai.preprod-eu-cc.eu-central-1.aws.ml.hana.ondemand.com:443
-  model_name: parakeet-1.1b-en-US-asr-offline
-  rest_endpoint: https://nim-parakeet.ai.preprod-eu-cc.eu-central-1.aws.ml.hana.ondemand.com/v1/audio/transcriptions
+  grpc_uri: realtime.ai.staging.eu-west-1.mlf-aws-dev.com:443
+  deployment_id: d4519ec6fdc44c0a        # nim-nemotron-asr
+  model_name: nemotron-asr               # label only; gRPC routes by deployment_id
+  rest_endpoint: https://api.ai.staging.eu-west-1.mlf-aws-dev.com/v2/inference/deployments/d4519ec6fdc44c0a/v1/audio/transcriptions
   language_code: en-US
   auth_header: Authorization
   request_timeout_s: 120
+  # Offline/batch Recognize is UNIMPLEMENTED on this gateway — recognize_batch()
+  # transparently falls back to StreamingRecognize when this is false.
+  supports_batch: false
+  # REST inference proxy returns HTTP 500 for this deployment.
+  supports_rest: false
+  # Test 1.12 (multilingual, FLEURS) runs every SAP Joule language by default.
+  # The model (Nemotron-3.5-Transcribe) auto-detects language, so the per-request
+  # code is only a hint. To restrict the run, list language keys here, e.g.:
+  #   multilingual_languages: [en, de, ja, ar, th]
+  multilingual_languages: []
+  # Opt-in per-language depth for the Tier-A tests (1.5 noise, 1.9 output
+  # quality). These languages are measured on FLEURS IN ADDITION to the
+  # unchanged English pass. Empty = English-only (original behaviour). e.g.:
+  #   multilingual_extra_languages: [de, ja, es]
+  multilingual_extra_languages: []
+  # Opt-in spot-check languages for the Tier-B tests (1.2 performance,
+  # 1.7 long-form, 1.10 confidence). Representative set, not exhaustive.
+  # Empty = English-only (original behaviour). e.g.:
+  #   spot_check_languages: [en, de, ja, th, ar]
+  spot_check_languages: []
 
 tts:
-  grpc_uri: nim-magpie.ai.preprod-eu-cc.eu-central-1.aws.ml.hana.ondemand.com:443
+  grpc_uri: realtime.ai.staging.eu-west-1.mlf-aws-dev.com:443
+  deployment_id: d9b39503a6dd78fc        # nim-magpie
   model_name: Magpie-Multilingual.EN-US.Aria
   voice_name: Magpie-Multilingual.EN-US.Aria
-  rest_endpoint: https://nim-magpie.ai.preprod-eu-cc.eu-central-1.aws.ml.hana.ondemand.com/v1/audio/synthesize_online
+  rest_endpoint: https://api.ai.staging.eu-west-1.mlf-aws-dev.com/v2/inference/deployments/d9b39503a6dd78fc/v1/audio/synthesize_online
   language_code: en-US
   auth_header: Authorization
   request_timeout_s: 60
@@ -23,6 +60,15 @@ tts:
   # Hard model limit confirmed in production: inputs >400 tokens fail with
   # StatusCode.UNKNOWN "Input sentence is longer than maximum sequence length: N > 400"
   max_sequence_tokens: 400
+  supports_rest: false
+  # Per-language TTS passes (2.1 naturalness, 2.2 intelligibility, 2.3 prosody,
+  # 2.9 acceptance). Keys from en|fr|es — the only languages Magpie TTS
+  # Multilingual supports. Empty = English-only (original behaviour).
+  # Run 2.9 first to confirm the deployment actually exposes fr/es voices.
+  multilingual_languages: []
+  # Override documented voice names if this deployment serves different voice
+  # strings, e.g. {fr: "Some.Other.Voice"}. Empty = use the documented voices.
+  voice_overrides: {}
 
 evaluation:
   stt_concurrency_levels: [1, 5, 10, 20]

@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import json
 import logging
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -46,6 +47,142 @@ def normalize_text(text: str) -> str:
         .replace("!", "")
         .strip()
     )
+
+
+# ---------------------------------------------------------------------------
+# Language-aware normalisation for WER / CER
+# ---------------------------------------------------------------------------
+# The HF Open ASR Leaderboard and every NVIDIA model card score transcription
+# accuracy by applying ONE shared normaliser to both hypothesis and reference
+# before computing WER. For English that normaliser is Whisper's
+# EnglishTextNormalizer (digit<->word, currency, contractions, unit spelling);
+# the English rules are wrong for other languages, so Whisper's
+# BasicTextNormalizer is used instead (lowercase, strip punctuation/symbols,
+# preserve CJK characters). Matching the industry normaliser is what makes our
+# WER numbers directly comparable to published leaderboard / model-card scores.
+
+# Scripts with no (or inconsistent) word boundaries: WER is not meaningful, so
+# these are scored primarily by Character Error Rate (CER).
+CER_LANGUAGES = {"ja", "zh", "cmn", "yue", "wuu", "th", "lo", "km", "my", "bo"}
+
+
+def _lang_root(lang_code: str | None) -> str:
+    """Reduce a locale tag to its base language.
+
+    'de-DE' -> 'de', 'cmn_hans_cn' -> 'cmn', 'ja_jp' -> 'ja', '' -> 'en'.
+    """
+    if not lang_code:
+        return "en"
+    return lang_code.replace("_", "-").split("-")[0].lower()
+
+
+@functools.lru_cache(maxsize=1)
+def _english_normalizer():
+    try:
+        from whisper.normalizers import EnglishTextNormalizer
+        return EnglishTextNormalizer()
+    except Exception as exc:  # pragma: no cover - fallback path
+        logger.warning(
+            "Whisper EnglishTextNormalizer unavailable (%s); falling back to "
+            "jiwer-only normalisation. English WER on numbers/contractions will "
+            "be inflated and NOT comparable to leaderboard numbers.",
+            exc,
+        )
+        return None
+
+
+@functools.lru_cache(maxsize=1)
+def _basic_normalizer():
+    try:
+        from whisper.normalizers import BasicTextNormalizer
+        # Keep diacritics: they are phonemic in French/Vietnamese/Arabic/etc.,
+        # and stripping them would reward wrong output. split_letters=False so
+        # word-based WER is preserved for space-delimited languages; CER handles
+        # the character-level CJK/Thai case separately.
+        return BasicTextNormalizer(remove_diacritics=False, split_letters=False)
+    except Exception as exc:  # pragma: no cover - fallback path
+        logger.warning(
+            "Whisper BasicTextNormalizer unavailable (%s); falling back to "
+            "jiwer-only normalisation for multilingual scoring.",
+            exc,
+        )
+        return None
+
+
+def is_cer_language(lang_code: str | None) -> bool:
+    """True when the language should be scored by CER rather than WER."""
+    return _lang_root(lang_code) in CER_LANGUAGES
+
+
+def _strip_all_ws(text: str) -> str:
+    """Remove every whitespace character (spaces, tabs, full-width spaces).
+
+    Used only for CER-primary (CJK/Thai) scoring, where word spacing carries no
+    linguistic meaning and ASR spacing is an artifact rather than signal.
+    """
+    return re.sub(r"\s+", "", text)
+
+
+def normalize_for_language(text: str | None, lang_code: str = "en") -> str:
+    """Apply the correct Whisper normaliser for the language.
+
+    English -> EnglishTextNormalizer, everything else -> BasicTextNormalizer.
+    Falls back to jiwer-style lowercase/strip-punctuation when Whisper is not
+    installed, so scoring never crashes (only loses number/contraction mapping).
+    """
+    if not text:
+        return ""
+    norm = _english_normalizer() if _lang_root(lang_code) == "en" else _basic_normalizer()
+    if norm is None:
+        return normalize_text(text)
+    try:
+        return norm(text)
+    except Exception:  # pragma: no cover - defensive
+        return normalize_text(text)
+
+
+def score_pair(references, hypotheses, lang_code: str = "en") -> dict:
+    """Aggregate WER/CER for one language after language-aware normalisation.
+
+    Accepts a single (str, str) or equal-length lists. Returns a dict with
+    ``wer`` (None for CER-primary languages, where word WER is meaningless),
+    ``cer``, ``primary`` ('cer' for CJK/Thai else 'wer'), ``primary_value`` and
+    ``n`` (number of scored pairs). Pairs whose reference is empty after
+    normalisation are dropped so jiwer never divides by zero.
+    """
+    if isinstance(references, str):
+        references = [references]
+        hypotheses = [hypotheses]
+    refs_n = [normalize_for_language(r, lang_code) for r in references]
+    hyps_n = [normalize_for_language(h, lang_code) for h in hypotheses]
+    pairs = [(r, h) for r, h in zip(refs_n, hyps_n) if r.strip()]
+    cer_primary = is_cer_language(lang_code)
+    if not pairs:
+        return {"wer": None, "cer": None, "primary": "cer" if cer_primary else "wer",
+                "primary_value": None, "n": 0}
+    refs_f = [p[0] for p in pairs]
+    hyps_f = [p[1] for p in pairs]
+    if cer_primary:
+        # Word WER is nonsense without word boundaries — report CER only.
+        # CJK/Thai have no inter-word spaces, and ASR engines are inconsistent
+        # about inserting them (this endpoint emits one space PER CHARACTER,
+        # e.g. "イ ン タ ー ネ ッ ト"). Counting those spaces as characters
+        # inflates CER toward 1.0, so — matching Open ASR Leaderboard practice
+        # for Chinese/Japanese — strip ALL whitespace before scoring CER.
+        refs_c = [_strip_all_ws(r) for r in refs_f]
+        hyps_c = [_strip_all_ws(h) for h in hyps_f]
+        refs_c, hyps_c = zip(*[(r, h) for r, h in zip(refs_c, hyps_c) if r]) if any(refs_c) else ([], [])
+        cer = float(jiwer.cer(list(refs_c), list(hyps_c))) if refs_c else None
+        return {"wer": None, "cer": cer, "primary": "cer",
+                "primary_value": cer, "n": len(refs_c)}
+    cer = float(jiwer.cer(refs_f, hyps_f))
+    wer = float(jiwer.wer(
+        refs_f, hyps_f,
+        reference_transform=NORMALIZE_FOR_WER_AGG,
+        hypothesis_transform=NORMALIZE_FOR_WER_AGG,
+    ))
+    return {"wer": wer, "cer": cer, "primary": "wer",
+            "primary_value": wer, "n": len(pairs)}
 
 
 # ---------------------------------------------------------------------------

@@ -20,6 +20,7 @@ from eval.utils import (
     bootstrap_ci,
     get_completed_ids,
     load_dataset_tmp,
+    normalize_for_language,
     read_jsonl,
     save_summary_csv,
     write_jsonl,
@@ -27,12 +28,25 @@ from eval.utils import (
 
 logger = logging.getLogger("eval.stt.accuracy")
 
+# The HF Open ASR Leaderboard standardises on 8 English test sets (LibriSpeech
+# counts clean+other separately). We run all of them so our WER table lines up
+# cell-for-cell with NVIDIA's published model-card numbers. Heavy / long-form
+# sets carry a `limit` so a full run stays tractable; registration-gated or
+# very large sets are skipped gracefully if they fail to download.
+#
+# Common Voice is the 8th leaderboard set but was removed from the Hugging Face
+# Hub in Oct 2025 (now distributed via the Mozilla Data Collective, which needs
+# authenticated download). It therefore cannot be auto-loaded here; point
+# CV_LOCAL_DIR at a local copy to include it, otherwise it is skipped.
 DATASETS = [
     {"name": "librispeech_clean", "hf": ("openslr/librispeech_asr", "clean"), "split": "test", "label": "LibriSpeech clean"},
     {"name": "librispeech_other", "hf": ("openslr/librispeech_asr", "other"), "split": "test", "label": "LibriSpeech other"},
     {"name": "voxpopuli_en", "hf": ("facebook/voxpopuli", "en"), "split": "test", "label": "VoxPopuli EN"},
     {"name": "gigaspeech", "hf": ("speechcolab/gigaspeech", "xs"), "split": "test", "label": "GigaSpeech"},
     {"name": "spgispeech", "hf": ("kensho/spgispeech", "S"), "split": "validation", "label": "SPGISpeech"},
+    {"name": "tedlium", "hf": ("LIUM/tedlium", "release3"), "split": "test", "label": "TED-LIUM 3", "limit": 500},
+    {"name": "ami", "hf": ("edinburghcstr/ami", "ihm"), "split": "test", "label": "AMI (IHM)", "limit": 500},
+    {"name": "earnings22", "hf": ("distil-whisper/earnings22", "chunked"), "split": "test", "label": "Earnings-22", "limit": 300},
 ]
 
 THRESHOLDS = {
@@ -41,7 +55,19 @@ THRESHOLDS = {
     "voxpopuli_en": {"pass": 0.08, "good": 0.12, "acceptable": 0.18},
     "gigaspeech": {"pass": 0.12, "good": 0.16, "acceptable": 0.22},
     "spgispeech": {"pass": 0.08, "good": 0.12, "acceptable": 0.18},
+    "tedlium": {"pass": 0.08, "good": 0.12, "acceptable": 0.18},
+    "ami": {"pass": 0.15, "good": 0.20, "acceptable": 0.28},
+    "earnings22": {"pass": 0.12, "good": 0.16, "acceptable": 0.25},
 }
+
+# Transform that preserves case AND punctuation (only splits into words). Used
+# to report a raw cased+punctuated WER alongside the normalised WER — the gap
+# between the two shows how much of the error is pure formatting.
+_CASED_WORDS = jiwer.Compose([
+    jiwer.RemoveMultipleSpaces(),
+    jiwer.Strip(),
+    jiwer.ReduceToListOfListOfWords(),
+])
 
 
 _GIGASPEECH_PUNCT = {"<COMMA>": ",", "<PERIOD>": ".", "<QUESTIONMARK>": "?", "<EXCLAMATIONPOINT>": "!"}
@@ -84,8 +110,9 @@ def run(config: Config) -> dict:
 
         path, name = ds_info["hf"]
         extra = {"trust_remote_code": True} if path.startswith("mozilla-foundation/") else {}
+        limit = ds_info.get("limit")
         try:
-            with load_dataset_tmp(path, ds_info["split"], name=name, **extra) as examples:
+            with load_dataset_tmp(path, ds_info["split"], name=name, limit=limit, **extra) as examples:
                 pass
         except Exception as e:
             logger.error("Failed to load %s: %s", ds_name, e)
@@ -113,16 +140,21 @@ def run(config: Config) -> dict:
                 result = stt_client.recognize_batch(audio_bytes, sr)
                 hyp = result["transcript"]
 
+                # Apply Whisper's EnglishTextNormalizer (digit<->word,
+                # contractions, currency) before jiwer so WER reflects semantic
+                # equality and matches how the leaderboard / model cards score.
+                ref_norm = normalize_for_language(ref_text, "en")
+                hyp_norm = normalize_for_language(hyp, "en")
                 utt_wer = jiwer.wer(
-                    ref_text, hyp,
+                    ref_norm, hyp_norm,
                     reference_transform=NORMALIZE_FOR_WER,
                     hypothesis_transform=NORMALIZE_FOR_WER,
-                )
+                ) if ref_norm.strip() else 0.0
                 utt_cer = jiwer.cer(
-                    ref_text, hyp,
+                    ref_norm, hyp_norm,
                     reference_transform=NORMALIZE_FOR_WER,
                     hypothesis_transform=NORMALIZE_FOR_WER,
-                )
+                ) if ref_norm.strip() else 0.0
 
                 record = {
                     "id": item_id,
@@ -156,9 +188,12 @@ def run(config: Config) -> dict:
                         hypotheses.append(rec["hypothesis"])
                         # Stored per-utt WER for GigaSpeech is inflated by tags — recompute.
                         if ds_name == "gigaspeech":
-                            w = jiwer.wer(ref, rec["hypothesis"],
-                                          reference_transform=NORMALIZE_FOR_WER,
-                                          hypothesis_transform=NORMALIZE_FOR_WER)
+                            w = jiwer.wer(
+                                normalize_for_language(ref, "en"),
+                                normalize_for_language(rec["hypothesis"], "en"),
+                                reference_transform=NORMALIZE_FOR_WER,
+                                hypothesis_transform=NORMALIZE_FOR_WER,
+                            )
                             per_utt_wers.append(w)
                         else:
                             per_utt_wers.append(rec.get("wer", 0.0))
@@ -166,27 +201,51 @@ def run(config: Config) -> dict:
                 logger.warning("No results for %s", ds_name)
                 continue
 
-        # Aggregate metrics — use NORMALIZE_FOR_WER_AGG (no RemoveEmptyStrings)
-        # so empty refs/hyps don't shorten one list and cause a length mismatch.
+        # Aggregate metrics. Apply the English normaliser first, then score with
+        # NORMALIZE_FOR_WER_AGG (no RemoveEmptyStrings) so empty refs/hyps don't
+        # shorten one list and cause a length mismatch.
+        refs_norm = [normalize_for_language(r, "en") for r in references]
+        hyps_norm = [normalize_for_language(h, "en") for h in hypotheses]
+
         agg_wer = jiwer.wer(
-            references, hypotheses,
+            refs_norm, hyps_norm,
             reference_transform=NORMALIZE_FOR_WER_AGG,
             hypothesis_transform=NORMALIZE_FOR_WER_AGG,
         )
         agg_cer = jiwer.cer(
-            references, hypotheses,
+            refs_norm, hyps_norm,
             reference_transform=NORMALIZE_FOR_WER_AGG,
             hypothesis_transform=NORMALIZE_FOR_WER_AGG,
         )
         agg_mer = jiwer.mer(
-            references, hypotheses,
+            refs_norm, hyps_norm,
             reference_transform=NORMALIZE_FOR_WER_AGG,
             hypothesis_transform=NORMALIZE_FOR_WER_AGG,
         )
         agg_wil = jiwer.wil(
-            references, hypotheses,
+            refs_norm, hyps_norm,
             reference_transform=NORMALIZE_FOR_WER_AGG,
             hypothesis_transform=NORMALIZE_FOR_WER_AGG,
+        )
+
+        # Substitution/insertion/deletion breakdown (on normalised text) — shows
+        # the error profile, not just the rate.
+        word_out = jiwer.process_words(
+            refs_norm, hyps_norm,
+            reference_transform=NORMALIZE_FOR_WER_AGG,
+            hypothesis_transform=NORMALIZE_FOR_WER_AGG,
+        )
+        n_sub, n_ins, n_del, n_hits = (
+            word_out.substitutions, word_out.insertions,
+            word_out.deletions, word_out.hits,
+        )
+
+        # Raw cased+punctuated WER (no normalisation): the gap vs agg_wer is the
+        # share of error that is pure casing/punctuation/formatting.
+        agg_wer_cased = jiwer.wer(
+            references, hypotheses,
+            reference_transform=_CASED_WORDS,
+            hypothesis_transform=_CASED_WORDS,
         )
 
         # SER: fraction of utterances with at least 1 error
@@ -207,20 +266,27 @@ def run(config: Config) -> dict:
             "dataset": ds_info["label"],
             "n_utterances": len(references),
             "wer": round(agg_wer, 4),
+            "wer_cased": round(agg_wer_cased, 4),
             "cer": round(agg_cer, 4),
             "mer": round(agg_mer, 4),
             "wil": round(agg_wil, 4),
             "ser": round(ser, 4),
+            "subs": n_sub,
+            "ins": n_ins,
+            "dels": n_del,
+            "hits": n_hits,
             "wer_ci_lo": round(ci_lo, 4),
             "wer_ci_hi": round(ci_hi, 4),
             "verdict": verdict,
         }
         summary_rows.append(row)
         logger.info(
-            "%s: WER=%.2f%% [%.2f%%–%.2f%%] CER=%.2f%% SER=%.2f%% → %s",
+            "%s: WER=%.2f%% [%.2f%%–%.2f%%] (cased %.2f%%) CER=%.2f%% "
+            "S/I/D=%d/%d/%d SER=%.2f%% → %s",
             ds_info["label"],
             agg_wer * 100, ci_lo * 100, ci_hi * 100,
-            agg_cer * 100, ser * 100, verdict,
+            agg_wer_cased * 100, agg_cer * 100,
+            n_sub, n_ins, n_del, ser * 100, verdict,
         )
 
     save_summary_csv(results_dir / "summary.csv", summary_rows)

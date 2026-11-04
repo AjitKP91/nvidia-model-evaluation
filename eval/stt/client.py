@@ -6,6 +6,7 @@ import time
 import wave
 from typing import Any
 
+import certifi
 import numpy as np
 import requests
 import soundfile as sf
@@ -24,14 +25,34 @@ class STTClient:
         self.stt_cfg = config.stt
         self.riva_cfg = config.riva
 
+        # IMPORTANT: construct Auth with NO metadata_args. The SAP AI Core gRPC
+        # gateway rejects a duplicated `authorization` header as "Token is
+        # invalid", and riva.client double-sends when metadata is passed to the
+        # constructor (it bakes it into channel call-credentials AND the service
+        # wrappers also pass it per-call). By leaving metadata_args unset the
+        # channel carries no call-creds, and we attach metadata via
+        # `self.auth.metadata` so it is sent exactly once per call. Updating
+        # that list (see _apply_token) is how we rotate a refreshed token.
         self.auth = riva.client.Auth(
             uri=self.stt_cfg.grpc_uri,
             use_ssl=self.riva_cfg.use_ssl,
-            metadata_args=[
-                ["authorization", f"Bearer {self.riva_cfg.auth_token}"]
-            ],
+            ssl_root_cert=certifi.where(),
         )
+        self._apply_token()
         self.asr_service = riva.client.ASRService(self.auth)
+
+    def _apply_token(self) -> None:
+        """Refresh the per-call auth metadata with a currently-valid token.
+
+        `riva_cfg.auth_token` returns a cached token and mints/refreshes a new
+        one when the old is near expiry, so calling this before each RPC keeps
+        long unattended runs from dying when a token ages out.
+        """
+        md = [("ai-resource-group", self.riva_cfg.resource_group)]
+        if self.stt_cfg.deployment_id:
+            md.append(("deployment-id", self.stt_cfg.deployment_id))
+        md.append(("authorization", f"Bearer {self.riva_cfg.auth_token}"))
+        self.auth.metadata = md
 
     # ------------------------------------------------------------------
     # gRPC batch
@@ -45,10 +66,26 @@ class STTClient:
         channels: int = 1,
         enable_punctuation: bool = True,
         enable_word_times: bool = True,
+        language_code: str | None = None,
     ) -> dict[str, Any]:
+        self._apply_token()
+        lang = language_code or self.stt_cfg.language_code
+
+        # The AI Core gateway does not implement offline Recognize — drive the
+        # streaming RPC instead and aggregate the final segments. Same return
+        # shape, so every caller of recognize_batch() works unchanged.
+        if not self.stt_cfg.supports_batch:
+            return self._recognize_via_streaming(
+                audio_bytes,
+                sample_rate,
+                enable_punctuation=enable_punctuation,
+                enable_word_times=enable_word_times,
+                language_code=lang,
+            )
+
         config = riva.client.RecognitionConfig(
             encoding=riva.client.AudioEncoding.LINEAR_PCM,
-            language_code=self.stt_cfg.language_code,
+            language_code=lang,
             max_alternatives=1,
             enable_automatic_punctuation=enable_punctuation,
             enable_word_time_offsets=enable_word_times,
@@ -104,16 +141,104 @@ class STTClient:
         }
 
     # ------------------------------------------------------------------
+    # Streaming-backed "batch" (gateway has no offline Recognize)
+    # ------------------------------------------------------------------
+
+    def _recognize_via_streaming(
+        self,
+        audio_bytes: bytes,
+        sample_rate: int,
+        enable_punctuation: bool = True,
+        enable_word_times: bool = True,
+        chunk_duration_s: float = 0.1,
+        language_code: str | None = None,
+    ) -> dict[str, Any]:
+        """Transcribe raw PCM via StreamingRecognize and aggregate finals.
+
+        Drop-in replacement for recognize_batch() on endpoints where offline
+        Recognize is UNIMPLEMENTED. Returns the same dict shape.
+        """
+        lang = language_code or self.stt_cfg.language_code
+        streaming_config = riva.client.StreamingRecognitionConfig(
+            config=riva.client.RecognitionConfig(
+                encoding=riva.client.AudioEncoding.LINEAR_PCM,
+                language_code=lang,
+                max_alternatives=1,
+                enable_automatic_punctuation=enable_punctuation,
+                enable_word_time_offsets=enable_word_times,
+                sample_rate_hertz=sample_rate,
+                audio_channel_count=1,
+            ),
+            interim_results=False,
+        )
+
+        bytes_per_chunk = max(2, int(sample_rate * chunk_duration_s) * 2)
+
+        def audio_chunks():
+            for i in range(0, len(audio_bytes), bytes_per_chunk):
+                yield audio_bytes[i:i + bytes_per_chunk]
+
+        start = time.perf_counter()
+        responses = self.asr_service.streaming_response_generator(
+            audio_chunks=audio_chunks(),
+            streaming_config=streaming_config,
+        )
+
+        transcript_parts: list[str] = []
+        confidence_parts: list[float] = []
+        words: list[dict] = []
+        for response in responses:
+            for result in response.results:
+                if not result.is_final or not result.alternatives:
+                    continue
+                alt = result.alternatives[0]
+                if alt.transcript:
+                    transcript_parts.append(alt.transcript)
+                confidence_parts.append(alt.confidence)
+                words.extend([
+                    {
+                        "word": w.word,
+                        "start_time": w.start_time,
+                        "end_time": w.end_time,
+                        "confidence": getattr(w, "confidence", None),
+                    }
+                    for w in getattr(alt, "words", [])
+                ])
+        elapsed = time.perf_counter() - start
+
+        transcript = " ".join(p.strip() for p in transcript_parts if p.strip())
+        confidence = (
+            float(sum(confidence_parts) / len(confidence_parts))
+            if confidence_parts else 0.0
+        )
+
+        return {
+            "transcript": transcript,
+            "confidence": confidence,
+            "words": words,
+            "elapsed_s": elapsed,
+            "interface": "grpc",
+            "mode": "batch",            # preserve downstream semantics
+            "transport": "streaming_fallback",
+            "raw_response": None,
+        }
+
+    # ------------------------------------------------------------------
     # REST batch
     # ------------------------------------------------------------------
 
-    @retry_with_backoff()
+    @retry_with_backoff(reraise_if=lambda e: isinstance(e, NotImplementedError))
     def recognize_batch_rest(
         self,
         audio_bytes: bytes,
         sample_rate: int,
         content_type: str = "audio/wav",
     ) -> dict[str, Any]:
+        if not self.stt_cfg.supports_rest:
+            raise NotImplementedError(
+                "REST transcription is not available on this endpoint "
+                "(stt.supports_rest is false)."
+            )
         import io
         import wave
 
@@ -171,7 +296,10 @@ class STTClient:
         self,
         audio_path: str,
         chunk_duration_s: float = 0.1,
+        language_code: str | None = None,
     ) -> dict[str, Any]:
+        self._apply_token()
+        lang = language_code or self.stt_cfg.language_code
         with wave.open(audio_path) as wf:
             sr = wf.getframerate()
             chunk_frames = int(sr * chunk_duration_s)
@@ -181,7 +309,7 @@ class STTClient:
         streaming_config = riva.client.StreamingRecognitionConfig(
             config=riva.client.RecognitionConfig(
                 encoding=riva.client.AudioEncoding.LINEAR_PCM,
-                language_code=self.stt_cfg.language_code,
+                language_code=lang,
                 max_alternatives=1,
                 enable_automatic_punctuation=True,
                 sample_rate_hertz=sr,
@@ -274,11 +402,16 @@ class STTClient:
     # REST streaming (chunked transfer / SSE — endpoint-dependent)
     # ------------------------------------------------------------------
 
-    @retry_with_backoff()
+    @retry_with_backoff(reraise_if=lambda e: isinstance(e, NotImplementedError))
     def stream_recognize_rest(
         self,
         audio_path: str,
     ) -> dict[str, Any]:
+        if not self.stt_cfg.supports_rest:
+            raise NotImplementedError(
+                "REST streaming is not available on this endpoint "
+                "(stt.supports_rest is false)."
+            )
         import io as _io
 
         audio, sr = sf.read(audio_path, dtype="int16")

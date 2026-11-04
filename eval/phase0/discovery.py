@@ -399,6 +399,19 @@ def _write_discovery(out_dir: Path, results: dict) -> None:
     tmp_path.replace(output_path)
 
 
+def _language_acceptance_subphase(stt_client: STTClient, out_dir: Path) -> dict:
+    """Probe all 40 model languages against the live endpoint (streamed FLEURS,
+    ~3 clips each, idempotent). Shares its output dir with Test 1.13 so the
+    "ok" verdicts are reused and the probe stays cheap on every later run."""
+    from eval.stt.language_acceptance import probe
+
+    # out_dir here is results/phase0; keep the matrix with the STT results.
+    accept_dir = out_dir.parent / "stt" / "language_acceptance"
+    result = probe(stt_client, accept_dir)
+    return {"phase": "language_acceptance", **result["summary"],
+            "matrix_csv": str(accept_dir / "language_acceptance.csv")}
+
+
 def run(config: Config | None = None) -> dict:
     if config is None:
         config = load_config()
@@ -448,6 +461,7 @@ def run(config: Config | None = None) -> dict:
     _run_subphase("parameters",             explore_parameters,           out_dir, results, stt_client, tts_client, out_dir)
     _run_subphase("smoke_tests",            smoke_tests,                  out_dir, results, stt_client, tts_client, out_dir)
     _run_subphase("cold_start",             cold_start_test,              out_dir, results, stt_client, tts_client, out_dir)
+    _run_subphase("language_acceptance",    _language_acceptance_subphase, out_dir, results, stt_client, out_dir)
 
     logger.info("Phase 0 results written to %s", out_dir / "discovery.json")
 

@@ -14,17 +14,30 @@ from tqdm import tqdm
 
 from eval.config import Config
 from eval.stt.client import STTClient
-from eval.utils import NORMALIZE_FOR_WER, load_dataset_tmp, save_summary_csv, write_jsonl
+from eval.stt.fleurs_common import fleurs_load, get_audio_and_ref, pcm16_bytes, resolve_languages
+from eval.utils import NORMALIZE_FOR_WER, is_cer_language, load_dataset_tmp, save_summary_csv, score_pair, write_jsonl
 
 logger = logging.getLogger("eval.stt.long_form")
 
 CHUNK_DURATION_S = 30
+# Number of FLEURS clips concatenated into one long file per spot-check language.
+LANG_CONCAT_GROUP = 10
+# How many concatenated long files to build per spot-check language.
+LANG_CONCAT_FILES = 3
 
 
-def _detect_hallucinations(reference: str, hypothesis: str, ngram_size: int = 5) -> dict:
-    """Flag n-gram sequences in hypothesis absent from reference."""
-    ref_words = reference.lower().split()
-    hyp_words = hypothesis.lower().split()
+def _detect_hallucinations(reference: str, hypothesis: str, ngram_size: int = 5,
+                           char_level: bool = False) -> dict:
+    """Flag n-gram sequences in hypothesis absent from reference.
+
+    English default (char_level=False) tokenises on whitespace, unchanged. For
+    CER languages (ja/zh/th — no word boundaries) pass char_level=True so n-grams
+    are over characters; callers mark such results ``approximate`` rather than
+    reporting a word-based rate that is meaningless for those scripts.
+    """
+    tokenize = (lambda t: list(t)) if char_level else (lambda t: t.split())
+    ref_words = tokenize(reference.lower())
+    hyp_words = tokenize(hypothesis.lower())
 
     ref_ngrams = set()
     for i in range(len(ref_words) - ngram_size + 1):
@@ -46,9 +59,10 @@ def _detect_hallucinations(reference: str, hypothesis: str, ngram_size: int = 5)
     }
 
 
-def _detect_repetitions(hypothesis: str, ngram_size: int = 5) -> dict:
-    """Count repeated n-gram sequences."""
-    words = hypothesis.lower().split()
+def _detect_repetitions(hypothesis: str, ngram_size: int = 5, char_level: bool = False) -> dict:
+    """Count repeated n-gram sequences (whitespace tokens, or chars for CER)."""
+    tokenize = (lambda t: list(t)) if char_level else (lambda t: t.split())
+    words = tokenize(hypothesis.lower())
     ngrams = []
     for i in range(len(words) - ngram_size + 1):
         ngrams.append(tuple(words[i : i + ngram_size]))
@@ -185,4 +199,84 @@ def run(config: Config) -> dict:
         avg_rep = np.mean([r["repetition_rate"] for r in summary_rows])
         logger.info("Hallucination rate: %.2f%%, Repetition rate: %.2f%%", avg_hall * 100, avg_rep * 100)
 
+    # ---- Opt-in Tier-B spot-check languages (FLEURS concatenation) ----
+    spot = resolve_languages(getattr(config.stt, "spot_check_languages", []) or [])
+    lang_rows: list[dict] = []
+    for lang in spot:
+        try:
+            lang_rows.extend(_run_language_longform(lang, config, stt_client, results_dir))
+        except Exception as e:  # pragma: no cover - defensive
+            logger.error("Language %s failed in 1.7: %s", lang["key"], e)
+    if lang_rows:
+        save_summary_csv(results_dir / "summary_by_language.csv", lang_rows)
+        summary_rows = summary_rows + lang_rows
+
     return {"test": "1.7", "name": "long_form", "results": summary_rows}
+
+
+def _run_language_longform(lang: dict, config: Config, stt_client: STTClient, results_dir: Path) -> list[dict]:
+    """Opt-in per-language long-form spot-check on concatenated FLEURS clips.
+
+    Builds long files by concatenating ~10 FLEURS clips (same idiom as the
+    English concatenated-LibriSpeech path) and scores full-file WER/CER with
+    ``score_pair``. For CER languages the hallucination/repetition detectors run
+    on characters and are flagged ``approximate`` — never reported as a bogus
+    word-based rate. Languages that return empty transcripts record a
+    ``no_output`` row.
+    """
+    key = lang["key"]
+    jsonl_path = results_dir / f"{key}.jsonl"
+    cer = is_cer_language(key)
+    logger.info("--- 1.7 spot-check language=%s (FLEURS %s, cer=%s) ---", key, lang["fleurs"], cer)
+
+    try:
+        with fleurs_load(lang, limit=LANG_CONCAT_GROUP * LANG_CONCAT_FILES) as examples:
+            pass
+    except Exception as e:
+        logger.error("FLEURS load failed for %s: %s", key, e)
+        return [{"language": key, "id": "load_failed", "full_wer": None}]
+
+    if not examples:
+        return [{"language": key, "id": "load_failed", "full_wer": None}]
+
+    groups = [examples[i:i + LANG_CONCAT_GROUP] for i in range(0, len(examples), LANG_CONCAT_GROUP)]
+    rows: list[dict] = []
+    non_empty = 0
+    for gi, group in enumerate(tqdm(groups, desc=f"lf:{key}")):
+        all_audio, all_refs, sr = [], [], None
+        for ex in group:
+            a, sr, ref = get_audio_and_ref(ex)
+            all_audio.append(a)
+            all_refs.append(ref)
+        if not all_audio:
+            continue
+        concat_audio = np.concatenate(all_audio)
+        concat_ref = " ".join(all_refs)
+        duration_s = len(concat_audio) / sr
+        try:
+            full_result = stt_client.recognize_batch(pcm16_bytes(concat_audio), sr, language_code=lang["model_lang"])
+            full_hyp = full_result["transcript"]
+            if (full_hyp or "").strip():
+                non_empty += 1
+            sc = score_pair([concat_ref], [full_hyp], key)
+            hall = _detect_hallucinations(concat_ref, full_hyp, char_level=cer)
+            rep = _detect_repetitions(full_hyp, char_level=cer)
+            record = {
+                "id": f"concat_{key}_{gi}",
+                "language": key,
+                "duration_s": duration_s,
+                "full_wer": round(sc["primary_value"], 4),
+                "metric": sc["primary"],
+                "hallucination_rate": hall["hallucination_rate"],
+                "repetition_rate": rep["repetition_rate"],
+                "detector_approximate": cer,
+            }
+            write_jsonl(jsonl_path, record)
+            rows.append(record)
+        except Exception as e:
+            logger.warning("Long-form %s group %d failed: %s", key, gi, e)
+
+    if non_empty == 0:
+        logger.warning("Language %s returns empty transcripts; recording no_output", key)
+        return [{"language": key, "id": "no_output", "full_wer": None}]
+    return rows

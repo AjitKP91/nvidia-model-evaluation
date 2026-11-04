@@ -1,4 +1,11 @@
-"""Test 1.11 — Audio Format & Input Robustness."""
+"""Test 1.11 — Audio Format & Input Robustness.
+
+ENGLISH-ONLY BY DESIGN: this is an audio-frontend test — it varies container
+format, sample rate, and bit depth and checks the endpoint still accepts/decodes
+the stream. Those are properties of the audio pipeline, not of the spoken
+language, so it is not parameterised by language. See
+docs/multilingual-test-gap-analysis.md.
+"""
 from __future__ import annotations
 
 import io

@@ -1,0 +1,2 @@
+language,f0_mean_hz,f0_std_intra_hz,f0_range_intra_hz,npvi,npvi_method,pause_ratio,wpm_mean,wpm_std,n_sentences
+zh,195.8,57.2,174.6,63.4,acoustic_approx,0.069,16.0,12.5,30

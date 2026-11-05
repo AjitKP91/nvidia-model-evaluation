@@ -1,0 +1,14 @@
+id,language,duration_s,full_wer,metric,hallucination_rate,repetition_rate,detector_approximate
+concat_en_0,en,90.98,0.0708,wer,0.5258215962441315,0.0,False
+concat_en_1,en,97.62,0.1179,wer,0.5765765765765766,0.0,False
+concat_en_2,en,100.72,0.0783,wer,0.6222222222222222,0.0,False
+concat_de_0,de,157.56,0.0857,wer,0.6554621848739496,0.0,False
+concat_de_1,de,118.74,0.078,wer,0.7014925373134329,0.0,False
+concat_de_2,de,174.12,0.1645,wer,0.7327188940092166,0.0,False
+concat_ja_0,ja,110.04,0.1964,cer,0.24234354194407456,0.04417670682730924,True
+concat_ja_1,ja,142.38,0.1848,cer,0.211,0.14759036144578314,True
+concat_ja_2,ja,111.12,0.2438,cer,0.23671497584541062,0.11165048543689321,True
+concat_th_0,th,99.0,0.9898,cer,0.5,0.0,True
+concat_th_1,th,121.44,0.8595,cer,0.0440251572327044,0.46496815286624205,True
+concat_th_2,th,105.3,1.0,cer,0.0,0.0,True
+no_output,ar,,,,,,

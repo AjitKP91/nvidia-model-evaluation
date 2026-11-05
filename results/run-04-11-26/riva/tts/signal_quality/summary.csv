@@ -1,0 +1,2 @@
+test,name,status,reason
+2.4,signal_quality,n/a,"Intrusive MCD/PESQ/STOI require a same-speaker, same-text ground-truth recording aligned to the output. None exists for a fixed synthetic voice (Aria), so any score would measure speaker mismatch, not quality. Use 2.1 (UTMOS/DNSMOS) and 2.2 (round-trip WER) instead. Valid only via zero-shot voice cloning against held-out real-speaker audio, which needs a different NIM deployment."

@@ -1,0 +1,2 @@
+language,n_sentences,round_trip_wer,metric
+ko,50,0.1775,wer

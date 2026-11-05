@@ -1,0 +1,110 @@
+metric,value,n_samples,language
+Punctuation F1 (.),0.3633,500.0,
+"Punctuation F1 (,)",0.2693,500.0,
+Punctuation F1 (?),0.0206,500.0,
+Punctuation F1 (!),0.0,500.0,
+Capitalisation Accuracy,0.9062,,
+Number Formatting Accuracy,0.9487,,
+Punctuation F1 (.),0.5564,200.0,en
+"Punctuation F1 (,)",0.2632,200.0,en
+Punctuation F1 (?),0.0,200.0,en
+Punctuation F1 (!),0.0,200.0,en
+Capitalisation Accuracy,0.9133,,en
+Number Formatting Accuracy,0.9421,,en
+Punctuation F1 (.),0.6797,200.0,de
+"Punctuation F1 (,)",0.4744,200.0,de
+Punctuation F1 (?),0.0,200.0,de
+Punctuation F1 (!),0.0,200.0,de
+Capitalisation Accuracy,0.9575,,de
+Number Formatting Accuracy,0.9433,,de
+Punctuation F1 (.),0.435,200.0,fr
+"Punctuation F1 (,)",0.3778,200.0,fr
+Punctuation F1 (?),0.0,400.0,fr
+Punctuation F1 (!),0.0,400.0,fr
+Punctuation F1 (?),0.0,400.0,fr
+Punctuation F1 (!),0.0,400.0,fr
+Punctuation F1 (;),0.0,200.0,fr
+Punctuation F1 (:),0.0,200.0,fr
+Capitalisation Accuracy,0.9264,,fr
+Number Formatting Accuracy,0.9675,,fr
+Punctuation F1 (.),0.6847,200.0,es
+"Punctuation F1 (,)",0.4864,200.0,es
+Punctuation F1 (?),0.005,200.0,es
+Punctuation F1 (!),0.0,200.0,es
+Punctuation F1 (¿),0.0,200.0,es
+Punctuation F1 (¡),0.0,200.0,es
+Capitalisation Accuracy,0.9826,,es
+Number Formatting Accuracy,0.9533,,es
+Punctuation F1 (.),0.4273,200.0,pt
+"Punctuation F1 (,)",0.3135,200.0,pt
+Punctuation F1 (?),0.005,200.0,pt
+Punctuation F1 (!),0.0,200.0,pt
+Capitalisation Accuracy,0.9359,,pt
+Number Formatting Accuracy,0.975,,pt
+Punctuation F1 (.),0.5128,200.0,nl
+"Punctuation F1 (,)",0.1737,200.0,nl
+Punctuation F1 (?),0.0,200.0,nl
+Punctuation F1 (!),0.0,200.0,nl
+Capitalisation Accuracy,0.9167,,nl
+Number Formatting Accuracy,0.83,,nl
+Punctuation F1 (.),0.4704,200.0,pl
+"Punctuation F1 (,)",0.3802,200.0,pl
+Punctuation F1 (?),0.0,200.0,pl
+Punctuation F1 (!),0.0,200.0,pl
+Capitalisation Accuracy,0.8777,,pl
+Number Formatting Accuracy,0.79,,pl
+Punctuation F1 (.),0.3667,200.0,ko
+"Punctuation F1 (,)",0.0,200.0,ko
+Punctuation F1 (?),0.0,200.0,ko
+Punctuation F1 (!),0.0,200.0,ko
+Capitalisation Accuracy,n/a,,ko
+Number Formatting Accuracy,0.95,,ko
+Punctuation F1 (.),0.2895,200.0,el
+"Punctuation F1 (,)",0.1557,200.0,el
+Punctuation F1 (!),0.0,200.0,el
+Punctuation F1 (·),0.0,200.0,el
+Punctuation F1 (;),0.0,200.0,el
+Capitalisation Accuracy,0.7796,,el
+Number Formatting Accuracy,0.9325,,el
+Punctuation F1 (。),0.0223,200.0,ja
+Punctuation F1 (、),0.0176,200.0,ja
+Punctuation F1 (？),0.0,200.0,ja
+Punctuation F1 (！),0.0,200.0,ja
+Punctuation F1 (，),0.0,200.0,ja
+Capitalisation Accuracy,n/a,,ja
+Number Formatting Accuracy,0.995,,ja
+Punctuation F1 (。),0.1333,200.0,zh
+Punctuation F1 (、),0.0067,200.0,zh
+Punctuation F1 (？),0.0,200.0,zh
+Punctuation F1 (！),0.0,200.0,zh
+Punctuation F1 (，),0.0,200.0,zh
+Capitalisation Accuracy,n/a,,zh
+Number Formatting Accuracy,0.8487,,zh
+Punctuation F1 (.),0.4273,200.0,vi
+"Punctuation F1 (,)",0.2598,200.0,vi
+Punctuation F1 (?),0.0,200.0,vi
+Punctuation F1 (!),0.0,200.0,vi
+Capitalisation Accuracy,0.8936,,vi
+Number Formatting Accuracy,0.959,,vi
+Capitalisation Accuracy,n/a,,th
+Number Formatting Accuracy,n/a,,th
+no_output,,,id
+no_output,,,ar
+Punctuation F1 (.),0.527,200.0,cs
+"Punctuation F1 (,)",0.3016,200.0,cs
+Punctuation F1 (?),0.0,200.0,cs
+Punctuation F1 (!),0.0,200.0,cs
+Capitalisation Accuracy,0.8989,,cs
+Number Formatting Accuracy,0.815,,cs
+Punctuation F1 (.),0.5475,200.0,it
+"Punctuation F1 (,)",0.2309,200.0,it
+Punctuation F1 (?),0.0,200.0,it
+Punctuation F1 (!),0.0,200.0,it
+Capitalisation Accuracy,0.952,,it
+Number Formatting Accuracy,0.79,,it
+Punctuation F1 (.),0.6332,200.0,tr
+"Punctuation F1 (,)",0.083,200.0,tr
+Punctuation F1 (?),0.0,200.0,tr
+Punctuation F1 (!),0.0,200.0,tr
+Capitalisation Accuracy,0.8886,,tr
+Number Formatting Accuracy,0.86,,tr

@@ -1,0 +1,3 @@
+{"id": "concat_th_0", "language": "th", "duration_s": 99.0, "full_wer": 0.9898, "metric": "cer", "hallucination_rate": 0.5, "repetition_rate": 0.0, "detector_approximate": true}
+{"id": "concat_th_1", "language": "th", "duration_s": 121.44, "full_wer": 0.8595, "metric": "cer", "hallucination_rate": 0.0440251572327044, "repetition_rate": 0.46496815286624205, "detector_approximate": true}
+{"id": "concat_th_2", "language": "th", "duration_s": 105.3, "full_wer": 1.0, "metric": "cer", "hallucination_rate": 0, "repetition_rate": 0.0, "detector_approximate": true}

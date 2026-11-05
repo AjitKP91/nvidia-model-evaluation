@@ -1,0 +1,3 @@
+{"id": "concat_ar_0", "language": "ar", "duration_s": 125.66, "full_wer": 1.0, "metric": "wer", "hallucination_rate": 0, "repetition_rate": 0.0, "detector_approximate": false}
+{"id": "concat_ar_1", "language": "ar", "duration_s": 107.62, "full_wer": 1.0, "metric": "wer", "hallucination_rate": 0, "repetition_rate": 0.0, "detector_approximate": false}
+{"id": "concat_ar_2", "language": "ar", "duration_s": 97.92, "full_wer": 1.0, "metric": "wer", "hallucination_rate": 0, "repetition_rate": 0.0, "detector_approximate": false}

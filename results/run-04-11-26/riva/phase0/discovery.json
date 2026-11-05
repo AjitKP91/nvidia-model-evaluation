@@ -1,0 +1,103 @@
+{
+  "connectivity": {
+    "grpc_stt": {
+      "status": "ok",
+      "latency_s": 0.5423634350008797,
+      "transcript_len": 0
+    },
+    "grpc_tts": {
+      "status": "ok",
+      "latency_s": 0.6721776600024896,
+      "audio_len_bytes": 92160
+    },
+    "rest_stt": {
+      "status": "error",
+      "error": "REST transcription is not available on this endpoint (stt.supports_rest is false)."
+    },
+    "rest_tts": {
+      "status": "error",
+      "error": "REST synthesis is not available on this endpoint (tts.supports_rest is false)."
+    },
+    "network_rtt_s": 0.125071847000072
+  },
+  "stt_schema": {
+    "has_transcript": false,
+    "has_confidence": true,
+    "has_words": false,
+    "word_fields": [],
+    "sample_transcript": "",
+    "batch_latency_s": 0.3918730549994507
+  },
+  "stt_streaming_schema": {
+    "has_partials": false,
+    "num_partials": 0,
+    "has_finals": false,
+    "has_stability": false,
+    "ttfw": null,
+    "finalization_latency": null,
+    "streaming_rtf": 1.035464590499032,
+    "final_transcript": ""
+  },
+  "tts_schema": {
+    "batch_audio_bytes": 81920,
+    "batch_audio_duration_s": 1.8575963718820863,
+    "batch_latency_s": 0.4474479489981604,
+    "sample_rate": 22050,
+    "stream_ttfb": 0.31793500400090124,
+    "stream_n_chunks": 10,
+    "stream_audio_duration_s": 1.5325170068027212,
+    "stream_total_latency_s": 0.3967097159984405,
+    "sample_saved": "results/run-04-11-26/riva/phase0/tts_sample.wav"
+  },
+  "parameters": {
+    "stt_sample_rates": {
+      "8000": "ok",
+      "16000": "ok",
+      "22050": "ok",
+      "44100": "ok",
+      "48000": "ok"
+    },
+    "tts_ssml": "supported"
+  },
+  "smoke_tests": {
+    "stt_10s": {
+      "status": "pass",
+      "latency_s": 0.43277475500144647
+    },
+    "stt_60s": {
+      "status": "pass",
+      "latency_s": 1.5150262150018534
+    },
+    "tts_rest": {
+      "status": "fail",
+      "error": "REST synthesis is not available on this endpoint (tts.supports_rest is false)."
+    },
+    "tts_grpc_stream": {
+      "status": "pass",
+      "ttfb_s": 0.23207650600306806
+    }
+  },
+  "cold_start": {
+    "stt": {
+      "t_first_s": 0.43399828399924445,
+      "t_warm_mean_s": 0.4885239654002362,
+      "cold_ratio": 0.8883868852650451
+    },
+    "tts": {
+      "t_first_s": 0.4969449500022165,
+      "t_warm_mean_s": 0.4875497271990753,
+      "cold_ratio": 1.0192702862477554
+    }
+  },
+  "language_acceptance": {
+    "phase": "language_acceptance",
+    "total": 40,
+    "by_status": {
+      "ok": 32,
+      "empty": 8
+    },
+    "joule_total": 18,
+    "joule_ok": 15,
+    "matrix_csv": "results/run-04-11-26/riva/stt/language_acceptance/language_acceptance.csv"
+  }
+}

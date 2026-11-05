@@ -1,0 +1,3 @@
+bucket_s,n_calls,rtf_mean,rtfx_mean,latency_p50,latency_p90,latency_p95,latency_p99,latency_mean,latency_std,latency_min,latency_max
+10,20,0.0527,19.63,0.474,0.582,0.704,0.924,0.528,0.119,0.457,0.979
+30,20,0.0309,32.53,0.907,0.96,0.984,1.03,0.898,0.06,0.794,1.041

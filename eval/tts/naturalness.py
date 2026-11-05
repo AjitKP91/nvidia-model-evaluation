@@ -1,10 +1,10 @@
 """Test 2.1 — Automated Naturalness (UTMOS / DNSMOS / NISQA).
 
 **Multilingual caveat:** UTMOS was validated on English (with Chinese only as an
-out-of-domain check), so it is **not reported as a naturalness score for fr/es**
-— for those languages we record ``utmos: null`` with a note. DNSMOS is a
-signal-quality predictor that is language-agnostic, so it is reported for every
-language. English behaviour is byte-for-byte unchanged (UTMOS + DNSMOS).
+out-of-domain check), so it is **not reported as a naturalness score for any
+non-English language** — for those we record ``utmos: null`` with a note. DNSMOS
+is a signal-quality predictor that is language-agnostic, so it is reported for
+every language. English behaviour is byte-for-byte unchanged (UTMOS + DNSMOS).
 """
 from __future__ import annotations
 

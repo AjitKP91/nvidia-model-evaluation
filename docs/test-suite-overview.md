@@ -71,7 +71,7 @@ deliberately not faked.
 | # | Test | What it measures |
 |---|------|-----------------|
 | 2.1 | Naturalness | UTMOS and DNSMOS (OVRL/SIG/BAK) on 200 synthesized sentences. Per-language: DNSMOS for every language, UTMOS English-only (see multilingual note). |
-| 2.2 | Intelligibility | Round-trip WER: synthesize → transcribe with Whisper large-v3 → compare, across 4 sentence categories (English) and FLEURS text per language (en/fr/es). |
+| 2.2 | Intelligibility | Round-trip WER/CER: synthesize → transcribe with Whisper large-v3 → compare, across 4 sentence categories (English) and FLEURS text per language (12 languages; CER for zh/ja, WER otherwise). |
 | 2.3 | Prosody | **Reference-free**: intra-utterance F0 std/range (pitch dynamism), acoustic nPVI (rhythm), pause ratio, and speaking rate (WPM). Flags monotone/robotic output. Intrusive F0-vs-reference metrics are not computable for a fixed synthetic voice. |
 | 2.4 | Signal Quality | **N/A for this model.** MCD/PESQ/STOI are full-reference metrics needing same-speaker ground truth, which does not exist for a fixed synthetic voice. Reported as N/A, not faked. Use 2.1 + 2.2 for quality. |
 | 2.5 | Streaming Latency | Time-to-first-byte and RTF across 5 text-length buckets × 2 interfaces |
@@ -86,16 +86,18 @@ repetition, mixed case, technical/domain terms, questions & commands, lists,
 URLs & emails, code snippets, and boundary lengths.
 
 **Multilingual TTS (2.1 / 2.2 / 2.3 / 2.9):** the model under test (Magpie TTS
-Multilingual) supports exactly **three** languages — **en-US, fr-FR, es-US** — each
-with its own voice name. Opt-in via `tts.multilingual_languages` in `config.yaml`
-(keys from `en|fr|es`, defaulting to `[]` = English-only, original behaviour
-byte-for-byte). All three are Latin-script, so intelligibility is scored with WER
-throughout (no CER path). Honest gates: UTMOS is **English-only** (it was validated
+Multilingual) serves **12** languages on this deployment — **en, es, fr, de, it,
+pt, hi, ko, vi, zh, ja, ar** — each with its own voice (confirmed live via
+`GetRivaSynthesisConfig`; re-probe with `scripts/probe_tts_voices.py --synth`).
+Opt-in via `tts.multilingual_languages` in `config.yaml` (keys from those 12,
+defaulting to `[]` = English-only, original behaviour byte-for-byte). Intelligibility
+is scored with WER for the space-delimited languages and **CER for Chinese/Japanese**
+(no word boundaries). Honest gates: UTMOS is **English-only** (it was validated
 on English with Chinese as out-of-domain, so it is not a valid naturalness score for
-fr/es — DNSMOS, which is language-agnostic, is reported for all); any language the
+non-English — DNSMOS, which is language-agnostic, is reported for all); any language the
 deployment does not actually synthesize is recorded as a `wrong_language`/`empty`
 serving gap by 2.9 rather than scored. 2.4 is N/A for the reasons above. Run **2.9
-first** to discover which languages this deployment exposes.
+first** to gate which languages round-trip before scoring 2.1/2.2/2.3.
 
 ## Key Design Principles
 - **Both interfaces** — every latency-sensitive test runs on both gRPC and REST for direct comparison.

@@ -235,11 +235,12 @@ def _run_english(tts_client: TTSClient, whisper_model, results_dir: Path) -> lis
 
 
 def _run_language(tts_client: TTSClient, whisper_model, lang: dict, results_dir: Path, limit: int = 50) -> dict:
-    """Per-language round-trip WER on FLEURS text, synthesised with the
+    """Per-language round-trip WER/CER on FLEURS text, synthesised with the
     language's voice+locale and transcribed with Whisper (language hint).
 
-    All supported TTS languages (en/fr/es) are Latin-script ⇒ WER throughout;
-    ``score_pair`` applies the correct per-language normalisation.
+    ``score_pair`` applies the correct per-language normalisation and metric:
+    WER for the space-delimited languages, CER for Chinese/Japanese (no word
+    boundaries). The ``metric`` field in the summary records which was used.
     """
     key = lang["key"]
     jsonl_path = results_dir / f"{key}.jsonl"
@@ -309,6 +310,6 @@ def _run_language(tts_client: TTSClient, whisper_model, lang: dict, results_dir:
         "metric": agg["primary"],
     }
     save_summary_csv(results_dir / f"summary_{key}.csv", [summary])
-    logger.info("  %s: round-trip WER=%.2f%% (n=%d)", key,
+    logger.info("  %s: round-trip %s=%.2f%% (n=%d)", key, agg["primary"].upper(),
                 (summary["round_trip_wer"] or 0) * 100, len(refs))
     return summary

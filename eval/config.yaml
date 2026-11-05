@@ -61,12 +61,16 @@ tts:
   max_sequence_tokens: 400
   supports_rest: false
   # Per-language TTS passes (2.1 naturalness, 2.2 intelligibility, 2.3 prosody,
-  # 2.9 acceptance). Keys from en|fr|es — the only languages Magpie TTS
-  # Multilingual supports. MULTILINGUAL RUN: all three.
-  # Run 2.9 first to confirm the deployment actually exposes fr/es voices.
-  multilingual_languages: [en, fr, es]
-  # Override documented voice names if this deployment serves different voice
-  # strings, e.g. {fr: "Some.Other.Voice"}. Empty = use the documented voices.
+  # 2.9 acceptance). Magpie TTS Multilingual serves 12 languages on THIS
+  # deployment — CONFIRMED live 2026-11-05 via GetRivaSynthesisConfig (139
+  # subvoices) + a synthesis smoke test (11/12 rendered immediately; ar only
+  # needs Arabic-script input, not Latin probe text). Keys from eval/tts/
+  # tts_languages.py: en es fr de it pt hi ko vi zh ja ar. MULTILINGUAL RUN: all 12.
+  # Run 2.9 first to gate which languages actually round-trip before 2.1/2.2/2.3.
+  multilingual_languages: [en, es, fr, de, it, pt, hi, ko, vi, zh, ja, ar]
+  # Override a language's voice if a future deployment serves different voice
+  # strings, e.g. {fr: "Magpie-Multilingual.FR-FR.Louise"}. Empty = use the
+  # verified voices in tts_languages.py.
   voice_overrides: {}
 
 evaluation:

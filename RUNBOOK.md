@@ -160,13 +160,16 @@ tts:
   request_timeout_s: 60
   sample_rate: 22050
   supports_rest: false                 # this gateway is gRPC-streaming only
-  # Opt-in multilingual TTS (default [] = English-only). Magpie supports en/fr/es,
-  # each with its own voice. Run Test 2.9 first to see which the deployment exposes:
-  multilingual_languages: []           # subset of [en, fr, es]
+  # Opt-in multilingual TTS (default [] = English-only). This Magpie deployment
+  # serves 12 languages (en es fr de it pt hi ko vi zh ja ar), each with its own
+  # voice — confirmed live via GetRivaSynthesisConfig. Run Test 2.9 first to gate
+  # which round-trip before scoring 2.1/2.2/2.3:
+  multilingual_languages: []           # subset of the 12 keys in tts_languages.py
   voice_overrides: {}                  # lang key → deployed voice string, if different
 ```
 
-> Auto-detect note: `multilingual_languages` keys are `en|fr|es` for TTS and the FLEURS
+> Auto-detect note: `multilingual_languages` keys are the 12 TTS language keys
+> (`en es fr de it pt hi ko vi zh ja ar`) and the FLEURS
 > language keys for STT. Leaving every list empty reproduces the English-only behaviour exactly.
 
 ---
@@ -238,7 +241,8 @@ Available TTS test names:
 `naturalness`, `intelligibility`, `prosody`, `signal_quality`, `latency`, `concurrency`,
 `edge_cases`, `long_form`, `tts_language_acceptance`
 
-> **Multilingual tip:** set `tts.multilingual_languages: [en, fr, es]` in `config.yaml`, then run
+> **Multilingual tip:** set `tts.multilingual_languages` in `config.yaml` (any subset of the 12
+> served keys `en es fr de it pt hi ko vi zh ja ar`), then run
 > `tts_language_acceptance` (2.9) **first** — it probes which languages this deployment actually
 > synthesizes (Whisper language-ID). Only run 2.1/2.2/2.3 per-language on whatever passes; a
 > language the deployment won't synthesize is recorded as a `wrong_language`/`empty` serving gap,

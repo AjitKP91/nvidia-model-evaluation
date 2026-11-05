@@ -132,31 +132,41 @@ noting they are intentionally English-only (serving-stack / audio-frontend prope
 ## TTS multilingual (Tests 2.1 / 2.2 / 2.3 / 2.9)
 
 The TTS model under test — **Magpie TTS Multilingual** — is a different situation from the STT
-model, and the approach is correspondingly simpler and narrower.
+model, but the deployment turns out to serve a broad language set.
 
-**Only three languages, each with its own voice.** Magpie TTS Multilingual supports exactly
-**en-US, fr-FR, es-US** per NVIDIA's documentation — not 40. Each language has its *own* voice
-name (`Magpie-Multilingual.EN-US.Aria`, `…FR-FR.Female.Female-1`, `…ES-US.Female.Female-1`), so
-driving non-English synthesis requires setting both a per-language **voice** and **locale** on
-the request, not just a language hint. All three are Latin-script, space-delimited languages, so
-every intelligibility score is **WER** — there is no CER path to worry about (unlike STT's
-CJK/Thai). The language table lives in `eval/tts/tts_languages.py`; voice names are overridable
-per deployment via `tts.voice_overrides`.
+**Twelve languages, each with its own voice.** The SAP AI Core Magpie deployment serves **12
+languages** — CONFIRMED live 2026-11-05 with one `GetRivaSynthesisConfig` call (the authoritative
+Riva RPC that enumerates served models/voices): it advertises
+`en-US, es-US, fr-FR, de-DE, zh-CN, vi-VN, it-IT, hi-IN, ja-JP, ko-KR, ar-XA, pt-BR` with **139
+subvoices**, and a synthesis smoke test rendered audio for **11/12 immediately** (only `ar-XA`
+rejected the *Latin* probe sentence — its grapheme-to-phoneme front-end needs Arabic script, and
+synthesises normally from FLEURS Arabic). This corrects an earlier wrong assumption that the model
+served only en/fr/es: the real cause of the first multilingual run's non-English failures was
+**fabricated voice strings** (`…FR-FR.Female.Female-1`, `…ES-US.Female.Female-1`) that do not
+exist on the server — not a serving gap. Each language has its *own* voice; the server accepts the
+format `Magpie-Multilingual.<LOCALE>.<Name>` (e.g. `Magpie-Multilingual.FR-FR.Aria`), so driving
+non-English synthesis requires setting both a per-language **voice** and **locale** on the request,
+not just a language hint. Most languages are space-delimited and scored with **WER**; **Chinese
+and Japanese** have no word boundaries and are scored with **CER** (Korean stays WER — it is
+space-delimited at the eojeol level). The language table lives in `eval/tts/tts_languages.py`
+(re-probe any time with `scripts/probe_tts_voices.py --synth`); voice names are overridable per
+deployment via `tts.voice_overrides`.
 
 **What industry measures for multilingual TTS, and what we adopted:**
 - **Intelligibility = ASR round-trip WER/CER** (Whisper large-v3) is the primary, language-
-  portable metric. → Test **2.2** synthesizes FLEURS text per language and round-trips it.
+  portable metric. → Test **2.2** synthesizes FLEURS text per language and round-trips it (WER
+  for most languages, CER for Chinese/Japanese — the routing in `eval/utils.py` is shared with STT).
 - **Naturalness = DNSMOS** (language-agnostic signal-quality MOS predictor). → Test **2.1**
   reports DNSMOS for every language. **UTMOS is English-biased** — it was validated on English
   with Chinese only as an out-of-domain check — so we **do not** report it as a naturalness
-  score for fr/es (recorded as `utmos: null` with a note). This is the single most important
-  honesty gate on the TTS side.
+  score for the non-English languages (recorded as `utmos: null` with a note). This is the single
+  most important honesty gate on the TTS side.
 - **Language-ID as an acceptance gate.** → Test **2.9** (TTS analogue of 1.13) synthesizes a few
   FLEURS sentences per configured language and checks, via Whisper's detected language, that the
-  deployment actually produces that language. Whether this SAP AI Core deployment exposes the
-  fr/es voices at all is unknown until probed; 2.9 records `ok | wrong_language | empty | error`
-  per language. If the deployment turns out to be **English-only**, that is the finding — a
-  serving gap reported exactly like STT's th/id/ar, not papered over.
+  deployment actually produces that language. The live probe already showed all 12 configured
+  languages render; 2.9 is the per-run, per-utterance gate that records `ok | wrong_language |
+  empty | error` per language, so any future regression (or a script-mismatch case like feeding
+  the Arabic voice non-Arabic text) surfaces as an explicit status, not a faked score.
 - **Speaker-similarity** (WavLM/ECAPA) is only meaningful for voice *cloning*, which this model
   does not do, so it is not used for multilingual scoring here (2.8 already tracks intra-voice
   drift for long-form English).

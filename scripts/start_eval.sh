@@ -71,6 +71,15 @@ if tmux has-session -t "$SESSION" 2>/dev/null; then
 fi
 
 # ── Write a launcher script for inside tmux ──────────────────────────────────
+# Precompute the token line so the heredoc never has to do conditional
+# expansion inline (a bare ${VAR:+...} that collapses to empty on the .env path
+# used to let the following line be mis-parsed). JWTs contain no single quotes,
+# so single-quoting the value is safe.
+if [ -n "$AICORE_TOKEN" ]; then
+    TOKEN_LINE="export AICORE_BEARER_TOKEN='$AICORE_TOKEN'"
+else
+    TOKEN_LINE="# no static token: harness reads client-credentials from .env (auto-refresh)"
+fi
 LAUNCHER="$REPO_DIR/scripts/_tmux_launcher.sh"
 cat > "$LAUNCHER" <<LAUNCHER_EOF
 #!/usr/bin/env bash
@@ -80,9 +89,7 @@ source "$REPO_DIR/.venv/bin/activate"
 export HF_HOME=~/hf_home
 export TORCH_HOME=~/torch_home
 export PIP_CACHE_DIR=~/pip_cache
-${AICORE_TOKEN:+export AICORE_BEARER_TOKEN="$AICORE_TOKEN"}
-# No AICORE_BEARER_TOKEN exported here ⇒ the harness reads client-credentials
-# from .env and auto-refreshes tokens for the whole run.
+$TOKEN_LINE
 # Make PyTorch bundled CUDA visible (fixes UTMOS libcudart error)
 TORCH_LIB="\$(python -c 'import torch, os; print(os.path.dirname(torch.__file__))')/lib"
 export LD_LIBRARY_PATH="\$TORCH_LIB:\${LD_LIBRARY_PATH:-}"

@@ -1759,6 +1759,29 @@ function resolve(v){{
   if(v&&typeof v==='object'){{const o={{}};for(const k in v)o[k]=resolve(v[k]);return o;}}
   return v;
 }}
+// Value labels for single-series horizontal bars: a true 0 (e.g. a perfect 0%
+// WER) renders a zero-length bar that looks empty — the label makes the number
+// explicit. Anchored past the bar end, or inside it (white) when it would overflow.
+const barValueLabels={{
+  id:'barvaluelabels',
+  afterDatasetsDraw(chart){{
+    if(chart.config.type!=='bar') return;
+    if((chart.options.indexAxis||'x')!=='y') return;
+    if(chart.data.datasets.length!==1) return;
+    const meta=chart.getDatasetMeta(0);const ds=chart.data.datasets[0];
+    const {{ctx,chartArea}}=chart;ctx.save();
+    ctx.font="600 12px "+Chart.defaults.font.family;ctx.textBaseline='middle';
+    const ink=cssVar('--ink2')||'#52514e';
+    meta.data.forEach((el,i)=>{{
+      const v=ds.data[i];if(v==null||typeof v!=='number'&&isNaN(parseFloat(v)))return;
+      const txt=Number(v).toFixed(1);const w=ctx.measureText(txt).width;
+      if(el.x+6+w<=chartArea.right){{ctx.fillStyle=ink;ctx.textAlign='left';ctx.fillText(txt,el.x+6,el.y);}}
+      else{{ctx.fillStyle='#ffffff';ctx.textAlign='right';ctx.fillText(txt,el.x-6,el.y);}}
+    }});
+    ctx.restore();
+  }}
+}};
+Chart.register(barValueLabels);
 function buildCharts(){{
   CHARTS.forEach(c=>c.destroy());CHARTS=[];
   Chart.defaults.font.family="system-ui,-apple-system,'Segoe UI',sans-serif";

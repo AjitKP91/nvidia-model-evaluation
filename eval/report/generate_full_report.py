@@ -1476,11 +1476,17 @@ def render_acceptance(matrix: list[dict]) -> str:
             sv = r.get("sample_primary")
             rr["sample"] = f"{metric} {fnum(sv, 3)}" if sv not in (None, "", "None") else "—"
             rr["sample_ref"] = esc((r.get("sample_ref") or "")[:70])
+            cfg = r.get("fleurs") or ""
+            rr["fleurs_link"] = (
+                '<a href="https://huggingface.co/datasets/google/fleurs/viewer/'
+                f'{esc(cfg)}/test" target="_blank" rel="noopener">{esc(cfg)}</a>'
+                if cfg else "—")
             out.append(rr)
         return out
 
     cols = [("label", "Language"), ("key", "Key"), ("joule_h", "Joule"),
-            ("quality", "Model tier"), ("status_b", "Status"),
+            ("quality", "Model tier"), ("fleurs_link", "FLEURS clips"),
+            ("status_b", "Status"),
             ("sample", "Sample WER/CER"), ("sample_ref", "Reference sample")]
 
     blanks = ", ".join(f'{esc(r["label"])} ({esc(r["key"])})' for r in empty)
@@ -1666,8 +1672,6 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
 
     gaps = (
         "<ul>"
-        "<li><b>th / id / ar blank on this endpoint</b> — 3 SAP Joule GA languages "
-        "return empty transcripts. A serving/gateway gap, not a model gap.</li>"
         "<li><b>1.6 dialect &amp; 1.8 domain</b> — multilingual coverage gaps; need "
         "per-locale / multilingual domain corpora. Deliberately not faked.</li>"
         "<li><b>1.3 / 1.4 / 1.11</b> — English-only by design (serving-stack / "

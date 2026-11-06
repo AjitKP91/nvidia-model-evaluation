@@ -175,8 +175,8 @@ def _run_language(lang: dict, config: Config, stt_client: STTClient, results_dir
     """Opt-in per-language noise-robustness pass on FLEURS.
 
     Same noise grid as English, but scored with ``score_pair`` so CJK/Thai get
-    CER, and language-hinted recognition. Languages that return empty transcripts
-    on this endpoint (e.g. th/ar/id) yield a graceful ``no_output`` row, not a
+    CER, and language-hinted recognition. Should any language return empty
+    transcripts on this endpoint, it yields a graceful ``no_output`` row, not a
     fabricated score.
     """
     key = lang["key"]

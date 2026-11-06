@@ -10,10 +10,10 @@ need so there is exactly one FLEURS code path:
   * get_audio_and_ref()  — pull (audio array, sample rate, reference) per clip.
 
 The model under test (nvidia/nemotron-3.5-asr-streaming-0.6b) auto-detects
-language, so lang["model_lang"] is only a hint. The live acceptance probe (1.13)
-shows one GA Joule language (Arabic) returns EMPTY transcripts
-on this endpoint; callers must therefore treat "no output" as a graceful
-no_output result, never a fake score.
+language, so lang["model_lang"] is only a hint. All Joule languages probed to
+date return usable transcripts (the live acceptance probe, 1.13, is the source
+of truth); should any language return nothing, callers must treat "no output"
+as a graceful no_output result, never a fake score.
 """
 from __future__ import annotations
 

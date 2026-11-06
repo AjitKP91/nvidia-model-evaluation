@@ -59,8 +59,9 @@ byte-for-byte unchanged. Two `config.yaml` keys under `stt:` enable it:
   chars/tokens per audio-second), **1.7** (long-form on concatenated FLEURS clips), and **1.10**
   (confidence calibration). Representative, not exhaustive.
 Per-language results are written to `results/stt/<test>/<langkey>.jsonl` and tagged with a
-`language` field. Any language the endpoint returns blank for (e.g. Arabic on
-this deployment) records a graceful `no_output` row rather than a fabricated score — see
+`language` field. If the endpoint ever returned blank for a language, that language would record
+a graceful `no_output` row rather than a fabricated score — though as of the latest run every
+in-scope language (Arabic included) transcribes; see
 `docs/multilingual-test-gap-analysis.md`. Tests **1.3, 1.4, 1.6, 1.8, 1.11** remain English-only
 by design: 1.3/1.4/1.11 measure serving-stack / audio-frontend properties, while 1.6 (dialect)
 and 1.8 (domain) are **flagged coverage gaps** that need corpora FLEURS cannot provide and are

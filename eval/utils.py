@@ -397,7 +397,11 @@ def load_dataset_tmp(path: str, split: str, name=None, limit: int | None = None,
 
     kw: dict = {
         "split": split,
-        "token": os.environ.get("HF_TOKEN") or True,
+        # Anonymous access when no HF_TOKEN is set: FLEURS and the other public
+        # corpora load without auth (see .env note). `or True` forced HF's
+        # "require a logged-in token" mode and broke every load on a machine
+        # with no cached login; `or None` restores documented public access.
+        "token": os.environ.get("HF_TOKEN") or None,
         "streaming": streaming,
         **kwargs,
     }

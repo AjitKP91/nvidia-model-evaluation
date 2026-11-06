@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 
 from datasets import load_dataset
@@ -61,7 +62,10 @@ def download_dataset(name: str, cache_dir: str | Path | None = None) -> object:
     kwargs = {
         "path": info["hf_path"],
         "split": info["split"],
-        "token": True,
+        # Anonymous access when no HF_TOKEN is set — public datasets load
+        # without a login; `token=True` would force HF's logged-in mode and
+        # fail on a machine with no cached login. Matches utils.load_dataset_tmp.
+        "token": os.environ.get("HF_TOKEN") or None,
     }
     if info.get("hf_name"):
         kwargs["name"] = info["hf_name"]

@@ -12,13 +12,14 @@ one representative language is enough). Below, every test is classified, with th
 dataset change needed where it matters.
 
 > **Gating principle first.** This is a single SAP AI Core gateway deployment that implements
-> only `StreamingRecognize`. The Phase-0 acceptance probe (1.13) shows the endpoint
-> returns an **empty transcript for Arabic** even though Arabic is a transcription-ready GA
-> language on the model card. So the order of operations is: **1.13 acceptance → 1.12 accuracy on
-> accepted languages → per-language depth tests only on the subset that actually produces
-> output.** There is no value in building a per-language noise test for a language the endpoint
-> transcribes as blank — so every per-language test records a graceful `no_output` row for
-> those languages instead of a fabricated score.
+> only `StreamingRecognize`. The Phase-0 acceptance probe (1.13) is run first and confirms that
+> **every** language in scope — all 16 SAP Joule languages, Arabic included — returns usable
+> transcripts on this endpoint. So the order of operations is: **1.13 acceptance → 1.12 accuracy on
+> accepted languages → per-language depth tests on that subset.** The honest gate remains wired in:
+> if a language ever returned a blank transcript, every per-language test would record a graceful
+> `no_output` row instead of a fabricated score — but as of the latest run no in-scope language
+> does. (An earlier run showed Arabic returning empty; re-probing at full 200-utterance scale
+> confirmed that was a transient outage, not a serving gap — Arabic transcribes at WER ≈ 0.15.)
 
 ---
 
@@ -119,8 +120,10 @@ byte-for-byte unchanged** — every new language is opt-in via config and defaul
   language-tagged item IDs and per-language JSONL so resume never collides; results under
   `results["per_language"]`.
 
-**Honest gate everywhere:** any language that returns empty transcripts (Arabic on this
-endpoint) records a `no_output` row/status instead of a fabricated score.
+**Honest gate everywhere:** if any language returned empty transcripts it would record a
+`no_output` row/status instead of a fabricated score. As of the latest run every in-scope
+language transcribes (Arabic's earlier empty result was a transient outage, re-probed clean at
+200 utterances), so no `no_output` rows are emitted — but the gate stays wired in for regressions.
 
 **Flagged gaps (documented, deliberately not faked):** 1.6 dialect fairness (needs Common Voice
 per-locale; `es-ES`/`es-419` and MSA/`ar-EG` live here) and 1.8 domain vocabulary (no

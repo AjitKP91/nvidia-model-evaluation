@@ -63,7 +63,14 @@ def normalize_text(text: str) -> str:
 
 # Scripts with no (or inconsistent) word boundaries: WER is not meaningful, so
 # these are scored primarily by Character Error Rate (CER).
-CER_LANGUAGES = {"ja", "zh", "cmn", "yue", "wuu", "th", "lo", "km", "my", "bo"}
+#   * ja/zh (+ cmn/yue/wuu) and th/lo/km/my/bo have no inter-word spaces at all.
+#   * ko (Korean) DOES use word spaces, but NVIDIA's Nemotron-3.5 model card
+#     evaluates Korean with CER ("Japanese, Korean, and Mandarin are evaluated
+#     using CER"), because Korean 띄어쓰기 (spacing) is highly variable and word
+#     WER punishes inflectional-ending near-misses as whole-word errors. Scoring
+#     Korean by CER keeps our number comparable to the card (card 7.3% CER vs our
+#     ~10%; the same read speech as WER scored ~26%, which overstates real error).
+CER_LANGUAGES = {"ja", "ko", "zh", "cmn", "yue", "wuu", "th", "lo", "km", "my", "bo"}
 
 
 def _lang_root(lang_code: str | None) -> str:

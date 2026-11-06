@@ -6,7 +6,7 @@ Spanish,es,es_419,ga,transcription-ready,200.0,wer,0.05,0.0169,0.05,0.0438,0.063
 Portuguese (BR),pt,pt_br,ga,transcription-ready,200.0,wer,0.0674,0.0238,0.0674,0.0607,0.0826,PASS,ok,,,,
 Dutch,nl,nl_nl,ga,transcription-ready,200.0,wer,0.149,0.0583,0.149,0.1393,0.1727,FLAG,ok,,,,
 Polish,pl,pl_pl,ga,broad-coverage,200.0,wer,0.2108,0.0936,0.2108,0.1909,0.2355,FLAG,ok,,,,
-Korean,ko,ko_kr,ga,transcription-ready,200.0,wer,0.2624,0.1024,0.2624,0.2342,0.2839,FAIL,ok,,,,
+Korean,ko,ko_kr,ga,transcription-ready,200.0,cer,,0.1004,0.1004,0.0786,0.1095,FLAG,ok,,,,
 Greek,el,el_gr,ga,adaptation-ready,200.0,wer,0.4996,0.1916,0.4996,0.4716,0.5231,FAIL,ok,,,,
 Japanese,ja,ja_jp,ga,transcription-ready,200.0,cer,,0.1359,0.1359,0.1266,0.1543,FLAG,ok,,,,
 Chinese (Mandarin),zh,cmn_hans_cn,ga,broad-coverage,200.0,cer,,0.1979,0.1979,0.168,0.2061,FLAG,ok,,,,

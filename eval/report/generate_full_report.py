@@ -961,6 +961,18 @@ details.dd .ddnote b{color:var(--ink)}
 .views .view-table{display:none}
 .views[data-view=table] .view-chart{display:none}
 .views[data-view=table] .view-table{display:block}
+.heat{display:grid;gap:3px;margin:10px 0 6px;overflow-x:auto;
+  font:600 11.5px system-ui,-apple-system,'Segoe UI',sans-serif}
+.heat .hcell{padding:8px 9px;border-radius:5px;text-align:center;white-space:nowrap;
+  min-width:52px}
+.heat .hhead{background:transparent;color:var(--muted);font-weight:700;
+  font-size:11px;text-transform:uppercase;letter-spacing:.03em;align-self:end;padding-bottom:4px}
+.heat .hlabel{background:transparent;color:var(--ink);text-align:right;
+  padding-right:12px;font-weight:600}
+.heat .hna{background:var(--surface);color:var(--muted);font-weight:600}
+.heatleg{display:flex;align-items:center;gap:8px;margin:2px 0 4px;
+  color:var(--muted);font-size:11px}
+.heatleg i{display:inline-block;height:9px;width:120px;border-radius:999px}
 table{border-collapse:collapse;width:100%;font-size:12.5px;margin:6px 0 4px;
   font-variant-numeric:tabular-nums}
 th,td{border-bottom:1px solid var(--grid);padding:7px 10px;text-align:left}
@@ -1424,18 +1436,134 @@ def render_domain(rows):
     return views(tiles, table(rows, cols) + toplist)
 
 
+LANG_NAMES = {
+    "en": "English", "de": "German", "fr": "French", "es": "Spanish",
+    "pt": "Portuguese", "nl": "Dutch", "pl": "Polish", "ko": "Korean",
+    "el": "Greek", "ja": "Japanese", "zh": "Chinese", "vi": "Vietnamese",
+    "cs": "Czech", "it": "Italian", "tr": "Turkish", "th": "Thai",
+    "id": "Indonesian", "ar": "Arabic", "ru": "Russian", "uk": "Ukrainian",
+}
+
+# Sequential single-hue ramp (indigo, the @s1 family) for the output-quality
+# heatmap: 0 → very light tint, 1 → deep indigo. Baked to hex because the grid
+# is static HTML (not a Chart.js canvas resolving @tokens); each cell carries
+# its own fill, so it reads the same in light and dark mode, and the text
+# colour is chosen per cell for contrast.
+_SEQ_LO_HEX = "#eef1fb"
+_SEQ_HI_HEX = "#2b3aa8"
+
+
+def _seq_color(v: float) -> tuple[str, str]:
+    """Map a 0..1 score to (background_hex, text_hex) on the indigo ramp."""
+    v = max(0.0, min(1.0, float(v)))
+    lo = (0xee, 0xf1, 0xfb)
+    hi = (0x2b, 0x3a, 0xa8)
+    rgb = tuple(round(lo[i] + (hi[i] - lo[i]) * v) for i in range(3))
+    lum = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255
+    fg = "#15182e" if lum > 0.62 else "#ffffff"
+    return "#%02x%02x%02x" % rgb, fg
+
+
 def render_output_quality(rows):
     if not rows:
         return table(rows, [])
-    labels = [r.get("metric", "") for r in rows]
-    vals = []
+
+    # The data is a language × dimension score matrix (period/comma F1,
+    # capitalisation, number formatting per language). The old chart plotted
+    # every (metric, language) row as its own bar — ~100 bars, unreadable and
+    # far too long. A heatmap is the right form for a two-category × one-measure
+    # matrix: one screen, and "which language is weak on which dimension" reads
+    # at a glance. Exclamation/question F1 are intentionally left OUT of the
+    # heatmap (see note) and kept in the Table view for transparency.
+    def _colkey(metric: str) -> str | None:
+        m = metric or ""
+        if "Capitalisation" in m:
+            return "caps"
+        if "Number Formatting" in m:
+            return "num"
+        if "F1" in m:
+            if "(.)" in m or "(。)" in m:
+                return "period"
+            if "(,)" in m or "(，)" in m or "(、)" in m:
+                return "comma"
+        return None  # ? ! ¿ ¡ ; : · — untested marks, excluded from heatmap
+
+    by_lang: dict[str, dict] = {}
+    order: list[str] = []
+    overall: dict[str, float] = {}
     for r in rows:
+        lang = (r.get("language") or "").strip()
+        key = _colkey(r.get("metric", ""))
+        if key is None:
+            continue
         v = fval(r.get("value"), 4)
-        vals.append(None if v is None else (round(v * 100, 2) if 0 <= (v or 0) <= 1 else v))
-    chart = bar("c_outq", labels, vals, horizontal=True, color="@s7",
-                x_title="Score (%) — higher is better")
-    cols = [("metric", "Metric"), ("value", "Value"), ("n_samples", "N")]
-    return views(chart, table(rows, cols))
+        if not lang:                      # aggregate (all-language) row
+            if v is not None:
+                overall[key] = v
+            continue
+        if lang not in by_lang:
+            by_lang[lang] = {}
+            order.append(lang)
+        # keep the first non-None value seen for a (lang, column)
+        if key not in by_lang[lang] and v is not None:
+            by_lang[lang][key] = v
+
+    # drop languages with no scorable punctuation/caps/number data (no_output)
+    order = [c for c in order if by_lang.get(c)]
+
+    cols_def = [("period", "Period ."), ("comma", "Comma ,"),
+                ("caps", "Capitals"), ("num", "Numbers")]
+
+    # headline tiles from the all-language aggregate
+    tiles = ""
+    if overall:
+        tiles = ('<div class="cards">'
+                 + card(pct(overall.get("caps")), "Capitalisation (overall)", "")
+                 + card(pct(overall.get("num")), "Number formatting (overall)", "")
+                 + card(fnum(overall.get("period"), 2), "Period F1 (overall)", "")
+                 + card(fnum(overall.get("comma"), 2), "Comma F1 (overall)", "")
+                 + "</div>")
+
+    # heatmap grid
+    cells = ['<div class="hcell hhead"></div>']
+    for _, h in cols_def:
+        cells.append(f'<div class="hcell hhead">{esc(h)}</div>')
+    for code in order:
+        name = LANG_NAMES.get(code, code.upper())
+        cells.append(f'<div class="hcell hlabel">{esc(name)}</div>')
+        for key, hlabel in cols_def:
+            v = by_lang[code].get(key)
+            if v is None:
+                cells.append('<div class="hcell hna" title="not applicable '
+                             'for this script">n/a</div>')
+            else:
+                bg, fg = _seq_color(v)
+                cells.append(
+                    f'<div class="hcell" style="background:{bg};color:{fg}" '
+                    f'title="{esc(name)} — {esc(hlabel)}: {v * 100:.0f}%">'
+                    f'{v * 100:.0f}</div>')
+    c_lo, c_hi = _SEQ_LO_HEX, _SEQ_HI_HEX
+    legend = (f'<div class="heatleg"><span>0</span>'
+              f'<i style="background:linear-gradient(90deg,{c_lo},{c_hi})"></i>'
+              f'<span>100 &nbsp;·&nbsp; score % (period/comma shown as F1×100), '
+              f'darker = higher = better</span></div>')
+    heat = (f'<div class="heat" style="grid-template-columns:'
+            f'minmax(104px,1.1fr) repeat({len(cols_def)},1fr)">'
+            + "".join(cells) + "</div>")
+
+    note = notice(
+        "<b>Exclamation (!) and question (?) marks are omitted from the heatmap.</b> "
+        "FLEURS read speech is declarative — a 200-clip set contains essentially "
+        "no '!' and at most one '?', so their F1 is 0 for lack of any reference "
+        "mark to detect, not because the model fails to emit them. The full "
+        "per-mark breakdown (including ! and ?) is in the Table view.", "muted")
+
+    chart_view = tiles + legend + heat + note
+
+    cols = [("language", "Lang"), ("metric", "Metric"),
+            ("value", "Value"), ("n_samples", "N")]
+    table_rows = [dict(r, language=(r.get("language") or "all")) for r in rows]
+    return views(chart_view, table(table_rows, cols))
 
 
 def render_confidence(rows):

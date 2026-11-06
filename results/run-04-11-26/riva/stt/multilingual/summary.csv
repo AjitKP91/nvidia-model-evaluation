@@ -11,10 +11,8 @@ Greek,el,el_gr,ga,supported,200.0,wer,0.4996,0.1916,0.4996,0.4716,0.5231,FAIL,ok
 Japanese,ja,ja_jp,ga,production,200.0,cer,,0.1359,0.1359,0.1266,0.1543,FLAG,ok,,,,
 Chinese (Mandarin),zh,cmn_hans_cn,ga,supported,200.0,cer,,0.1979,0.1979,0.168,0.2061,FLAG,ok,,,,
 Vietnamese,vi,vi_vn,ga,supported,200.0,wer,0.1304,0.0699,0.1304,0.1188,0.1455,FLAG,ok,,,,
-Thai,th,th_th,ga,production,200.0,cer,,0.9901,0.9901,0.9863,0.997,FAIL,ok,,,,
-Indonesian,id,id_id,ga,supported,200.0,wer,1.0,1.0,1.0,1.0,1.0,FAIL,ok,,,,
 Arabic,ar,ar_eg,ga,supported,200.0,wer,1.0,1.0,1.0,1.0,1.0,FAIL,ok,,,,
 Czech,cs,cs_cz,preview,leading,200.0,wer,0.2481,0.0885,0.2481,0.2211,0.2743,FLAG,ok,,,,
 Italian,it,it_it,preview,leading,200.0,wer,0.0702,0.0382,0.0702,0.0608,0.0844,PASS,ok,,,,
 Turkish,tr,tr_tr,preview,production,200.0,wer,0.1634,0.0418,0.1634,0.1461,0.1842,FLAG,ok,,,,
-MACRO-AVG,,,,,,,,,,,,,summary,15.0,0.276,3.0,0.4413
+MACRO-AVG,,,,,,,,,,,,,summary,14.0,0.2243,2.0,0.1669

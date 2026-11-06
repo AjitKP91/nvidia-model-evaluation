@@ -1,6 +1,6 @@
 """Comprehensive single-file HTML report — a beginner-friendly website.
 
-Covers Phase 0 discovery, STT 1.1-1.13 (including the full 40-language
+Covers Phase 0 discovery, STT 1.1-1.13 (including the full 34-language
 multilingual acceptance matrix), and TTS 2.1-2.9 — each test led by a
 plain-language explanation (what it is, how the code computes it, which dataset
 it uses, with clickable links) followed by an interactive chart and a compact
@@ -371,7 +371,7 @@ TEST_META = {
         "metrics": ["WER", "CER"],
     },
     "1.13": {
-        "summary": "Language acceptance — a live probe of all 40 model languages: "
+        "summary": "Language acceptance — a live probe of all 34 model languages: "
                    "does each one actually return a transcript on this endpoint?",
         "what": "The multilingual centrepiece. Rather than trusting the model "
                 "card, it sends one real clip per language and records whether "
@@ -1091,7 +1091,7 @@ def render_multilingual(rows):
     if not rows:
         return notice(
             "Full per-language accuracy (1.12) is opt-in and was not run here. "
-            "The live 40-language acceptance probe (1.13) is shown below.", "muted")
+            "The live 34-language acceptance probe (1.13) is shown below.", "muted")
     labels = [r.get("language", r.get("key", "")) for r in rows]
     vals = [None if fval(r.get("primary_value"), 4) is None
             else round(fval(r.get("primary_value"), 4) * 100, 2) for r in rows]
@@ -1516,7 +1516,7 @@ def render_phase0(data: dict) -> str:
                          "detail": esc(r.get("error"))[:120]})
         elif "by_status" in r:
             rows.append({"check": name, "status": badge("ok", "pass"),
-                         "detail": f"40-lang matrix: {esc(r.get('by_status'))}; "
+                         "detail": f"acceptance matrix: {esc(r.get('by_status'))}; "
                                    f"Joule ok {esc(r.get('joule_ok'))}/{esc(r.get('joule_total'))}"})
         else:
             rows.append({"check": name, "status": badge("ok", "pass"),
@@ -1545,7 +1545,7 @@ STT_TESTS = [
     ("t1_10", "1.10", "Test 1.10 — Confidence Calibration"),
     ("t1_11", "1.11", "Test 1.11 — Format Robustness"),
     ("t1_12", "1.12", "Test 1.12 — Multilingual Accuracy"),
-    ("t1_13", "1.13", "Test 1.13 — Language Acceptance (40 languages)"),
+    ("t1_13", "1.13", "Test 1.13 — Language Acceptance (34 languages)"),
 ]
 TTS_TESTS = [
     ("t2_1", "2.1", "Test 2.1 — Naturalness"),
@@ -1611,7 +1611,7 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
         + card(clean_wer, "STT clean WER (LibriSpeech)", "pass")
         + card(f"{joule_ok}/{len(joule) or '—'}", "SAP Joule languages transcribe",
                "pass" if joule and joule_ok == len(joule) else "warn")
-        + card(f"{ok}/{len(matrix) or '—'}", "of 40 model languages transcribe", "")
+        + card(f"{ok}/{len(matrix) or '—'}", "model languages transcribe", "")
         + card(utmos, "TTS naturalness (UTMOS, en)", "pass")
         + "</div>")
 
@@ -1684,7 +1684,7 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
     summary_card = (
         '<section class="card" id="summary"><h3>Executive Summary</h3>'
         '<p class="summ">One report covering Phase 0 discovery, STT tests 1.1–1.13 '
-        '(including the full 40-language multilingual matrix) and TTS tests 2.1–2.9. '
+        '(including the full 34-language multilingual matrix) and TTS tests 2.1–2.9. '
         'All metrics are computed client-side. Every test leads with a plain-language '
         'explanation you can expand; any test with no data on disk says so rather '
         'than showing a fabricated number.</p>'
@@ -1844,9 +1844,9 @@ def main(argv=None):
                     help="Run directory containing stt/ tts/ phase0/")
     ap.add_argument("--acceptance",
                     default="results/run-04-11-26/riva/stt/language_acceptance/language_acceptance.csv",
-                    help="40-language acceptance matrix CSV (Test 1.13)")
+                    help="Language-acceptance matrix CSV (Test 1.13)")
     ap.add_argument("--out", default="docs/full-report.html")
-    ap.add_argument("--model", default="NVIDIA-Nemotron-3.5-Transcribe-30B-A4B")
+    ap.add_argument("--model", default="nvidia/nemotron-3.5-asr-streaming-0.6b")
     ap.add_argument("--tts-model", default="Magpie TTS Multilingual",
                     help="TTS model name shown in the header")
     ap.add_argument("--endpoint", default="SAP AI Core gateway (gRPC StreamingRecognize)")

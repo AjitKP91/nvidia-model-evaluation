@@ -400,8 +400,8 @@ def _write_discovery(out_dir: Path, results: dict) -> None:
 
 
 def _language_acceptance_subphase(stt_client: STTClient, out_dir: Path) -> dict:
-    """Probe all 40 model languages against the live endpoint (streamed FLEURS,
-    ~3 clips each, idempotent). Shares its output dir with Test 1.13 so the
+    """Probe every registered model language against the live endpoint (streamed
+    FLEURS, ~3 clips each, idempotent). Shares its output dir with Test 1.13 so the
     "ok" verdicts are reused and the probe stays cheap on every later run."""
     from eval.stt.language_acceptance import probe
 

@@ -3,10 +3,10 @@
 ENGLISH-ONLY BY DESIGN: this measures serving-stack streaming behaviour
 (time-to-first-word, partial/finalization latency, stability), which is a
 property of the transport and the endpoint, not of the spoken language. It is
-additionally moot for language variance because the model under test
-(Nemotron-3.5-Transcribe) is offline-only — there is no true incremental
-decoding to vary by language. Not parameterised by language on purpose. See
-docs/multilingual-test-gap-analysis.md.
+additionally moot for language variance because streaming behaviour on this
+deployment is governed by the gateway (which only implements StreamingRecognize)
+rather than by per-language incremental decoding. Not parameterised by language
+on purpose. See docs/multilingual-test-gap-analysis.md.
 """
 from __future__ import annotations
 

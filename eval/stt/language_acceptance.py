@@ -1,7 +1,8 @@
 """Phase-0 language-acceptance probe.
 
 Before spending a full multilingual evaluation, confirm the live endpoint
-actually transcribes each of the model's 40 advertised languages. For every
+actually transcribes each language the model's card claims (the registry in
+eval/stt/languages.py). For every
 language we stream a handful of FLEURS clips (no full-split download), send them
 through the real client, and record an acceptance verdict:
 

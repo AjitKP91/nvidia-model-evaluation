@@ -3,8 +3,8 @@
 Measures transcription accuracy across the languages SAP Joule supports, using
 FLEURS (google/fleurs, CC-BY-4.0) as one consistent read-speech corpus that
 covers every one of them. The model under evaluation —
-NVIDIA-Nemotron-3.5-Transcribe-30B-A4B — supports 40 languages and auto-detects
-language, so the `model_lang` tag below is at most a hint; every Joule language
+nvidia/nemotron-3.5-asr-streaming-0.6b — auto-detects language, so the
+`model_lang` tag below is at most a hint; every Joule language
 is expected to return output. Languages the endpoint does not accept are
 recorded with status "no_output" rather than crashing the run.
 
@@ -38,10 +38,10 @@ from eval.utils import (
 
 logger = logging.getLogger("eval.stt.multilingual")
 
-# Scoped to the languages SAP Joule exposes (15 GA + 3 preview). The full
-# 40-language registry lives in eval/stt/languages.py; language_acceptance.py
-# (Phase 0) probes all 40 against the endpoint, while this test runs the full
-# FLEURS WER/CER evaluation only on the Joule subset.
+# Scoped to the languages SAP Joule exposes (13 GA + 3 preview). The full
+# language registry lives in eval/stt/languages.py; language_acceptance.py
+# (Phase 0) probes every registered language against the endpoint, while this
+# test runs the full FLEURS WER/CER evaluation only on the Joule subset.
 #
 # Notes on corpus/product mismatches worth remembering when reading results:
 #   * es -> FLEURS ships only es_419 (Latin-American Spanish); Joule targets

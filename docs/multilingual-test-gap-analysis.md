@@ -1,8 +1,9 @@
 # Multilingual Test-Gap Analysis — STT Tests 1.2–1.11
 
-**Question asked:** now that we evaluate 40 languages for *accuracy* (Test 1.12) and
-*acceptance* (Test 1.13), do the **other** STT tests (1.2–1.11) also need per-language
-versions, and must their **datasets be enhanced** to measure each language properly?
+**Question asked:** now that we evaluate the Joule languages for *accuracy* (Test 1.12) and
+the model's full supported set for *acceptance* (Test 1.13), do the **other** STT tests
+(1.2–1.11) also need per-language versions, and must their **datasets be enhanced** to measure
+each language properly?
 
 **Short answer:** No, not uniformly. Each test's language-sensitivity depends on whether it
 measures a property of the **model's linguistic ability** (varies by language — needs
@@ -12,8 +13,8 @@ dataset change needed where it matters.
 
 > **Gating principle first.** This is a single SAP AI Core gateway deployment that implements
 > only `StreamingRecognize`. The Phase-0 acceptance probe (1.13) shows the endpoint
-> returns **empty transcripts for Thai, Arabic and Indonesian** even though all three are
-> Nemotron-3.5 GA languages. So the order of operations is: **1.13 acceptance → 1.12 accuracy on
+> returns an **empty transcript for Arabic** even though Arabic is a transcription-ready GA
+> language on the model card. So the order of operations is: **1.13 acceptance → 1.12 accuracy on
 > accepted languages → per-language depth tests only on the subset that actually produces
 > output.** There is no value in building a per-language noise test for a language the endpoint
 > transcribes as blank — so every per-language test records a graceful `no_output` row for
@@ -25,22 +26,22 @@ dataset change needed where it matters.
 
 | Test | What it measures | Current data (language) | Language-sensitive? | Recommendation |
 |------|------------------|-------------------------|---------------------|----------------|
-| **1.2 Performance (RTF/RTFx)** | Batch throughput / speed | LibriSpeech clean (EN) | **Partially.** This is an autoregressive LLM-ASR; decode time scales with *output token count*, which differs by script (CJK dense, morphologically-rich langs longer). Speed is otherwise language-neutral. | **Spot-check** 4–5 representative langs (en, de, ja, th, ar). Reuse FLEURS audio. Also report output-tokens-per-audio-second to expose decoder-cost variance. Not all 40. |
-| **1.3 Streaming (TTFW/stability)** | Partial/final latency, stability | LibriSpeech + VoxPopuli (EN) | **Low / N/A.** Nemotron-3.5-Transcribe is **offline-only** (30 s internal chunking); real-time streaming is a *different* model (`nemotron-3.5-asr-streaming-0.6b`). TTFW here is the gateway's fallback behaviour, a serving property. | **Keep English-only.** Add a note that streaming semantics are stack-level, not model-linguistic. |
+| **1.2 Performance (RTF/RTFx)** | Batch throughput / speed | LibriSpeech clean (EN) | **Partially.** Decode time scales with *output token count*, which differs by script (CJK dense, morphologically-rich langs longer). Speed is otherwise language-neutral. | **Spot-check** 4 representative langs (en, de, ja, ar). Reuse FLEURS audio. Also report output-tokens-per-audio-second to expose decoder-cost variance. Not every language. |
+| **1.3 Streaming (TTFW/stability)** | Partial/final latency, stability | LibriSpeech + VoxPopuli (EN) | **Low / N/A.** On this deployment streaming semantics are governed by the gateway (which only implements `StreamingRecognize`); TTFW here is a serving-stack property, not a per-language model behaviour. | **Keep English-only.** Add a note that streaming semantics are stack-level, not model-linguistic. |
 | **1.4 REST vs gRPC** | Transport parity | LibriSpeech clean (EN) | **No.** Pure transport comparison; identical bytes regardless of language. (And this gateway only does gRPC streaming anyway.) | **Keep English-only.** |
 | **1.5 Noise robustness** | WER degradation vs SNR | LibriSpeech clean + synthetic noise (EN) | **Yes.** Noise sensitivity varies by language (phoneme density, per-language training-data volume). A model robust in EN can be fragile in a lower-resource language. | **Per-language (Joule subset).** Cheap: mix the same SNR noise onto **FLEURS clips per language** — no new corpus needed, reuse the existing SNR mixer. |
 | **1.6 Accent & dialect** | WER across accents | L2-Arctic (L2 *English* accents) | **Yes, but reframed.** The multilingual analog is **regional dialects within a language** — exactly where the `es_419` vs `es-ES` and `ar_eg` vs MSA mismatches bite. FLEURS gives one dialect per language, so it *cannot* measure this. | **New data needed** (Common Voice has per-locale accents). **Flag as a coverage gap**; do not fake it with FLEURS. Lower priority than 1.5/1.9. |
 | **1.7 Long-form** | Drift/hallucination on long audio | VoxPopuli EN + concatenated LibriSpeech | **Yes.** Repetition/hallucination under long audio is typically worse for lower-resource languages. | **Spot-check** 3–5 langs. Reuse the concatenation trick on **FLEURS clips per language** (concat ~10 clips → ~5 min). Actionable, no new corpus. |
 | **1.8 Domain vocabulary** | WER on domain terms (medical, etc.) | English domain datasets | **Yes, inherently.** Domain vocabulary is language-specific; an English medical-term test says nothing about German medical transcription. | **Flag as a gap.** Per-language domain corpora barely exist publicly. Document the limitation rather than produce a misleading English-only verdict labelled "domain". |
 | **1.9 Output quality (punct/caps/numbers)** | Formatting correctness | English datasets, English rules | **Highest language-sensitivity of all.** Capitalisation (German capitalises every noun; CJK/Thai have no case), number formatting (decimal comma vs point), punctuation (Spanish `¿¡`, CJK full-width `。、`, Arabic `؟`). The current logic is English-centric and would emit **wrong verdicts** in other languages. | **Per-language (Joule subset), with per-language rules.** **Dataset change required:** use FLEURS **`raw_transcription`** (keeps original casing/punctuation/numerals) as reference — the default `transcription` field is pre-lowercased and useless here. |
-| **1.10 Confidence calibration** | Reliability of confidence scores | LibriSpeech + GigaSpeech (EN) | **Moderate.** Calibration can drift per language (over/under-confident on lower-resource langs), but this is second-order. | **Spot-check** 3–5 langs on FLEURS. Not all 40. |
+| **1.10 Confidence calibration** | Reliability of confidence scores | LibriSpeech + GigaSpeech (EN) | **Moderate.** Calibration can drift per language (over/under-confident on lower-resource langs), but this is second-order. | **Spot-check** 3–5 langs on FLEURS. Not every language. |
 | **1.11 Format robustness** | Container/codec/sample-rate handling | Fixed clip, format-mutated | **No.** Entirely in the audio frontend (decode → resample). Language-neutral. | **Keep English-only.** |
 
 ---
 
 ## Does the dataset need enhancing? — Yes, in three specific ways
 
-1. **FLEURS is read speech, and that is its ceiling.** FLEURS covers all 40 languages for a
+1. **FLEURS is read speech, and that is its ceiling.** FLEURS covers every supported language for a
    clean WER/CER baseline (Test 1.12), but it is scripted, clean, single-dialect audio. It
    **cannot** exercise noise (1.5), dialects (1.6), long-form drift (1.7), domain vocabulary
    (1.8), or spontaneous speech. For the language-sensitive tests we either *derive* harder
@@ -63,13 +64,13 @@ dataset change needed where it matters.
 
 ## Recommended tiering (pragmatic, given data scarcity + single-endpoint reality)
 
-- **Tier A — run per-language on the Joule subset (18) that passes acceptance:**
+- **Tier A — run per-language on the Joule subset (16) that passes acceptance:**
   1.12 accuracy (done), **1.9 output-quality** (needs `raw_transcription` + per-language rules),
   **1.5 noise robustness** (FLEURS + existing SNR mixer).
-- **Tier B — spot-check 4–5 representative languages (en, de, ja, th, ar):**
+- **Tier B — spot-check 4 representative languages (en, de, ja, ar):**
   1.2 performance, 1.7 long-form, 1.10 confidence. Representative, not exhaustive.
 - **Tier C — keep English-only (language-neutral):**
-  1.3 streaming (also N/A: offline model), 1.4 REST-vs-gRPC, 1.11 format robustness.
+  1.3 streaming (gateway-level serving property), 1.4 REST-vs-gRPC, 1.11 format robustness.
 - **Flagged data gaps (document, don't fake):**
   1.6 dialect coverage (needs Common Voice per-locale), 1.8 domain vocabulary (no multilingual
   corpus). The `es_419`/`es-ES` and `ar_eg`/MSA mismatches are instances of the 1.6 gap.
@@ -118,8 +119,8 @@ byte-for-byte unchanged** — every new language is opt-in via config and defaul
   language-tagged item IDs and per-language JSONL so resume never collides; results under
   `results["per_language"]`.
 
-**Honest gate everywhere:** any language that returns empty transcripts (Thai, Arabic,
-Indonesian on this endpoint) records a `no_output` row/status instead of a fabricated score.
+**Honest gate everywhere:** any language that returns empty transcripts (Arabic on this
+endpoint) records a `no_output` row/status instead of a fabricated score.
 
 **Flagged gaps (documented, deliberately not faked):** 1.6 dialect fairness (needs Common Voice
 per-locale; `es-ES`/`es-419` and MSA/`ar-EG` live here) and 1.8 domain vocabulary (no

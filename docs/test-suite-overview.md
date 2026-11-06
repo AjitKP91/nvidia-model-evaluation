@@ -23,8 +23,8 @@ measurement across all endpoints.
 | 1.9 | Output Quality | Punctuation F1 per mark, capitalization accuracy, number-formatting accuracy |
 | 1.10 | Confidence Calibration | Expected calibration error (ECE), AUROC, Brier score; reliability diagram |
 | 1.11 | Format Robustness | Pass/fail matrix across audio formats, sample rates, and bit depths |
-| 1.12 | Multilingual Accuracy | Per-language WER (space-delimited) or CER (CJK/Thai) on FLEURS across the 18 SAP Joule languages (15 GA + 3 preview), with unweighted macro-averages and bootstrap CIs |
-| 1.13 | Language Acceptance | Phase-0 smoke probe: streams ~3 FLEURS clips for **all 40** Nemotron-3.5 languages and records ok / empty / error / load_failed per language, so the operator sees which languages actually produce output on this endpoint before the full evaluation. Idempotent (ok languages skip on re-run); also runs automatically inside Phase 0. |
+| 1.12 | Multilingual Accuracy | Per-language WER (space-delimited) or CER (CJK) on FLEURS across the 16 SAP Joule languages (13 GA + 3 preview), with unweighted macro-averages and bootstrap CIs |
+| 1.13 | Language Acceptance | Phase-0 smoke probe: streams ~3 FLEURS clips for the Nemotron-3.5 streaming model's supported languages and records ok / empty / error / load_failed per language, so the operator sees which languages actually produce output on this endpoint before the full evaluation. Idempotent (ok languages skip on re-run); also runs automatically inside Phase 0. |
 
 **Text normalization (1.1 / 1.12):** before scoring, both reference and hypothesis
 pass through the same normalizer used by the Open ASR Leaderboard and NVIDIA's
@@ -35,8 +35,8 @@ directly comparable to published figures.
 
 **Multilingual (1.12):** FLEURS (`google/fleurs`, CC-BY-4.0) provides one
 consistent read-speech corpus covering all Joule languages. The model under test
-(Nemotron-3.5-Transcribe-30B-A4B) auto-detects language, so the per-request
-language code is only a hint; CJK and Thai are scored by CER since they lack word
+(nemotron-3.5-asr-streaming-0.6b) auto-detects language, so the per-request
+language code is only a hint; CJK is scored by CER since it lacks word
 boundaries. Set `stt.multilingual_languages` in `config.yaml` to restrict the run.
 For CER languages, all whitespace is stripped before scoring (matching Open ASR
 Leaderboard practice for Chinese/Japanese) because this endpoint emits one space
@@ -59,7 +59,7 @@ byte-for-byte unchanged. Two `config.yaml` keys under `stt:` enable it:
   chars/tokens per audio-second), **1.7** (long-form on concatenated FLEURS clips), and **1.10**
   (confidence calibration). Representative, not exhaustive.
 Per-language results are written to `results/stt/<test>/<langkey>.jsonl` and tagged with a
-`language` field. Any language the endpoint returns blank for (e.g. Thai/Arabic/Indonesian on
+`language` field. Any language the endpoint returns blank for (e.g. Arabic on
 this deployment) records a graceful `no_output` row rather than a fabricated score — see
 `docs/multilingual-test-gap-analysis.md`. Tests **1.3, 1.4, 1.6, 1.8, 1.11** remain English-only
 by design: 1.3/1.4/1.11 measure serving-stack / audio-frontend properties, while 1.6 (dialect)

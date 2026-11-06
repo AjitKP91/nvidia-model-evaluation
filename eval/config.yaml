@@ -31,20 +31,21 @@ stt:
   supports_batch: false
   # REST inference proxy returns HTTP 500 for this deployment.
   supports_rest: false
-  # Test 1.12 (multilingual, FLEURS) — MULTILINGUAL RUN: all 18 SAP Joule
-  # languages (15 GA + 3 preview). The model (Nemotron-3.5-Transcribe)
+  # Test 1.12 (multilingual, FLEURS) — MULTILINGUAL RUN: all 16 SAP Joule
+  # languages (13 GA + 3 preview). The model (nemotron-3.5-asr-streaming-0.6b)
   # auto-detects language, so the per-request code is only a hint. Empty = all
   # Joule; listed explicitly here to make the multilingual run intent clear.
-  multilingual_languages: [en, de, fr, es, pt, nl, pl, ko, el, ja, zh, vi, th, id, ar, cs, it, tr]
+  # Thai + Indonesian dropped: not claimed by the deployed model's card.
+  multilingual_languages: [en, de, fr, es, pt, nl, pl, ko, el, ja, zh, vi, ar, cs, it, tr]
   # Tier-A per-language depth (1.5 noise, 1.9 output quality), measured on FLEURS
-  # IN ADDITION to the unchanged English pass. MULTILINGUAL RUN: all 18 Joule.
-  # Languages the endpoint returns blank for (th/ar/id on this deployment) record
+  # IN ADDITION to the unchanged English pass. MULTILINGUAL RUN: all 16 Joule.
+  # Languages the endpoint returns blank for (ar on this deployment) record
   # a graceful no_output row, never a fabricated score.
-  multilingual_extra_languages: [en, de, fr, es, pt, nl, pl, ko, el, ja, zh, vi, th, id, ar, cs, it, tr]
+  multilingual_extra_languages: [en, de, fr, es, pt, nl, pl, ko, el, ja, zh, vi, ar, cs, it, tr]
   # Tier-B spot-checks (1.2 performance, 1.7 long-form, 1.10 confidence) — a
-  # representative set spanning scripts/resource levels, not all 18 (these tests
+  # representative set spanning scripts/resource levels, not all 16 (these tests
   # are language-sensitive but second-order; full breadth isn't worth the cost).
-  spot_check_languages: [en, de, ja, th, ar]
+  spot_check_languages: [en, de, ja, ar]
 
 tts:
   grpc_uri: realtime.ai.staging.eu-west-1.mlf-aws-dev.com:443

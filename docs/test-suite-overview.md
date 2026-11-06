@@ -17,7 +17,7 @@ measurement across all endpoints.
 | 1.3 | Streaming Performance | Time-to-first-word, partial-result latency, finalization latency, streaming RTF, stability rate |
 | 1.4 | REST vs gRPC | Side-by-side P50/P90/P99 latency on identical audio |
 | 1.5 | Noise Robustness | WER degradation across **4 noise types — Gaussian, babble, traffic, office** — over SNR levels from **−5 dB to +20 dB** (Gaussian: −5, 0, 5, 10, 15, 20 dB; babble/traffic/office: 0–20 dB) |
-| 1.6 | Accent Robustness | Per-accent WER (Common Voice EN + L2-ARCTIC); fairness delta across accents |
+| 1.6 | Accent Robustness | Per-accent WER (VCTK + L2-ARCTIC); fairness delta across accents |
 | 1.7 | Long-Form Audio | Full-file vs 30 s chunked WER; hallucination and repetition detection |
 | 1.8 | Domain Vocabulary | Key-term recall rate, named-entity WER, out-of-vocabulary rate (financial/domain corpora) |
 | 1.9 | Output Quality | Punctuation F1 per mark, capitalization accuracy, number-formatting accuracy |

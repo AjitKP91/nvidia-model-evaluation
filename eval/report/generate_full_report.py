@@ -535,6 +535,23 @@ TEST_META = {
             _ds("FLEURS (102-language read speech)",
                 "https://huggingface.co/datasets/google/fleurs"),
         ],
+        "note": "Why the Metric column is mixed, and why Korean is CER. WER (word "
+                "error rate) needs word boundaries, which it finds by splitting on "
+                "spaces — so it is used for the space-separated languages here "
+                "(English, German, Vietnamese, and the rest). Japanese and Chinese "
+                "(Mandarin) write text as an unbroken run of characters with no "
+                "spaces, so a word-level rate is meaningless — a single wrong "
+                "character would score the whole line as one bad 'word'. Korean does "
+                "use spaces, but we score it by CER too, matching NVIDIA's model "
+                "card (\"Japanese, Korean, and Mandarin are evaluated using CER\"): "
+                "Korean spacing (띄어쓰기) is highly variable and its inflectional "
+                "word-endings make WER punish near-correct words as whole-word "
+                "errors — Korean scored ~26% by WER but ~10% by CER (card: 7.3%). "
+                "CER is the identical edit-distance math, counted per character "
+                "after whitespace is removed. Greek is left out entirely: the card "
+                "places it in the adaptation-ready tier with no published score, and "
+                "our ~50% WER reflects a language the model isn't tuned for — see "
+                "the note under the table.",
         "code": [
             _code("multilingual.py — run() (load clips, transcribe, aggregate)",
                   "eval/stt/multilingual.py", 77),
@@ -928,7 +945,22 @@ details.dd .dslist a,.dslist .dsflat{font-size:12.5px;background:var(--card);
 .dslist.code a{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px}
 .mdef{font-size:12.5px;color:var(--ink2);margin:2px 0}
 .mdef b{color:var(--ink)}
+details.dd .ddnote{font-size:13px;color:var(--ink2);background:var(--surface);
+  border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:6px;padding:10px 13px;margin:2px 0 8px}
+details.dd .ddnote b{color:var(--ink)}
 .chartbox{position:relative;margin:4px 0 16px;width:100%}
+.vtoggle{margin-left:auto;display:inline-flex;align-self:center;
+  border:1px solid var(--line);border-radius:999px;overflow:hidden;
+  background:var(--surface)}
+.vtoggle button{appearance:none;-webkit-appearance:none;border:0;background:transparent;
+  cursor:pointer;font:600 11.5px system-ui,-apple-system,'Segoe UI',sans-serif;
+  color:var(--ink2);padding:5px 14px;letter-spacing:.02em;line-height:1.4}
+.vtoggle button.active{background:var(--accent);color:#fff}
+.vtoggle button:not(.active):hover{color:var(--ink)}
+.views .view-table{display:none}
+.views[data-view=table] .view-chart{display:none}
+.views[data-view=table] .view-table{display:block}
 table{border-collapse:collapse;width:100%;font-size:12.5px;margin:6px 0 4px;
   font-variant-numeric:tabular-nums}
 th,td{border-bottom:1px solid var(--grid);padding:7px 10px;text-align:left}
@@ -1035,16 +1067,49 @@ def deepdive(meta: dict) -> str:
         parts.append("<h4>Metrics in this test</h4>")
         for m in mk:
             parts.append(f'<p class="mdef"><b>{esc(m)}</b> — {esc(GLOSSARY[m])}</p>')
+    if meta.get("note"):
+        parts.append(f'<h4>Note</h4><p class="ddnote">{esc(meta["note"])}</p>')
     parts.append("</div></details>")
     return "".join(parts)
 
 
+def views(chart_html: str, table_html: str):
+    """Mark a card body as having a chart view and a table view.
+
+    ``test_card`` renders a Chart/Table toggle in the header when both views are
+    non-empty (chart shown by default); if only one is non-empty it shows that
+    single view with no toggle. Plain strings bypass this entirely."""
+    return ("__views__", chart_html or "", table_html or "")
+
+
+def _body_views(body) -> tuple[str, str]:
+    """Return (header_toggle_html, body_html) for a card body."""
+    if isinstance(body, tuple) and body and body[0] == "__views__":
+        chart_html, table_html = body[1], body[2]
+        has_c = bool(chart_html and chart_html.strip())
+        has_t = bool(table_html and table_html.strip())
+        if has_c and has_t:
+            toggle = (
+                '<span class="vtoggle" role="group" aria-label="Show as chart or table">'
+                '<button type="button" class="active" aria-pressed="true" '
+                "onclick=\"toggleView(this,'chart')\">Chart</button>"
+                '<button type="button" aria-pressed="false" '
+                "onclick=\"toggleView(this,'table')\">Table</button></span>")
+            html = ('<div class="views" data-view="chart">'
+                    f'<div class="view view-chart">{chart_html}</div>'
+                    f'<div class="view view-table">{table_html}</div></div>')
+            return toggle, html
+        return "", (chart_html if has_c else table_html)
+    return "", (body or "")
+
+
 def test_card(anchor: str, title: str, meta: dict, chip_html: str,
-              body: str) -> str:
+              body) -> str:
     summ = (f'<p class="summ">{esc(meta.get("summary", ""))}</p>'
             if meta.get("summary") else "")
-    return (f'<section class="card" id="{anchor}"><h3>{esc(title)}{chip_html}</h3>'
-            f'{summ}{deepdive(meta)}{body}</section>')
+    toggle, body_html = _body_views(body)
+    return (f'<section class="card" id="{anchor}"><h3>{esc(title)}{chip_html}{toggle}</h3>'
+            f'{summ}{deepdive(meta)}{body_html}</section>')
 
 
 def band(anchor: str, title: str, subtitle: str) -> str:
@@ -1170,7 +1235,7 @@ def render_accuracy(rows):
         r["verdict"] = badge(v, "pass" if v == "PASS" else "warn") if v else ""
     cols = [("dataset", "Dataset"), ("n_utterances", "N"), ("wer", "WER"),
             ("cer", "CER"), ("mer", "MER"), ("verdict", "Verdict")]
-    return chart + table(rows, cols)
+    return views(chart, table(rows, cols))
 
 
 def render_performance(rows, conc):
@@ -1194,7 +1259,7 @@ def render_performance(rows, conc):
         r["latency_p99"] = fnum(r.get("latency_p99"), 3)
     cols = [("bucket_s", "Bucket (s)"), ("n_calls", "N"), ("rtfx_mean", "RTFx"),
             ("rtf_mean", "RTF"), ("latency_p50", "P50 (s)"), ("latency_p99", "P99 (s)")]
-    out = chart + "<h4>Throughput by audio duration</h4>" + table(rows, cols)
+    tbl = "<h4>Throughput by audio duration</h4>" + table(rows, cols)
     if conc:
         for r in conc:
             r["rtf_mean"] = fnum(r.get("rtf_mean"), 4)
@@ -1202,31 +1267,47 @@ def render_performance(rows, conc):
             r["p99"] = fnum(r.get("p99"), 3)
         cc = [("concurrency", "Concurrency"), ("n_calls", "N"), ("p50", "P50 (s)"),
               ("p99", "P99 (s)"), ("rtf_mean", "RTF")]
-        out += "<h4>Concurrency</h4>" + table(conc, cc)
-    return out
+        tbl += "<h4>Concurrency</h4>" + table(conc, cc)
+    return views(chart, tbl)
 
 
 def render_streaming(rows):
     if not rows:
         return notice("No data on disk for this test in the selected run.")
     r = rows[0]
-    parts = []
-    pbar_lbl, pbar_val = [], []
+    tiles = []
+    bar_lbl, bar_val, ptbl = [], [], []
+    # True latencies (seconds) — these share the bar's seconds axis.
     for key, lbl in [("ttfw", "Time-to-first-word"),
                      ("finalization_latency", "Finalization latency"),
-                     ("streaming_rtf", "Streaming RTF"),
                      ("partial_latency", "Partial latency")]:
         d = maybe_literal(r.get(key))
         if isinstance(d, dict):
-            parts.append(card(f"{fnum(d.get('p50'), 3)}", f"{lbl} P50", ""))
-            pbar_lbl.append(lbl)
-            pbar_val.append(fval(d.get("p50"), 3))
-    parts.append(card(pct(r.get("stability_rate_mean")), "Stability rate", "pass"))
-    parts.append(card(pct(r.get("batch_wer")), "Batch WER", ""))
-    parts.append(card(pct(r.get("stream_wer")), "Stream WER", ""))
-    chart = bar("c_stream", pbar_lbl, pbar_val, horizontal=True, color="@s1",
-                x_title="P50 latency (s)") if pbar_lbl else ""
-    return '<div class="cards">' + "".join(parts) + "</div>" + chart
+            tiles.append(card(f"{fnum(d.get('p50'), 3)}s", f"{lbl} P50", ""))
+            bar_lbl.append(lbl)
+            bar_val.append(fval(d.get("p50"), 3))
+            ptbl.append({"metric": lbl, "unit": "seconds", "p50": fnum(d.get("p50"), 3),
+                         "p90": fnum(d.get("p90"), 3), "p95": fnum(d.get("p95"), 3),
+                         "p99": fnum(d.get("p99"), 3)})
+    # Streaming RTF is a ratio (×realtime), NOT a latency — keep it OFF the
+    # seconds axis so the bar stays unit-consistent; surface it as a KPI tile and
+    # a table row instead.
+    rtf = maybe_literal(r.get("streaming_rtf"))
+    if isinstance(rtf, dict):
+        tiles.append(card(fnum(rtf.get("p50"), 3), "Streaming RTF P50 (×realtime)", ""))
+        ptbl.append({"metric": "Streaming RTF", "unit": "×realtime",
+                     "p50": fnum(rtf.get("p50"), 3), "p90": fnum(rtf.get("p90"), 3),
+                     "p95": fnum(rtf.get("p95"), 3), "p99": fnum(rtf.get("p99"), 3)})
+    tiles.append(card(pct(r.get("stability_rate_mean")), "Stability rate", "pass"))
+    tiles.append(card(pct(r.get("batch_wer")), "Batch WER", ""))
+    tiles.append(card(pct(r.get("stream_wer")), "Stream WER", ""))
+    tiles_html = '<div class="cards">' + "".join(tiles) + "</div>"
+    chart = bar("c_stream", bar_lbl, bar_val, horizontal=True, color="@s1",
+                x_title="P50 latency (s) — lower is better") if bar_lbl else ""
+    cols = [("metric", "Metric"), ("unit", "Unit"), ("p50", "P50"), ("p90", "P90"),
+            ("p95", "P95"), ("p99", "P99")]
+    tbl = table(ptbl, cols) if ptbl else ""
+    return views(tiles_html + chart, tiles_html + tbl)
 
 
 def render_rest_grpc(rows):
@@ -1273,7 +1354,7 @@ def render_noise(rows):
         r["delta_rel"] = ("+" + pct(dr)) if dr not in (None, "", "0.0") else "baseline"
     cols = [("noise_type", "Noise"), ("snr_db", "SNR (dB)"), ("wer", "WER"),
             ("delta_rel", "Δ vs clean"), ("n_utterances", "N")]
-    return chart + table(rows, cols)
+    return views(chart, table(rows, cols))
 
 
 def render_accent(rows):
@@ -1289,7 +1370,7 @@ def render_accent(rows):
         r["fairness_delta"] = pct(r.get("fairness_delta"))
     cols = [("accent", "Accent"), ("source", "Source"), ("n_utterances", "N"),
             ("wer", "WER"), ("fairness_delta", "Fairness Δ")]
-    return chart + table(rows, cols)
+    return views(chart, table(rows, cols))
 
 
 def render_longform(rows):
@@ -1319,7 +1400,7 @@ def render_longform(rows):
     if len(rows) > 24:
         tbl = (f'<details class="dd"><summary>Per-file results '
                f'({len(rows)} files)</summary><div class="body">{tbl}</div></details>')
-    return chart + tbl
+    return views(chart, tbl)
 
 
 def render_domain(rows):
@@ -1340,7 +1421,7 @@ def render_domain(rows):
         r["ne_wer_mean"] = pct(r.get("ne_wer_mean"))
     cols = [("dataset", "Dataset"), ("n_utterances", "N"), ("domain_wer", "Domain WER"),
             ("krr_mean", "Key-term recall"), ("ne_wer_mean", "NE WER")]
-    return tiles + table(rows, cols) + toplist
+    return views(tiles, table(rows, cols) + toplist)
 
 
 def render_output_quality(rows):
@@ -1352,9 +1433,9 @@ def render_output_quality(rows):
         v = fval(r.get("value"), 4)
         vals.append(None if v is None else (round(v * 100, 2) if 0 <= (v or 0) <= 1 else v))
     chart = bar("c_outq", labels, vals, horizontal=True, color="@s7",
-                x_title="Score")
+                x_title="Score (%) — higher is better")
     cols = [("metric", "Metric"), ("value", "Value"), ("n_samples", "N")]
-    return chart + table(rows, cols)
+    return views(chart, table(rows, cols))
 
 
 def render_confidence(rows):
@@ -1382,7 +1463,7 @@ def render_confidence(rows):
         btbl = "<h4>Reliability bins</h4>" + table(
             bins, [("bin", "Bin"), ("n", "N"), ("confidence", "Mean conf."),
                    ("accuracy", "Accuracy"), ("gap", "Gap")])
-    return cards_html + chart + btbl
+    return views(cards_html + chart, btbl)
 
 
 def render_format(rows):
@@ -1396,6 +1477,19 @@ def render_format(rows):
     return table(rows, cols)
 
 
+# NVIDIA model-card FLEURS scores for nemotron-3.5-asr-streaming-0.6b, from the
+# published card (huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b):
+# auto-detect mode at the 1.12 s chunk (the card's best operating point, matching
+# our run). Values are percentages. Same metric per language as our run — WER,
+# except Japanese/Korean/Mandarin which the card scores by CER. Greek is omitted
+# because the card publishes no number for it (adaptation-ready tier).
+NVIDIA_CARD_FLEURS = {
+    "en": 8.84, "de": 8.22, "fr": 9.02, "es": 4.13, "pt": 5.47, "nl": 11.70,
+    "it": 4.32, "tr": 11.32, "ar": 12.06, "vi": 11.22, "pl": 16.55, "cs": 21.45,
+    "ja": 11.66, "zh": 19.87, "ko": 7.30,
+}
+
+
 def render_multilingual(rows):
     if not rows:
         return notice(
@@ -1405,20 +1499,59 @@ def render_multilingual(rows):
     # blended score across tiers misleads more than it informs).
     rows = [r for r in rows
             if r.get("status") != "summary" and r.get("language") != "MACRO-AVG"]
+    # Greek is excluded: NVIDIA's model card lists Greek only in the
+    # "adaptation-ready" tier (recognised by the tokenizer, not tuned for
+    # production) and publishes no benchmark for it. Our ~50% WER reflects that
+    # untuned state, so charting it beside production languages misleads. We keep
+    # it out of the chart/table and explain why in a note below.
+    greek = [r for r in rows if r.get("key") == "el"]
+    rows = [r for r in rows if r.get("key") != "el"]
     labels = [r.get("language", r.get("key", "")) for r in rows]
-    vals = [None if fval(r.get("primary_value"), 4) is None
+    ours = [None if fval(r.get("primary_value"), 4) is None
             else round(fval(r.get("primary_value"), 4) * 100, 2) for r in rows]
-    chart = bar("c_ml", labels, vals, horizontal=True, color="@s1",
-                x_title="WER / CER (%)")
+    # Second series = NVIDIA's published card figure (None where the card has no
+    # number — Chart.js simply leaves that bar out, so our-only languages still
+    # show their single Ours bar). A direct Ours-vs-card comparison is the whole
+    # point of this test, so it becomes the default visual.
+    card_series = [NVIDIA_CARD_FLEURS.get(r.get("key")) for r in rows]
+    chart = grouped_bar(
+        "c_ml", labels,
+        [("Ours (FLEURS, 200 clips)", ours), ("NVIDIA card (FLEURS)", card_series)],
+        horizontal=True, x_title="WER / CER (%) — lower is better")
     disp = []
     for r in rows:
+        key = r.get("key")
+        card_val = NVIDIA_CARD_FLEURS.get(key)
         disp.append({"language": esc(r.get("language")),
                      "metric": esc((r.get("primary_metric") or r.get("metric") or "").upper()),
                      "primary_value": pct(r.get("primary_value")),
+                     "card": ("—" if card_val is None else f"{card_val:.1f}%"),
                      "n": esc(r.get("n_utterances"))})
     cols = [("language", "Language"), ("metric", "Metric"),
-            ("primary_value", "Score"), ("n", "N")]
-    return chart + table(disp, cols)
+            ("primary_value", "Our score"),
+            ("card", "NVIDIA card (FLEURS)"), ("n", "N")]
+    notes = notice(
+        "<b>NVIDIA card</b> figures (the second bar / the right-hand column) are the "
+        "model card's FLEURS score for nemotron-3.5-asr-streaming-0.6b, auto-detect "
+        "mode at the 1.12&nbsp;s chunk (the card's best operating point, matching our "
+        "run). Same metric per language (WER, or CER for Japanese/Korean/Mandarin). "
+        "Our numbers run ~1–5&nbsp;pts higher, consistent with our 200-clip FLEURS "
+        "subset, the Whisper normaliser, and two locale mismatches (Egyptian Arabic "
+        "vs MSA, LatAm vs EU Spanish).", "muted")
+    if greek:
+        g = greek[0]
+        notes += notice(
+            "<b>Greek is excluded</b> from the chart and table above. NVIDIA's "
+            "model card places Greek in the <i>adaptation-ready</i> tier "
+            "(recognised by the tokenizer but not tuned for production) and "
+            "publishes no accuracy number for it. Our run measured Greek at "
+            f"WER&nbsp;{pct(g.get('primary_value'))} — consistent with an untuned "
+            "language: the transcript is phonetically close (CER&nbsp;"
+            f"{pct(g.get('cer'))}) but inflectional word-endings are missed, which "
+            "WER counts as whole-word errors. Shown here for transparency, kept out "
+            "of the comparison because there is no card figure to compare against.",
+            "muted")
+    return views(chart + notes, table(disp, cols) + notes)
 
 # ----------------------------------------------------------------------------
 # TTS render functions
@@ -1492,28 +1625,30 @@ def render_naturalness(rows, lang_rows=None):
         "Per-language naturalness uses DNSMOS (language-agnostic). UTMOS is "
         "omitted for non-English — it was validated on English only, so it is "
         "not a valid score for other languages.", "muted")
-    return (base + "<h4>Per-language (multilingual)</h4>" + chart + caveat
-            + table(out, cols))
+    header = "<h4>Per-language (multilingual)</h4>"
+    return views(base + header + chart + caveat,
+                 base + header + table(out, cols) + caveat)
 
 
 def render_intelligibility(rows, lang_rows=None):
-    chart = ""
+    cat_chart = ""
     if rows:
         labels = [r.get("category", "") for r in rows]
         vals = [None if fval(r.get("round_trip_wer"), 4) is None
                 else round(fval(r.get("round_trip_wer"), 4) * 100, 2) for r in rows]
-        chart = bar("c_intel", labels, vals, color="@s1",
-                    x_title="Category", y_title="Round-trip WER (%)")
+        cat_chart = bar("c_intel", labels, vals, color="@s1",
+                        x_title="Category",
+                        y_title="Round-trip WER (%) — lower is better")
     for r in rows:
         r["round_trip_wer"] = pct(r.get("round_trip_wer"))
         r["round_trip_cer"] = pct(r.get("round_trip_cer"))
     cols = [("category", "Category"), ("n_sentences", "N"),
             ("round_trip_wer", "Round-trip WER"), ("round_trip_cer", "CER"),
             ("normalizer", "Normalizer")]
-    base = chart + table(rows, cols)
+    cat_tbl = table(rows, cols)
 
     if not lang_rows:
-        return base
+        return views(cat_chart, cat_tbl)
 
     labels, vals, out = [], [], []
     for r in lang_rows:
@@ -1530,13 +1665,14 @@ def render_intelligibility(rows, lang_rows=None):
             labels.append(r.get("language"))
             vals.append(round(w * 100, 2))
     lchart = bar("c_intel_lang", labels, vals, horizontal=True, color="@s2",
-                 x_title="Round-trip WER (%)") if labels else ""
+                 x_title="Round-trip WER (%) — lower is better") if labels else ""
     cols2 = [("language", "Lang"), ("n_sentences", "N"),
              ("round_trip_wer", "Round-trip WER")]
     note = notice("FLEURS text synthesised per language, transcribed with "
                   "Whisper large-v3 using the language hint.", "muted")
-    return (base + "<h4>Per-language (FLEURS round-trip)</h4>" + lchart + note
-            + table(out, cols2))
+    h = "<h4>Per-language (FLEURS round-trip)</h4>"
+    return views(cat_chart + h + lchart + note,
+                 cat_tbl + h + table(out, cols2) + note)
 
 
 def render_prosody(rows, lang_rows=None):
@@ -1572,7 +1708,7 @@ def render_prosody(rows, lang_rows=None):
         "nPVI), pause ratio and speaking rate. Intrusive F0-vs-reference metrics "
         "need a same-speaker ground truth, which a fixed synthetic voice lacks "
         "(see 2.4).", "muted")
-    return note + chart + table(display, cols)
+    return views(note + chart, note + table(display, cols))
 
 
 def render_signal(rows):
@@ -1597,9 +1733,9 @@ def render_tts_latency(rows):
         if any(v is not None for v in vals):
             chart = bar("c_ttslat", labels, vals, color="@s1",
                         x_title="Text-length bucket", y_title="TTFB P50 (s)")
-    return chart + render_percentile_table(
+    return views(chart, render_percentile_table(
         rows, "bucket", "Bucket",
-        [("ttfb", "TTFB (s)"), ("rtf", "RTF"), ("elapsed", "Elapsed (s)")])
+        [("ttfb", "TTFB (s)"), ("rtf", "RTF"), ("elapsed", "Elapsed (s)")]))
 
 
 def render_tts_concurrency(rows):
@@ -1621,7 +1757,7 @@ def render_tts_concurrency(rows):
     cols = [("interface", "Interface"), ("concurrency", "N"), ("n_success", "OK"),
             ("error_rate", "Err rate"), ("rps", "RPS"), ("latency_p50", "P50 (s)"),
             ("latency_p99", "P99 (s)")]
-    return chart + table(rows, cols)
+    return views(chart, table(rows, cols))
 
 
 def render_edge(rows):
@@ -1633,12 +1769,12 @@ def render_edge(rows):
     colors = ["@good" if (v or 0) >= 90 else "@serious" if (v or 0) >= 50 else "@crit"
               for v in vals]
     chart = bar("c_edge", labels, vals, horizontal=True, colors=colors,
-                x_title="Pass rate (%)")
+                x_title="Pass rate (%) — higher is better")
     for r in rows:
         r["pass_rate"] = pct(r.get("pass_rate"))
     cols = [("category", "Category"), ("total", "Total"), ("pass", "Pass"),
             ("fail", "Fail"), ("degraded", "Degraded"), ("pass_rate", "Pass rate")]
-    return chart + table(rows, cols)
+    return views(chart, table(rows, cols))
 
 
 def render_tts_longform(rows):
@@ -1647,7 +1783,7 @@ def render_tts_longform(rows):
         labels = [str(r.get("title", ""))[:22] for r in rows]
         sim = [fval(r.get("mean_speaker_sim"), 3) for r in rows]
         chart = bar("c_ttslf", labels, sim, horizontal=True, color="@s3",
-                    x_title="Mean speaker similarity (higher = more consistent)")
+                    x_title="Mean speaker similarity (0–1) — higher is more consistent")
     for r in rows:
         r["mean_speaker_sim"] = fnum(r.get("mean_speaker_sim"), 3)
         r["f0_drift_hz"] = fnum(r.get("f0_drift_hz"), 1)
@@ -1655,7 +1791,7 @@ def render_tts_longform(rows):
     cols = [("title", "Passage"), ("n_paragraphs", "Paras"),
             ("mean_speaker_sim", "Speaker sim"), ("f0_drift_hz", "F0 drift (Hz)"),
             ("wpm_drift", "WPM drift")]
-    return chart + table(rows, cols)
+    return views(chart, table(rows, cols))
 
 
 def render_tts_acceptance(rows):
@@ -1673,7 +1809,7 @@ def render_tts_acceptance(rows):
             else round(fval(r.get("round_trip_wer"), 4) * 100, 2) for r in rows]
     colors = ["@good" if r.get("status") == "ok" else "@serious" for r in rows]
     chart = bar("c_ttsacc", labels, vals, horizontal=True, colors=colors,
-                x_title="Round-trip WER (%)") if any(v is not None for v in vals) else ""
+                x_title="Round-trip WER (%) — lower is better") if any(v is not None for v in vals) else ""
     gap = ""
     bad = [r for r in rows if r.get("status") != "ok"]
     if bad:
@@ -1703,7 +1839,8 @@ def render_tts_acceptance(rows):
     cols = [("label", "Language"), ("voice", "Voice"), ("status_b", "Status"),
             ("detected", "Whisper detected"), ("wer", "Round-trip WER"),
             ("sample", "Sample transcript")]
-    return cards + gap + chart + table(disp, cols, highlight=row_style)
+    return views(cards + gap + chart,
+                 cards + gap + table(disp, cols, highlight=row_style))
 
 
 # ----------------------------------------------------------------------------
@@ -1853,6 +1990,7 @@ def chip(rows_present: bool, na: bool = False) -> str:
 # (anchor, test-id, title)
 STT_TESTS = [
     ("t1_1", "1.1", "Test 1.1 — Clean-Speech Accuracy"),
+    ("t1_12", "1.12", "Test 1.12 — Multilingual Accuracy"),
     ("t1_2", "1.2", "Test 1.2 — Batch Performance"),
     ("t1_3", "1.3", "Test 1.3 — Streaming Performance"),
     ("t1_4", "1.4", "Test 1.4 — REST vs gRPC"),
@@ -1863,7 +2001,6 @@ STT_TESTS = [
     ("t1_9", "1.9", "Test 1.9 — Output Quality"),
     ("t1_10", "1.10", "Test 1.10 — Confidence Calibration"),
     ("t1_11", "1.11", "Test 1.11 — Format Robustness"),
-    ("t1_12", "1.12", "Test 1.12 — Multilingual Accuracy"),
     ("t1_13", "1.13", "Test 1.13 — Language Acceptance (34 languages)"),
 ]
 TTS_TESTS = [
@@ -2103,6 +2240,14 @@ const barValueLabels={{
   }}
 }};
 Chart.register(barValueLabels);
+function toggleView(btn,mode){{
+  const card=btn.closest('.card');if(!card)return;
+  const v=card.querySelector('.views');if(v)v.setAttribute('data-view',mode);
+  card.querySelectorAll('.vtoggle button').forEach(b=>{{
+    const on=b===btn;b.classList.toggle('active',on);
+    b.setAttribute('aria-pressed',on?'true':'false');
+  }});
+}}
 function buildCharts(){{
   CHARTS.forEach(c=>c.destroy());CHARTS=[];
   Chart.defaults.font.family="system-ui,-apple-system,'Segoe UI',sans-serif";

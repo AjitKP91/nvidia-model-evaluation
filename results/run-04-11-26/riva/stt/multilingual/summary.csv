@@ -15,4 +15,3 @@ Arabic,ar,ar_eg,ga,transcription-ready,200.0,wer,0.1543,0.0467,0.1543,0.1334,0.1
 Czech,cs,cs_cz,preview,broad-coverage,200.0,wer,0.2481,0.0885,0.2481,0.2211,0.2743,FLAG,ok,,,,
 Italian,it,it_it,preview,transcription-ready,200.0,wer,0.0702,0.0382,0.0702,0.0608,0.0844,PASS,ok,,,,
 Turkish,tr,tr_tr,preview,transcription-ready,200.0,wer,0.1634,0.0418,0.1634,0.1461,0.1842,FLAG,ok,,,,
-MACRO-AVG,,,,,,,,,,,,,summary,14.0,0.1639,2.0,0.1669

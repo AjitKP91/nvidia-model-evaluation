@@ -156,6 +156,17 @@ def _ds(name, url):
     return {"name": name, "url": url}
 
 
+# Base URL for linking "how it works" copy to the actual source on GitHub.
+# Pinned to a branch so line anchors stay meaningful across the default branch.
+CODE_BASE = "https://github.com/AjitKP91/nvidia-model-evaluation/blob/main/"
+
+
+def _code(label, path, line=None):
+    """A clickable link to a source file (optionally a line anchor)."""
+    url = CODE_BASE + path + (f"#L{line}" if line else "")
+    return {"name": label, "url": url}
+
+
 # ----------------------------------------------------------------------------
 # TEST_META — authored, code-accurate copy for every test
 #   summary : one plain line (always visible)
@@ -172,11 +183,26 @@ TEST_META = {
         "what": "The baseline accuracy test. It plays clean English audio from "
                 "well-known public corpora and compares the transcript to the "
                 "reference, so you can place the model against published numbers.",
-        "how": "eval/stt/accuracy.py streams each clip over gRPC, then scores it "
-               "with eval.utils.score_pair: text is normalised with Whisper's "
-               "EnglishTextNormalizer and WER/CER/MER are computed with jiwer "
-               "(edit distance over words/characters). Per-dataset means are "
-               "written to accuracy/summary.csv with a PASS/warn verdict.",
+        "how": "Clean English clips are streamed to the model over gRPC and the "
+               "returned transcript is compared to the dataset's reference text. "
+               "Before comparing, both strings pass through Whisper's "
+               "EnglishTextNormalizer, which expands numbers and currency, fixes "
+               "contractions and strips casing and punctuation so only genuine "
+               "word errors count. The two cleaned word sequences are then lined "
+               "up by edit distance (jiwer): WER = (words substituted + inserted + "
+               "deleted) ÷ reference words, with MER and character-level CER "
+               "reported alongside. Each of the eight benchmarks is scored "
+               "separately and gets its own PASS/warn verdict, and a raw cased-and-"
+               "punctuated WER is also reported so the un-normalised picture is "
+               "visible too.",
+        "code": [
+            _code("accuracy.py — run() (stream, score, per-dataset verdict)",
+                  "eval/stt/accuracy.py", 97),
+            _code("utils.py — score_pair() (WER/MER/CER edit distance)",
+                  "eval/utils.py", 144),
+            _code("utils.py — normalize_for_language() (EnglishTextNormalizer)",
+                  "eval/utils.py", 126),
+        ],
         "datasets": [
             _ds("LibriSpeech (test-clean / test-other)",
                 "https://huggingface.co/datasets/openslr/librispeech_asr"),
@@ -196,11 +222,21 @@ TEST_META = {
         "what": "A speed test (not accuracy). It measures how quickly audio is "
                 "processed for short/medium/long clips and how latency holds up "
                 "when many requests run at once.",
-        "how": "eval/stt/performance.py times each gRPC call, computing RTF = "
-               "elapsed ÷ audio-duration and RTFx = its inverse, bucketed by clip "
-               "length. A concurrency sweep replays the workload at increasing "
-               "parallelism and records P50/P99 latency and mean RTF per level "
-               "(concurrency_summary.csv).",
+        "how": "This times the model rather than scoring its words. Each clip is "
+               "sent and the wall-clock time is divided by the clip's audio "
+               "duration to get RTF (real-time factor); RTFx is its inverse, so "
+               "RTFx 10 means ten seconds of audio transcribed per second of "
+               "compute. Clips are grouped into short / medium / long buckets to "
+               "show how speed scales with length. A second pass replays the same "
+               "workload at 1, 5, 10 and 20 simultaneous requests and records "
+               "median (P50) and tail (P99) latency plus mean RTF at each level, "
+               "exposing how throughput holds up under concurrent load.",
+        "code": [
+            _code("performance.py — run() (RTF/RTFx + concurrency sweep)",
+                  "eval/stt/performance.py", 37),
+            _code("performance.py — _pick_utterances_by_duration() (length buckets)",
+                  "eval/stt/performance.py", 25),
+        ],
         "datasets": [
             _ds("LibriSpeech (length-bucketed clips)",
                 "https://huggingface.co/datasets/openslr/librispeech_asr"),
@@ -213,11 +249,24 @@ TEST_META = {
         "what": "Measures the live-dictation experience: how soon the first word "
                 "appears, how long results take to finalise, how stable partial "
                 "hypotheses are, and whether streaming hurts accuracy.",
-        "how": "eval/stt/streaming.py drives StreamingRecognize and records "
-               "time-to-first-word, finalisation latency, partial latency and a "
-               "stability rate (how often partials survive unchanged), plus a "
-               "batch-vs-stream WER comparison. Percentiles are stored as dicts "
-               "in summary.csv. English-only by design.",
+        "how": "The clip is streamed in small chunks and every partial and final "
+               "result from StreamingRecognize is timestamped. From those "
+               "timestamps the test derives time-to-first-word (how soon any text "
+               "appears), finalisation latency (how long after the audio ends the "
+               "final text arrives) and partial latency. A stability rate measures "
+               "how often an interim word survives unchanged into the final "
+               "transcript — jitter-free streaming scores near 1.0. The same audio "
+               "is also transcribed in batch and the WER compared, so you can see "
+               "whether streaming costs accuracy. English-only: streaming timing "
+               "is a property of the serving stack, not the language.",
+        "code": [
+            _code("streaming.py — run() (drive StreamingRecognize, collect timings)",
+                  "eval/stt/streaming.py", 68),
+            _code("streaming.py — _compute_stability_rate() (partial survival)",
+                  "eval/stt/streaming.py", 38),
+            _code("streaming.py — _compute_partial_latencies()",
+                  "eval/stt/streaming.py", 57),
+        ],
         "datasets": [
             _ds("LibriSpeech (streamed clips)",
                 "https://huggingface.co/datasets/openslr/librispeech_asr"),
@@ -230,9 +279,16 @@ TEST_META = {
         "what": "Would compare the REST and gRPC transports for the same audio. "
                 "The SAP AI Core gateway exposes only gRPC streaming, so there is "
                 "no REST path to compare and the test records an honest N/A.",
-        "how": "eval/stt/rest_vs_grpc.py expects both interfaces; when REST is "
-               "unavailable it writes no fabricated numbers. The report shows the "
-               "N/A rationale instead of a chart.",
+        "how": "The test is written to send identical audio over both REST and "
+               "gRPC and compare their latency head-to-head. This deployment's SAP "
+               "AI Core gateway only implements gRPC StreamingRecognize, so there "
+               "is no REST endpoint to measure. Rather than invent a comparison, "
+               "the code detects the missing interface and records an explicit "
+               "N/A — the report shows that rationale instead of a chart.",
+        "code": [
+            _code("rest_vs_grpc.py — run() (detects missing REST, records N/A)",
+                  "eval/stt/rest_vs_grpc.py", 29),
+        ],
         "datasets": [],
         "metrics": [],
     },
@@ -242,10 +298,23 @@ TEST_META = {
         "what": "Mixes clean speech with real-world noise at controlled signal-"
                 "to-noise ratios and tracks WER as conditions worsen — a "
                 "stress test for noisy rooms, cafés, streets and babble.",
-        "how": "eval/stt/noise_robustness.py adds MUSAN/DEMAND noise to "
-               "LibriSpeech at set SNRs, transcribes, and scores WER per "
-               "(noise_type, SNR). It also reports delta_rel, the relative WER "
-               "increase versus the clean baseline (snr=∞).",
+        "how": "Clean speech is mixed with noise at a fixed signal-to-noise ratio "
+               "(SNR — higher dB means quieter noise) and then transcribed, so you "
+               "can watch accuracy fall as conditions worsen. Four noise types are "
+               "used: synthetic Gaussian hiss plus real babble (MUSAN) and street "
+               "and office recordings (DEMAND), each injected across SNRs from −5 "
+               "to +20 dB. For every (noise type, SNR) pair it scores WER exactly "
+               "as Test 1.1 does, and reports delta_rel — the percentage increase "
+               "in WER versus the clean baseline — so the degradation curve is easy "
+               "to read.",
+        "code": [
+            _code("noise_robustness.py — run() (grid over noise × SNR)",
+                  "eval/stt/noise_robustness.py", 58),
+            _code("noise_robustness.py — _inject_noise() (SNR mixing)",
+                  "eval/stt/noise_robustness.py", 47),
+            _code("noise_robustness.py — _run_english() (score vs clean baseline)",
+                  "eval/stt/noise_robustness.py", 92),
+        ],
         "datasets": [
             _ds("LibriSpeech (clean source)",
                 "https://huggingface.co/datasets/openslr/librispeech_asr"),
@@ -261,9 +330,22 @@ TEST_META = {
         "what": "Checks whether the model treats speakers of different accents "
                 "equally by scoring the same kind of speech across many accent "
                 "groups and measuring the spread.",
-        "how": "eval/stt/accent.py transcribes VCTK and L2-ARCTIC clips grouped "
-               "by accent, computes per-accent WER, and derives fairness_delta = "
-               "each group's WER minus the best group's WER.",
+        "how": "The same kind of read speech is transcribed for many speaker "
+               "groups, each a different accent, and WER is computed per group. "
+               "VCTK supplies UK and Commonwealth accents; L2-ARCTIC supplies "
+               "non-native (L2) English accents; clips are bucketed by their "
+               "accent label. The headline is fairness_delta = each group's WER "
+               "minus the best group's WER, which shows how much worse the model "
+               "does on its weakest accent than its strongest — the gap, not just "
+               "the average.",
+        "code": [
+            _code("accent.py — run() (per-accent WER + fairness delta)",
+                  "eval/stt/accent.py", 124),
+            _code("accent.py — _load_vctk_groups()",
+                  "eval/stt/accent.py", 39),
+            _code("accent.py — _load_l2arctic_groups()",
+                  "eval/stt/accent.py", 64),
+        ],
         "datasets": [
             _ds("VCTK (UK/Commonwealth accents)",
                 "https://datashare.ed.ac.uk/handle/10283/3443"),
@@ -278,9 +360,23 @@ TEST_META = {
         "what": "Tests whether the model holds up on long recordings (meetings, "
                 "talks) without drifting, hallucinating text, or repeating "
                 "itself.",
-        "how": "eval/stt/long_form.py transcribes each long file whole and in "
-               "chunks, scoring full_wer and chunked_wer, plus a hallucination "
-               "rate and repetition rate that flag runaway or looping output.",
+        "how": "Each long recording is transcribed two ways — as one whole file "
+               "and as a sequence of 30-second chunks — and both are scored "
+               "(full_wer vs chunked_wer) to reveal whether long context helps or "
+               "hurts. Two failure detectors then run on the output: a "
+               "hallucination rate flags text the model invented that isn't in the "
+               "reference, and a repetition rate flags looping n-grams (the model "
+               "getting stuck repeating a phrase). For CJK languages the detectors "
+               "switch to character n-grams and are marked approximate rather than "
+               "reporting a bogus word-based number.",
+        "code": [
+            _code("long_form.py — run() (whole vs chunked, drift detection)",
+                  "eval/stt/long_form.py", 85),
+            _code("long_form.py — _detect_hallucinations()",
+                  "eval/stt/long_form.py", 29),
+            _code("long_form.py — _detect_repetitions()",
+                  "eval/stt/long_form.py", 62),
+        ],
         "datasets": [
             _ds("TED-LIUM 3 (long talks)",
                 "https://huggingface.co/datasets/LIUM/tedlium"),
@@ -295,10 +391,22 @@ TEST_META = {
         "what": "Measures performance on specialised content (finance, "
                 "meetings) where rare terms and proper nouns matter more than "
                 "overall WER.",
-        "how": "eval/stt/domain.py computes domain_wer, a key-term recall rate "
-               "(KRR — how many domain terms were caught) and NE-WER (error rate "
-               "restricted to named entities), and surfaces the most-"
-               "misrecognised terms.",
+        "how": "On jargon-heavy speech, overall WER hides what matters, so this "
+               "zooms in on the hard words. It computes domain_wer (WER on the "
+               "specialised clips), a key-term recall rate (KRR — of the domain "
+               "terms and named entities present in the reference, how many the "
+               "model got right) and NE-WER (error rate restricted to named "
+               "entities only). It also surfaces the most-frequently-"
+               "misrecognised terms, so you can see exactly where the vocabulary "
+               "breaks down.",
+        "code": [
+            _code("domain.py — run() (domain WER, KRR, NE-WER, OOV)",
+                  "eval/stt/domain.py", 77),
+            _code("domain.py — _compute_krr() (key-term recall)",
+                  "eval/stt/domain.py", 38),
+            _code("domain.py — _compute_ne_wer() (named-entity WER)",
+                  "eval/stt/domain.py", 47),
+        ],
         "datasets": [
             _ds("SPGISpeech (finance)",
                 "https://huggingface.co/datasets/kensho/spgispeech"),
@@ -313,10 +421,26 @@ TEST_META = {
         "what": "Clean words aren't enough: this checks the formatting that "
                 "makes transcripts readable — sentence punctuation, proper "
                 "capitalisation and correctly written numbers.",
-        "how": "eval/stt/output_quality.py compares formatted output against "
-               "references and reports per-aspect scores (e.g. F1 for "
-               "punctuation marks, capitalisation accuracy, numeric formatting) "
-               "in output_quality/summary.csv.",
+        "how": "Beyond getting words right, a usable transcript needs correct "
+               "formatting, so this scores three things against formatted "
+               "references. Punctuation is scored as an F1 per mark — the "
+               "precision and recall of each '.', ',', '?' and so on, so both "
+               "missing and spurious marks count. Capitalisation accuracy checks "
+               "the right letters are upper-cased, and is reported N/A for scripts "
+               "with no case (CJK/Thai) rather than a false zero. Number accuracy "
+               "checks digits are written correctly, reported N/A for native-digit "
+               "scripts. Per-language runs use language-aware punctuation sets "
+               "(Spanish ¿¡, CJK 。、, Arabic ؟،).",
+        "code": [
+            _code("output_quality.py — run() (punct / caps / number scoring)",
+                  "eval/stt/output_quality.py", 136),
+            _code("output_quality.py — _compute_punct_f1()",
+                  "eval/stt/output_quality.py", 33),
+            _code("output_quality.py — _compute_capitalisation_accuracy()",
+                  "eval/stt/output_quality.py", 87),
+            _code("output_quality.py — _compute_number_accuracy()",
+                  "eval/stt/output_quality.py", 114),
+        ],
         "datasets": [
             _ds("LibriSpeech / curated formatted references",
                 "https://huggingface.co/datasets/openslr/librispeech_asr"),
@@ -329,10 +453,24 @@ TEST_META = {
         "what": "A trustworthy model should be confident when right and unsure "
                 "when wrong. This test checks that the reported confidence means "
                 "what it says.",
-        "how": "eval/stt/confidence.py bins words by confidence and compares each "
-               "bin's mean confidence to its measured accuracy, reporting ECE "
-               "(calibration gap), AUROC (confidence as an error detector) and "
-               "the Brier score, plus the per-bin reliability curve.",
+        "how": "A confidence score is only useful if it tracks whether the model "
+               "was actually right. Each recognised word is labelled correct or "
+               "not by aligning to the reference, then bucketed by its confidence. "
+               "Expected Calibration Error (ECE) is the average gap between a "
+               "bucket's stated confidence and its measured accuracy (0 = "
+               "perfectly calibrated). AUROC measures how well confidence alone "
+               "separates right from wrong words (0.5 = useless, 1.0 = perfect "
+               "error detector). The Brier score is the mean squared error of "
+               "confidence-as-probability. A per-bin reliability curve is plotted "
+               "against the ideal y=x line.",
+        "code": [
+            _code("confidence.py — run() (bin words, build reliability curve)",
+                  "eval/stt/confidence.py", 45),
+            _code("confidence.py — _calibration_summary() (ECE / AUROC / Brier)",
+                  "eval/stt/confidence.py", 145),
+            _code("confidence.py — _compute_word_correctness() (align to reference)",
+                  "eval/stt/confidence.py", 25),
+        ],
         "datasets": [
             _ds("LibriSpeech (word-level confidences)",
                 "https://huggingface.co/datasets/openslr/librispeech_asr"),
@@ -345,9 +483,20 @@ TEST_META = {
         "what": "An operational check that the service tolerates the audio "
                 "formats real clients send (WAV/FLAC, 8–48 kHz, mono/stereo) "
                 "rather than only one golden format.",
-        "how": "eval/stt/format_robustness.py submits the same utterance in many "
-               "encodings/rates/layouts and records pass/fail per variant with "
-               "any error returned. English-only serving-stack property.",
+        "how": "This is an operational compatibility check, not an accuracy test. "
+               "One fixed utterance is re-encoded into many combinations of "
+               "container, codec, sample rate, bit depth and channel layout (WAV "
+               "and FLAC, 8–48 kHz, mono/stereo, and so on) and submitted to the "
+               "endpoint. Each variant is recorded pass or fail along with any "
+               "error the server returned, producing a support matrix. It stays "
+               "English-only because decoding and resampling happen in the audio "
+               "frontend and don't depend on the language.",
+        "code": [
+            _code("format_robustness.py — run() (submit each variant, pass/fail)",
+                  "eval/stt/format_robustness.py", 67),
+            _code("format_robustness.py — _convert_format() (re-encode audio)",
+                  "eval/stt/format_robustness.py", 39),
+        ],
         "datasets": [
             _ds("LibriSpeech (re-encoded variants)",
                 "https://huggingface.co/datasets/openslr/librispeech_asr"),
@@ -360,13 +509,41 @@ TEST_META = {
         "what": "Measures transcription accuracy language by language (not just "
                 "English), using a common multilingual benchmark so languages are "
                 "comparable.",
-        "how": "eval/stt/multilingual.py transcribes FLEURS audio per language "
-               "and scores with eval.utils.score_pair, routing CJK languages to "
-               "CER and the rest to WER. Opt-in: populated when the multilingual "
-               "language lists are configured.",
+        "how": "For each language the harness pulls up to 200 clean read-speech "
+               "clips from FLEURS and sends each one to the model, getting back a "
+               "predicted transcript. Before anything is counted, both the correct "
+               "reference text and the model's transcript are run through the same "
+               "text normaliser (Whisper's — the English one for English, the "
+               "basic one for every other language): this lowercases, strips "
+               "punctuation and standardises spacing, so differences in formatting "
+               "don't count as mistakes — only genuinely wrong words do. The two "
+               "cleaned strings are then compared by edit distance. For "
+               "space-separated languages the score is WER = (words substituted + "
+               "inserted + deleted) ÷ (number of words in the reference); a WER of "
+               "0.15 means roughly 15 words in 100 were wrong. Chinese, Japanese "
+               "and Thai have no spaces between words, so they are scored the same "
+               "way but per character (CER) after all spaces are removed — this "
+               "endpoint emits one space per character, and counting those would "
+               "otherwise push the score toward 1.0. Each clip is scored "
+               "individually; the per-clip scores are averaged into the language's "
+               "number, with a bootstrap confidence interval, and compared against "
+               "PASS/FLAG/FAIL thresholds. Every language is reported on its own "
+               "line — there is deliberately no blended macro-average, because the "
+               "languages span very different difficulty tiers and one combined "
+               "number would hide more than it shows.",
         "datasets": [
             _ds("FLEURS (102-language read speech)",
                 "https://huggingface.co/datasets/google/fleurs"),
+        ],
+        "code": [
+            _code("multilingual.py — run() (load clips, transcribe, aggregate)",
+                  "eval/stt/multilingual.py", 77),
+            _code("utils.py — score_pair() (WER/CER edit distance)",
+                  "eval/utils.py", 144),
+            _code("utils.py — normalize_for_language() (Whisper normaliser)",
+                  "eval/utils.py", 126),
+            _code("utils.py — bootstrap_ci() (confidence interval)",
+                  "eval/utils.py", 280),
         ],
         "metrics": ["WER", "CER"],
     },
@@ -376,11 +553,22 @@ TEST_META = {
         "what": "The multilingual centrepiece. Rather than trusting the model "
                 "card, it sends one real clip per language and records whether "
                 "the deployment returns usable text — rendered SAP-Joule-first.",
-        "how": "eval/stt/language_acceptance.py probes each language once, "
-               "classifies the result as ok / empty / error / load_failed, and "
-               "captures a sample reference/hypothesis and a sample WER/CER. "
-               "Languages that return nothing are logged as graceful no_output "
-               "rows, never scored as fabricated numbers.",
+        "how": "Before trusting any accuracy number, this confirms the endpoint "
+               "actually returns text for each language. For every one of the "
+               "model's languages it streams a few real FLEURS clips and "
+               "classifies the outcome: ok (usable text came back), empty (the "
+               "endpoint returned nothing), error (the call failed) or load_failed "
+               "(the dataset couldn't be fetched). It keeps a sample reference / "
+               "hypothesis pair and a sample WER/CER for a sanity glance. A "
+               "language that returns nothing is logged as a graceful no_output "
+               "row — never a fabricated score — and ok languages are skipped on "
+               "re-run so it's cheap to repeat.",
+        "code": [
+            _code("language_acceptance.py — run() (probe every language, classify)",
+                  "eval/stt/language_acceptance.py", 175),
+            _code("language_acceptance.py — probe() (stream clips, status + sample)",
+                  "eval/stt/language_acceptance.py", 60),
+        ],
         "datasets": [
             _ds("FLEURS (one clip per language)",
                 "https://huggingface.co/datasets/google/fleurs"),
@@ -395,10 +583,23 @@ TEST_META.update({
                    "sounds, scored by neural MOS predictors.",
         "what": "Rates how natural the generated speech sounds without a human "
                 "panel, using models that predict listener opinion scores.",
-        "how": "eval/tts/naturalness.py synthesizes sentences and scores them "
-               "with UTMOS (English only) and DNSMOS (language-agnostic P.835: "
-               "SIG/BAK/OVRL). Per-language runs report DNSMOS only; UTMOS is "
-               "omitted for non-English because it was validated on English.",
+        "how": "The model synthesizes a set of sentences and two neural predictors "
+               "rate how natural the audio sounds, with no human panel needed. "
+               "DNSMOS (an ONNX model implementing ITU-T P.835) returns SIG "
+               "(speech quality), BAK (background cleanliness) and OVRL (overall) "
+               "on a 1–5 MOS scale and is language-agnostic, so it is reported for "
+               "every language. UTMOS also predicts a MOS but was trained and "
+               "validated on English, so for non-English it would be scoring "
+               "out-of-domain audio — the code records utmos: null with a note "
+               "there rather than a misleading number.",
+        "code": [
+            _code("naturalness.py — run() (synthesize, score UTMOS + DNSMOS)",
+                  "eval/tts/naturalness.py", 32),
+            _code("dnsmos.py — score_dnsmos() (P.835 SIG/BAK/OVRL)",
+                  "eval/tts/dnsmos.py", 145),
+            _code("utmos.py — score_utmos() (English-only MOS predictor)",
+                  "eval/tts/utmos.py", 44),
+        ],
         "datasets": [
             _ds("Internal sentence set + FLEURS text (per language)",
                 "https://huggingface.co/datasets/google/fleurs"),
@@ -410,10 +611,22 @@ TEST_META.update({
                    "back correctly? (round-trip WER).",
         "what": "The clearest real-world test of TTS quality: if a strong ASR "
                 "model can read the speech back accurately, a human can too.",
-        "how": "eval/tts/intelligibility.py synthesizes each sentence, "
-               "transcribes it with Whisper large-v3 (language-hinted), and "
-               "computes round-trip WER/CER after normalisation — by content "
-               "category and, for multilingual runs, per language via FLEURS.",
+        "how": "This is the most real-world TTS check: synthesize the text, then "
+               "transcribe the synthesized audio back with Whisper large-v3 and "
+               "compare to the original text. The idea is simple — if a strong ASR "
+               "can read the speech back accurately, a human can too. The "
+               "round-trip is scored with the same normaliser and edit-distance "
+               "WER as the STT tests (CER for Chinese and Japanese), broken down "
+               "by content category (numbers, punctuation, etc.) for English and "
+               "per language via FLEURS text for multilingual runs.",
+        "code": [
+            _code("intelligibility.py — run() (synthesize → transcribe → score)",
+                  "eval/tts/intelligibility.py", 95),
+            _code("intelligibility.py — _transcribe_whisper() (Whisper large-v3)",
+                  "eval/tts/intelligibility.py", 69),
+            _code("utils.py — score_pair() (round-trip WER/CER)",
+                  "eval/utils.py", 144),
+        ],
         "datasets": [
             _ds("Curated categories + FLEURS (per language)",
                 "https://huggingface.co/datasets/google/fleurs"),
@@ -426,11 +639,23 @@ TEST_META.update({
         "what": "Flat, robotic speech is unpleasant even when intelligible. This "
                 "measures expressiveness: pitch movement, rhythmic variation, "
                 "pausing and tempo.",
-        "how": "eval/tts/prosody.py extracts reference-free prosody features: F0 "
-               "mean/std/range (pitch dynamism), an acoustic nPVI approximation "
-               "(rhythm), pause ratio and words-per-minute. Intrusive F0-vs-"
-               "reference metrics are not computable for a fixed synthetic voice "
-               "(see 2.4).",
+        "how": "Intelligible speech can still sound flat and robotic, so this "
+               "measures expressiveness directly from the audio — no reference "
+               "recording required. It extracts the pitch (F0) contour and reports "
+               "its standard deviation and range (how much the voice moves), an "
+               "acoustic nPVI that captures rhythmic variation between successive "
+               "voiced segments, the pause ratio (share of silence) and the "
+               "speaking rate in words per minute. Together these flag monotone or "
+               "unnaturally paced output. The intrusive 'F0 versus a reference' "
+               "metrics aren't computable for a fixed synthetic voice — see 2.4.",
+        "code": [
+            _code("prosody.py — run() (per-utterance features + aggregate)",
+                  "eval/tts/prosody.py", 257),
+            _code("prosody.py — _measure_utterance() (F0, pause, WPM)",
+                  "eval/tts/prosody.py", 142),
+            _code("prosody.py — _npvi() (rhythm variation)",
+                  "eval/tts/prosody.py", 102),
+        ],
         "datasets": [
             _ds("Internal passages + FLEURS text (per language)",
                 "https://huggingface.co/datasets/google/fleurs"),
@@ -444,9 +669,20 @@ TEST_META.update({
                 "same speaker saying the same words. A fixed synthetic persona "
                 "has no such reference, so any score would measure speaker "
                 "mismatch, not quality.",
-        "how": "eval/tts/signal_quality.py records the N/A rationale rather than "
-               "emitting misleading intrusive scores. Use 2.1 and 2.2 instead; a "
-               "valid intrusive run needs a zero-shot voice-cloning deployment.",
+        "how": "MCD, PESQ and STOI are full-reference metrics: each compares the "
+               "output waveform to a recording of the same speaker saying the same "
+               "words. A fixed synthetic persona has no such ground-truth "
+               "recording, so any score would measure speaker mismatch, not "
+               "synthesis quality. The code therefore records an explicit N/A "
+               "rationale instead of emitting misleading numbers; a valid intrusive "
+               "run would need a zero-shot voice-cloning deployment with held-out "
+               "real-speaker audio, which is kept behind a guard.",
+        "code": [
+            _code("signal_quality.py — run() (records the N/A rationale)",
+                  "eval/tts/signal_quality.py", 93),
+            _code("signal_quality.py — _run_intrusive() (guarded MCD/PESQ/STOI path)",
+                  "eval/tts/signal_quality.py", 111),
+        ],
         "datasets": [],
         "metrics": [],
     },
@@ -456,9 +692,17 @@ TEST_META.update({
         "what": "Measures responsiveness for live use: how soon the first audio "
                 "chunk arrives (TTFB) and how fast speech is produced relative to "
                 "its duration.",
-        "how": "eval/tts/latency.py times gRPC streaming synthesis per text-"
-               "length bucket, storing TTFB, RTF and elapsed as P50/P99 "
-               "percentile dicts in summary.csv.",
+        "how": "A responsiveness test for live synthesis. For each text-length "
+               "bucket it streams the audio over gRPC and records time-to-first-"
+               "byte (how soon the first audio chunk arrives — what a user "
+               "perceives as lag) and RTF (synthesis time ÷ audio duration, so "
+               "below 1.0 is faster than real time). Results are stored as P50/P99 "
+               "percentile pairs so both typical and worst-case latency are "
+               "visible per text length.",
+        "code": [
+            _code("latency.py — run() (TTFB + RTF per text-length bucket)",
+                  "eval/tts/latency.py", 47),
+        ],
         "datasets": [
             _ds("Length-bucketed prompt set (internal)", ""),
         ],
@@ -469,10 +713,19 @@ TEST_META.update({
                    "as parallel load increases.",
         "what": "A capacity test: how many simultaneous synthesis requests the "
                 "endpoint sustains and how latency and error rate respond.",
-        "how": "eval/tts/concurrency.py replays synthesis at rising concurrency "
-               "levels and records success count, error rate, RPS and P50/P99 "
-               "latency. Shown as two single-axis charts (throughput and latency "
-               "vs concurrency) — never a dual-axis plot.",
+        "how": "A capacity test. The same synthesis request is replayed at rising "
+               "concurrency — 1, 5, 10 and 20 parallel calls — and at each level "
+               "it records how many succeeded, the error rate, requests per second "
+               "(throughput) and P50/P99 latency. Throughput and latency are shown "
+               "as two separate single-axis charts versus concurrency (never one "
+               "dual-axis plot), so rising latency isn't visually conflated with "
+               "rising throughput.",
+        "code": [
+            _code("concurrency.py — run() (sweep concurrency levels)",
+                  "eval/tts/concurrency.py", 111),
+            _code("concurrency.py — _run_concurrent_grpc() (parallel replay, RPS)",
+                  "eval/tts/concurrency.py", 71),
+        ],
         "datasets": [
             _ds("Fixed prompt replayed under load (internal)", ""),
         ],
@@ -484,9 +737,20 @@ TEST_META.update({
         "what": "Stress-tests the text frontend with awkward inputs across "
                 "seventeen categories to find where synthesis breaks or "
                 "degrades.",
-        "how": "eval/tts/edge_cases.py runs each category and classifies every "
-               "item as pass / fail / degraded, reporting a per-category "
-               "pass_rate in summary.csv.",
+        "how": "The text frontend is stress-tested with awkward inputs across "
+               "seventeen categories — empty strings, very long text, numbers, "
+               "punctuation, abbreviations, SSML markup, emoji and special "
+               "characters, URLs and emails, code snippets, and more. Each item is "
+               "synthesized and classified pass / fail / degraded, with a timeout "
+               "guard so one bad case can't stall the suite. The report shows a "
+               "pass_rate per category, so you can see which input types the voice "
+               "handles cleanly and which break it.",
+        "code": [
+            _code("edge_cases.py — run() (run categories, classify, pass_rate)",
+                  "eval/tts/edge_cases.py", 39),
+            _code("edge_cases.py — _round_trip_wer() (degraded-output check)",
+                  "eval/tts/edge_cases.py", 25),
+        ],
         "datasets": [
             _ds("Curated edge-case suite (17 categories, internal)", ""),
         ],
@@ -497,9 +761,22 @@ TEST_META.update({
                    "across a long passage (no drift)?",
         "what": "Checks that voice identity, pitch and tempo stay stable "
                 "paragraph-to-paragraph over long passages instead of drifting.",
-        "how": "eval/tts/long_form.py synthesizes multi-paragraph passages and "
-               "measures speaker similarity (ECAPA-TDNN embeddings) between "
-               "paragraphs plus F0 and WPM drift across the passage.",
+        "how": "Over a long multi-paragraph passage a synthetic voice can slowly "
+               "drift — change timbre, pitch or pace. This synthesizes each "
+               "paragraph, computes an ECAPA-TDNN speaker embedding for each, and "
+               "measures the cosine similarity between paragraphs: high, flat "
+               "similarity means the voice stayed the same person throughout. It "
+               "also tracks mean-F0 drift and speaking-rate (WPM) drift across the "
+               "passage to catch pitch or tempo wandering that similarity alone "
+               "might miss.",
+        "code": [
+            _code("long_form.py — run() (synthesize passages, measure drift)",
+                  "eval/tts/long_form.py", 83),
+            _code("long_form.py — _compute_speaker_embeddings() (ECAPA-TDNN)",
+                  "eval/tts/long_form.py", 21),
+            _code("long_form.py — _pairwise_cosine_similarity()",
+                  "eval/tts/long_form.py", 61),
+        ],
         "datasets": [
             _ds("Multi-paragraph passages (internal)", ""),
         ],
@@ -511,10 +788,21 @@ TEST_META.update({
         "what": "The TTS counterpart to 1.13: confirms which configured "
                 "languages actually produce usable speech on this deployment, "
                 "verified by a Whisper round-trip.",
-        "how": "eval/tts/language_acceptance.py synthesizes one probe per "
-               "language, transcribes it with Whisper (language detection), and "
-               "classifies ok / wrong_language / empty / error, recording the "
-               "round-trip WER and a sample transcript.",
+        "how": "The TTS counterpart to 1.13. For each configured language it "
+               "synthesizes a short FLEURS sentence with that language's own voice "
+               "and locale, transcribes the result with Whisper (letting Whisper "
+               "detect the language), and classifies it ok / wrong_language / "
+               "empty / error. 'wrong_language' catches the case where the server "
+               "produced fluent speech but in the wrong language — e.g. feeding an "
+               "Arabic voice Latin text. It records the round-trip WER and a "
+               "sample transcript, and this gate decides which languages 2.1, 2.2 "
+               "and 2.3 are allowed to score.",
+        "code": [
+            _code("tts_language_acceptance.py — run() (probe each configured language)",
+                  "eval/tts/tts_language_acceptance.py", 190),
+            _code("tts_language_acceptance.py — probe() (synth → Whisper → classify)",
+                  "eval/tts/tts_language_acceptance.py", 65),
+        ],
         "datasets": [
             _ds("FLEURS probe text per language",
                 "https://huggingface.co/datasets/google/fleurs"),
@@ -527,9 +815,22 @@ TEST_META.update({
         "what": "A pre-flight that confirms the endpoint is reachable, the "
                 "request/response schemas match, parameters behave, smoke tests "
                 "pass and cold-start behaviour is recorded.",
-        "how": "eval/run writes phase0/discovery.json with sub-checks for "
-               "connectivity, STT/streaming/TTS schema, parameters, smoke tests, "
-               "cold start and the language-acceptance summary.",
+        "how": "Run before any scored test, discovery confirms the deployment is "
+               "usable and records what it found. Sub-checks probe connectivity, "
+               "the STT / streaming / TTS request-response schemas, parameter "
+               "behaviour, a handful of smoke syntheses and transcriptions, and "
+               "cold-start latency (first-call warm-up), plus the language-"
+               "acceptance summary. Each sub-phase writes to phase0/discovery.json "
+               "immediately, so even a crash mid-run leaves a readable record of "
+               "everything verified so far.",
+        "code": [
+            _code("discovery.py — _run_subphase() (runs + persists each check)",
+                  "eval/phase0/discovery.py", 361),
+            _code("discovery.py — smoke_tests()",
+                  "eval/phase0/discovery.py", 233),
+            _code("discovery.py — cold_start_test()",
+                  "eval/phase0/discovery.py", 295),
+        ],
         "datasets": [],
         "metrics": [],
     },
@@ -624,6 +925,7 @@ details.dd .dslist a,.dslist .dsflat{font-size:12.5px;background:var(--card);
   border:1px solid var(--line);border-radius:999px;padding:4px 11px;
   text-decoration:none;color:var(--accent-ink)}
 .dslist .dsflat{color:var(--muted)}
+.dslist.code a{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px}
 .mdef{font-size:12.5px;color:var(--ink2);margin:2px 0}
 .mdef b{color:var(--ink)}
 .chartbox{position:relative;margin:4px 0 16px;width:100%}
@@ -721,6 +1023,13 @@ def deepdive(meta: dict) -> str:
                 chips.append(f'<span class="dsflat">{esc(d["name"])}</span>')
         parts.append('<h4>Dataset</h4><div class="dslist">'
                      + "".join(chips) + "</div>")
+    code = meta.get("code") or []
+    if code:
+        clinks = [f'<a href="{esc(c["url"])}" target="_blank" rel="noopener">'
+                  f'{esc(c["name"])} ↗</a>' for c in code if c.get("url")]
+        if clinks:
+            parts.append('<h4>Code</h4><div class="dslist code">'
+                         + "".join(clinks) + "</div>")
     mk = [m for m in (meta.get("metrics") or []) if m in GLOSSARY]
     if mk:
         parts.append("<h4>Metrics in this test</h4>")
@@ -1092,6 +1401,10 @@ def render_multilingual(rows):
         return notice(
             "Full per-language accuracy (1.12) is opt-in and was not run here. "
             "The live 34-language acceptance probe (1.13) is shown below.", "muted")
+    # Per-language rows only — no macro-average (dropped by design; a single
+    # blended score across tiers misleads more than it informs).
+    rows = [r for r in rows
+            if r.get("status") != "summary" and r.get("language") != "MACRO-AVG"]
     labels = [r.get("language", r.get("key", "")) for r in rows]
     vals = [None if fval(r.get("primary_value"), 4) is None
             else round(fval(r.get("primary_value"), 4) * 100, 2) for r in rows]
@@ -1100,7 +1413,7 @@ def render_multilingual(rows):
     disp = []
     for r in rows:
         disp.append({"language": esc(r.get("language")),
-                     "metric": esc((r.get("metric") or "").upper()),
+                     "metric": esc((r.get("primary_metric") or r.get("metric") or "").upper()),
                      "primary_value": pct(r.get("primary_value")),
                      "n": esc(r.get("n_utterances"))})
     cols = [("language", "Language"), ("metric", "Metric"),

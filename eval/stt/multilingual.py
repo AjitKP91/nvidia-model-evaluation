@@ -19,7 +19,6 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-import numpy as np
 from tqdm import tqdm
 
 from eval.config import Config
@@ -203,26 +202,11 @@ def run(config: Config) -> dict:
             (primary_value or 0) * 100, agg["n"], row["verdict"],
         )
 
-    # Macro-averages (unweighted across languages) so high-resource languages
-    # don't dominate. WER macro over WER-primary langs; CER macro over CER langs.
-    wer_vals = [r["wer"] for r in summary_rows
-                if r.get("status") == "ok" and r.get("primary_metric") == "wer" and r.get("wer") is not None]
-    cer_vals = [r["cer"] for r in summary_rows
-                if r.get("status") == "ok" and r.get("primary_metric") == "cer" and r.get("cer") is not None]
-    macro = {
-        "language": "MACRO-AVG",
-        "status": "summary",
-        "n_languages_wer": len(wer_vals),
-        "macro_wer": round(float(np.mean(wer_vals)), 4) if wer_vals else None,
-        "n_languages_cer": len(cer_vals),
-        "macro_cer": round(float(np.mean(cer_vals)), 4) if cer_vals else None,
-    }
-    summary_rows.append(macro)
-
+    # Per-language rows only. We deliberately do NOT emit a macro-average row:
+    # with languages spanning transcription-ready to adaptation-ready tiers, a
+    # single blended WER/CER is more misleading than informative — read each
+    # language on its own line (and its tier/verdict) instead.
     save_summary_csv(results_dir / "summary.csv", summary_rows)
-    logger.info(
-        "Multilingual: macro WER=%s over %d langs; macro CER=%s over %d langs",
-        macro["macro_wer"], macro["n_languages_wer"],
-        macro["macro_cer"], macro["n_languages_cer"],
-    )
+    n_ok = sum(1 for r in summary_rows if r.get("status") == "ok")
+    logger.info("Multilingual: wrote %d per-language rows (%d ok)", len(summary_rows), n_ok)
     return {"test": "1.12", "name": "multilingual_accuracy", "results": summary_rows}

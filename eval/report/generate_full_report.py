@@ -769,6 +769,9 @@ def bar(cid, labels, values, *, horizontal=False, color="@s1", colors=None,
             "plugins": {"legend": {"display": False}},
             "scales": _axis_titles(x_title, y_title)}
     if horizontal:
+        # match the tooltip to the row the cursor is on — nearest by the category
+        # (y) axis only, so a short bar's endpoint can't steal the hover.
+        opts["interaction"] = {"mode": "nearest", "axis": "y", "intersect": False}
         height = max(height, 60 + 26 * len(labels))
     return add_chart(cid, "bar", {"labels": labels, "datasets": [ds]}, opts, height)
 
@@ -786,6 +789,7 @@ def grouped_bar(cid, labels, series, *, horizontal=False, x_title="", y_title=""
             "plugins": {"legend": {"display": len(series) > 1, "position": "top"}},
             "scales": _axis_titles(x_title, y_title)}
     if horizontal:
+        opts["interaction"] = {"mode": "index", "axis": "y", "intersect": False}
         height = max(height, 60 + 30 * len(labels))
     return add_chart(cid, "bar", {"labels": labels, "datasets": datasets}, opts,
                      height)

@@ -2345,7 +2345,19 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
                             chip(bool(read_json(run_dir / "phase0" / "discovery.json"))),
                             render_phase0(read_json(run_dir / "phase0" / "discovery.json")))
 
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    # Derive the run date from the `run-DD-MM-YY` directory name (the data this
+    # report describes), falling back to today only if the pattern is absent.
+    run_date = datetime.now().strftime("%b %-d, %Y")
+    for part in [run_dir.name] + [p.name for p in run_dir.parents]:
+        if part.startswith("run-"):
+            bits = part[4:].split("-")
+            if len(bits) == 3 and all(b.isdigit() and len(b) == 2 for b in bits):
+                dd, mm, yy = (int(b) for b in bits)
+                try:
+                    run_date = datetime(2000 + yy, mm, dd).strftime("%b %-d, %Y")
+                    break
+                except ValueError:
+                    pass
     _mi = ('M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z|'
            'M19 10v2a7 7 0 0 1-14 0v-2|M12 19v3')
     _sp = ('P11 5 6 9 2 9 2 15 6 15 11 19 11 5|'
@@ -2382,7 +2394,7 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
         '<div class="herometa">'
         + _meta(_mi, "STT model", model)
         + _meta(_sp, "TTS model", tts_model)
-        + _meta(_ck, "Generated", now)
+        + _meta(_ck, "Run date", run_date)
         + '</div>')
 
     summary_card = (

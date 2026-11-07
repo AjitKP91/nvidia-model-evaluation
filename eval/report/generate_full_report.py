@@ -961,9 +961,24 @@ section.card{background:var(--card);border:1px solid var(--line);border-radius:1
 section.card.hero{padding:26px 28px 24px;margin-top:18px;
   background:linear-gradient(180deg,var(--accent-weak),transparent 120px),var(--card);
   box-shadow:var(--shadow-md)}
-.hero .eyebrow{margin:0 0 10px;font-family:var(--font-mono);font-size:11.5px;
-  font-weight:600;letter-spacing:.01em;color:var(--muted);line-height:1.7}
-.hero .eyebrow b{color:var(--ink2);font-weight:700}
+.hero .kicker{display:inline-flex;align-items:center;gap:8px;margin:0 0 14px;
+  padding:5px 12px 5px 11px;border:1px solid var(--line);border-radius:999px;
+  background:var(--surface);font-family:var(--font-mono);font-size:10.5px;
+  font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--accent-ink);
+  box-shadow:var(--shadow-sm)}
+.hero .kicker .lv{width:6px;height:6px;border-radius:50%;background:var(--good);
+  box-shadow:0 0 0 3px var(--accent-weak)}
+.herometa{display:flex;flex-wrap:wrap;gap:9px;margin:18px 0 2px}
+.herometa .mi{display:flex;align-items:center;gap:10px;min-width:0;
+  padding:9px 13px;border:1px solid var(--line);border-radius:11px;
+  background:var(--surface);box-shadow:var(--shadow-sm)}
+.herometa .mi>svg{width:17px;height:17px;flex:none;color:var(--accent);opacity:.85;
+  stroke-width:1.8}
+.herometa .mi>div{min-width:0;display:flex;flex-direction:column}
+.herometa .ml{font-size:9.5px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--muted);line-height:1.2}
+.herometa .mv{font-family:var(--font-mono);font-size:12.5px;font-weight:600;
+  color:var(--ink);line-height:1.4;word-break:break-word}
 .hero .herotitle{margin:0 0 8px;font-size:30px;font-weight:700;letter-spacing:-.025em;
   line-height:1.1}
 .hero .summ{margin-top:0}
@@ -1072,6 +1087,7 @@ footer{color:var(--muted);font-size:12px;text-align:center;padding:40px 20px;
   main{padding:20px 18px 80px;max-width:100%}
   header.top{padding:8px 16px}
   .hero .herotitle{font-size:24px}
+  .herometa .mi{flex:1 1 100%}
   section.card{padding:18px 17px}
   section.card table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
   header.top .hbtn span{display:none}
@@ -2330,18 +2346,55 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
                             render_phase0(read_json(run_dir / "phase0" / "discovery.json")))
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    _mi = ('M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z|'
+           'M19 10v2a7 7 0 0 1-14 0v-2|M12 19v3')
+    _sp = ('P11 5 6 9 2 9 2 15 6 15 11 19 11 5|'
+           'M15.5 8.5a5 5 0 0 1 0 7|M19 5a10 10 0 0 1 0 14')
+    _ck = ('C12 12 9|P12 7 12 12 15 14')
+
+    def _svg(spec):
+        parts = []
+        for seg in spec.split("|"):
+            k, rest = seg[0], seg[1:]
+            if k == "M":
+                parts.append(f'<path d="{seg}"/>')
+            elif k == "P":
+                parts.append(f'<polyline points="{rest}"/>')
+            elif k == "R":
+                x, y, w, h, r = rest.split()
+                parts.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{r}"/>')
+            elif k == "C":
+                cx, cy, rr = rest.split()
+                parts.append(f'<circle cx="{cx}" cy="{cy}" r="{rr}"/>')
+            elif k == "L":
+                x1, y1, x2, y2 = rest.split()
+                parts.append(f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}"/>')
+        return ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+                'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+                + "".join(parts) + "</svg>")
+
+    def _meta(icon, label, value):
+        return (f'<div class="mi">{_svg(icon)}<div>'
+                f'<span class="ml">{esc(label)}</span>'
+                f'<span class="mv">{esc(value)}</span></div></div>')
+
+    hero_meta = (
+        '<div class="herometa">'
+        + _meta(_mi, "STT model", model)
+        + _meta(_sp, "TTS model", tts_model)
+        + _meta(_ck, "Generated", now)
+        + '</div>')
+
     summary_card = (
         '<section class="card hero" id="summary">'
-        f'<p class="eyebrow"><b>STT</b> {esc(model)} &nbsp;·&nbsp; '
-        f'<b>TTS</b> {esc(tts_model)}<br>{esc(endpoint)} &nbsp;·&nbsp; '
-        f'run {esc(run_dir.name)} &nbsp;·&nbsp; generated {esc(now)}</p>'
+        '<p class="kicker"><span class="lv" aria-hidden="true"></span>Evaluation Report</p>'
         '<h2 class="herotitle">Executive Summary</h2>'
         '<p class="summ">One report covering Phase 0 discovery, STT tests 1.1–1.13 '
         '(including the full 34-language multilingual matrix) and TTS tests 2.1–2.9. '
         'All metrics are computed client-side. Every test leads with a plain-language '
         'explanation you can expand; any test with no data on disk says so rather '
         'than showing a fabricated number.</p>'
-        + exec_cards + "</section>")
+        + hero_meta + exec_cards + "</section>")
 
     # ---- sidebar nav ----
     def nav_links(items):

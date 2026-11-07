@@ -1290,6 +1290,33 @@ def lines(cid, series, *, x_title="", y_title="", height=340):
     return add_chart(cid, "line", {"datasets": datasets}, opts, height)
 
 
+def scatter(cid, series, *, x_title="", y_title="", height=340):
+    """series: list of dicts {name, points:[{x,y}], style?}.
+
+    A points-only chart (no connecting line) for showing a relationship between
+    two quantitative variables. Identity is carried by both the categorical hue
+    AND the point shape (so it is never colour-alone), with a surface-coloured
+    ring on each mark so overlapping points stay separable."""
+    series = [s for s in series if s.get("points")]
+    if not series:
+        return ""
+    shapes = ["circle", "triangle", "rect", "rectRot"]
+    datasets = []
+    for i, s in enumerate(series):
+        c = _SERIES[i % 8]
+        datasets.append({"label": s["name"], "data": s["points"],
+                         "backgroundColor": c, "borderColor": "@card",
+                         "pointStyle": s.get("style", shapes[i % len(shapes)]),
+                         "pointRadius": 4.5, "pointHoverRadius": 6.5,
+                         "borderWidth": 1.5, "showLine": False})
+    opts = {"plugins": {"legend": {"display": len(series) > 1, "position": "top"}},
+            "scales": {"x": dict({"type": "linear", "beginAtZero": True},
+                                 **(_axis_titles(x_title).get("x", {}))),
+                       "y": dict({"beginAtZero": True},
+                                 **(_axis_titles("", y_title).get("y", {})))}}
+    return add_chart(cid, "scatter", {"datasets": datasets}, opts, height)
+
+
 def reliability(cid, conf, acc, height=340):
     pts = [{"x": c, "y": a} for c, a in zip(conf, acc) if c is not None and a is not None]
     if not pts:
@@ -1478,17 +1505,26 @@ def render_accent(rows):
 def render_longform(rows):
     if not rows:
         return table(rows, [])
-    show_chart = 1 <= len(rows) <= 24
-    chart = ""
-    if show_chart:
-        labels = [str(r.get("id", ""))[:18] for r in rows]
-        full = [None if fval(r.get("full_wer"), 4) is None
-                else round(fval(r.get("full_wer"), 4) * 100, 2) for r in rows]
-        chunk = [None if fval(r.get("chunked_wer"), 4) is None
-                 else round(fval(r.get("chunked_wer"), 4) * 100, 2) for r in rows]
-        chart = grouped_bar("c_lf", labels,
-                            [("Full-file WER", full), ("Chunked WER", chunk)],
-                            horizontal=True, x_title="WER (%)")
+    # Scatter: does accuracy hold as the clip gets longer? One point per clip,
+    # x = duration, y = WER. Split the short source clips from the concatenated
+    # multi-minute clips so the long-audio stability is visible at a glance.
+    def _pts(prefix):
+        out = []
+        for r in rows:
+            if not str(r.get("id", "")).startswith(prefix):
+                continue
+            d = fval(r.get("duration_s"), 2)
+            w = fval(r.get("full_wer"), 4)
+            if d is None or w is None:
+                continue
+            out.append({"x": d, "y": round(w * 100, 2)})
+        return out
+    chart = scatter(
+        "c_lf",
+        [{"name": "Short clips", "points": _pts("longform"), "style": "circle"},
+         {"name": "Concatenated long-form", "points": _pts("concat"),
+          "style": "triangle"}],
+        x_title="Clip duration (s)", y_title="WER (%)")
     for r in rows:
         r["full_wer"] = pct(r.get("full_wer"))
         r["chunked_wer"] = pct(r.get("chunked_wer"))

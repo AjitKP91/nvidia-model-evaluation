@@ -177,6 +177,19 @@ def run(config: Config) -> dict:
             full_hyp = full_result["transcript"]
             full_wer = jiwer.wer(concat_ref, full_hyp, reference_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
 
+            # Chunked transcription — same 30s windowing as the short-clip loop
+            # above. The concat files are the only ones long enough to span
+            # multiple chunks, so this is where whole-file vs chunked drift is
+            # actually measurable; without it chunked_wer/wer_ratio are blank.
+            chunks = _chunk_audio(concat_audio, sr, CHUNK_DURATION_S)
+            chunk_hyps = []
+            for chunk in chunks:
+                chunk_bytes = (chunk * 32768).astype(np.int16).tobytes()
+                cr = stt_client.recognize_batch(chunk_bytes, sr)
+                chunk_hyps.append(cr["transcript"])
+            chunked_hyp = " ".join(chunk_hyps)
+            chunked_wer = jiwer.wer(concat_ref, chunked_hyp, reference_transform=NORMALIZE_FOR_WER, hypothesis_transform=NORMALIZE_FOR_WER)
+
             hall = _detect_hallucinations(concat_ref, full_hyp)
             rep = _detect_repetitions(full_hyp)
 
@@ -184,8 +197,11 @@ def run(config: Config) -> dict:
                 "id": f"concat_{gi}",
                 "duration_s": duration_s,
                 "full_wer": full_wer,
+                "chunked_wer": chunked_wer,
+                "wer_ratio": full_wer / chunked_wer if chunked_wer > 0 else None,
                 "hallucination_rate": hall["hallucination_rate"],
                 "repetition_rate": rep["repetition_rate"],
+                "elapsed_s": full_result["elapsed_s"],
             }
             write_jsonl(jsonl_path, record)
             summary_rows.append(record)

@@ -1134,13 +1134,18 @@ section.card.hero{padding:26px 28px 24px;margin-top:18px;
 .herometa .ml{font-size:9.5px;font-weight:700;letter-spacing:.09em;
   text-transform:uppercase;color:var(--muted);line-height:1.2}
 .herometa .mv{font-family:var(--font-mono);font-size:12.5px;font-weight:600;
-  color:var(--ink);line-height:1.4;word-break:break-word}
+  color:var(--ink);line-height:1.4;word-break:break-word;
+  display:inline-flex;align-items:center;gap:7px}
+.herometa .milink{display:inline-flex;align-items:center;color:var(--muted);flex:none;
+  border-radius:5px}
+.herometa .milink:hover,.herometa .milink:focus-visible{color:var(--accent);outline:none}
+.herometa .milink svg{width:13px;height:13px;stroke-width:2}
 .hero .herotitle{margin:0 0 8px;font-size:30px;font-weight:700;letter-spacing:-.025em;
   line-height:1.1}
 .hero .summ{margin-top:0;max-width:none}
 section.card>h3{margin:0 0 4px;font-size:17px;font-weight:700;display:flex;
   align-items:center;gap:10px;flex-wrap:wrap}
-.summ{color:var(--ink2);font-size:14.5px;margin:4px 0 14px;max-width:72ch}
+.summ{color:var(--ink2);font-size:14.5px;margin:4px 0 14px;max-width:108ch}
 details.dd{border:1px solid var(--line);border-radius:10px;background:var(--surface);
   margin:0 0 16px;overflow:hidden}
 details.dd>summary{cursor:pointer;list-style:none;padding:11px 15px;font-size:13px;
@@ -3221,6 +3226,8 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
     _sp = ('P11 5 6 9 2 9 2 15 6 15 11 19 11 5|'
            'M15.5 8.5a5 5 0 0 1 0 7|M19 5a10 10 0 0 1 0 14')
     _ck = ('C12 12 9|P12 7 12 12 15 14')
+    _ext = ('M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6|'
+            'P15 3 21 3 21 9|L10 14 21 3')
 
     def _svg(spec):
         parts = []
@@ -3243,15 +3250,34 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
                 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
                 + "".join(parts) + "</svg>")
 
-    def _meta(icon, label, value):
+    def _meta(icon, label, value, href=None, display=None):
+        shown = display if display is not None else value
+        link = ""
+        if href:
+            link = (f'<a class="milink" href="{esc(href)}" target="_blank" rel="noopener" '
+                    f'aria-label="Open the {esc(label)} card on Hugging Face" '
+                    f'title="View model card on Hugging Face">{_svg(_ext)}</a>')
         return (f'<div class="mi">{_svg(icon)}<div>'
                 f'<span class="ml">{esc(label)}</span>'
-                f'<span class="mv">{esc(value)}</span></div></div>')
+                f'<span class="mv">{esc(shown)}{link}</span></div></div>')
+
+    # Strip the HF org prefix for display, but keep the full id for the model-card link.
+    stt_display = model.split("/", 1)[1] if "/" in model else model
+    stt_href = f"https://huggingface.co/{model}" if "/" in model else None
+    # TTS carries a friendly display name, not a repo path. Link to the Hugging Face
+    # card only for the Magpie family (verified repo); anything else stays unlinked
+    # rather than risk pointing at a page that does not exist.
+    if "/" in tts_model:
+        tts_href = f"https://huggingface.co/{tts_model}"
+    elif "magpie" in tts_model.lower():
+        tts_href = "https://huggingface.co/nvidia/magpie_tts_multilingual_357m"
+    else:
+        tts_href = None
 
     hero_meta = (
         '<div class="herometa">'
-        + _meta(_mi, "STT model", model)
-        + _meta(_sp, "TTS model", tts_model)
+        + _meta(_mi, "STT model", model, href=stt_href, display=stt_display)
+        + _meta(_sp, "TTS model", tts_model, href=tts_href)
         + _meta(_ck, "Run date", run_date)
         + '</div>')
 
@@ -3259,11 +3285,14 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
         '<section class="card hero" id="summary">'
         '<p class="kicker"><span class="lv" aria-hidden="true"></span>Evaluation Report</p>'
         '<h2 class="herotitle">Executive Summary</h2>'
-        '<p class="summ">One report covering Phase 0 discovery, STT tests 1.1–1.18 '
-        '(including the full 34-language multilingual matrix) and TTS tests 2.1–2.10. '
-        'All metrics are computed client-side. Every test leads with a plain-language '
-        'explanation you can expand; any test with no data on disk says so rather '
-        'than showing a fabricated number.</p>'
+        '<p class="summ">An end-to-end evaluation of Nemotron ASR 3.5 (speech-to-text) '
+        'and Magpie TTS Multilingual behind the SAP AI Core gRPC gateway — measuring '
+        'accuracy, latency, robustness, multilingual reach, and whether the gateway '
+        'actually honors each serving-layer feature it is asked for. Phase 0 probes the '
+        'endpoint before the scored suite: STT tests 1.1–1.18 (including the full '
+        '34-language matrix) and TTS tests 2.1–2.10. Every metric is computed client-side '
+        'from stored run artifacts — tests with no data say so rather than show a '
+        'fabricated number — and each one expands into a plain-language explanation.</p>'
         + hero_meta + exec_cards + "</section>")
 
     # ---- sidebar nav ----

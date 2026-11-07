@@ -52,6 +52,11 @@ def _is_permanent_tts_error(exc: Exception) -> bool:
         # Empty / pure-whitespace inputs are also unrecoverable.
         "Input is empty",
         "Empty input",
+        # Magpie SSML validator rejects malformed / unsupported SSML outright
+        # (e.g. prosody rate="slow"|"0.5", say-as interpret-as="characters").
+        # Retrying the identical payload can never succeed — fail fast.
+        "invalid SSML specs",
+        "SSML input with unsupported",
     )
     return any(m in msg for m in permanent_markers)
 

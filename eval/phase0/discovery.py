@@ -30,6 +30,40 @@ def _make_sine_wav(path: Path, duration_s: float = 2.0, sr: int = 16000) -> None
     sf.write(str(path), audio, sr)
 
 
+_SCHEMA_PROBE_TEXT = "The quick brown fox jumps over the lazy dog."
+
+
+def _speech_probe_clip(stt_client: STTClient, tts_client: TTSClient,
+                       out_dir: Path) -> tuple[bytes, int, Path]:
+    """Synthesize a short known utterance for schema discovery.
+
+    The schema probes ask "does the response carry a transcript / words /
+    finals field?" — that can only be answered with *speech*. A sine wave
+    transcribes to nothing, so the content-dependent fields come back empty
+    and the schema looks (misleadingly) unsupported. We synthesize a real
+    sentence via the live TTS endpoint and transcribe that instead. Falls
+    back to a sine only if TTS is unavailable (recorded as the degraded case).
+
+    Returns ``(audio_bytes, sample_rate, wav_path)`` — bytes for the batch
+    probe, the WAV path for the streaming probe (which reads a file).
+    """
+    wav_path = out_dir / "speech_probe.wav"
+    try:
+        synth = tts_client.synthesize_batch(_SCHEMA_PROBE_TEXT)
+        audio_bytes = synth["audio_bytes"]
+        sr = tts_client.sample_rate
+        arr = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+        sf.write(str(wav_path), arr, sr)
+        return audio_bytes, sr, wav_path
+    except Exception as e:
+        logger.warning("Schema-probe TTS failed, falling back to sine: %s", e)
+        sine_path = out_dir / "sine_test.wav"
+        if not sine_path.exists():
+            _make_sine_wav(sine_path, duration_s=5.0, sr=16000)
+        audio_bytes, sr = stt_client.audio_to_bytes(str(sine_path))
+        return audio_bytes, sr, sine_path
+
+
 # ------------------------------------------------------------------
 # 0.1  Connectivity & Auth
 # ------------------------------------------------------------------
@@ -102,13 +136,14 @@ def check_connectivity(stt_client: STTClient, tts_client: TTSClient, out_dir: Pa
 # 0.2  STT Schema Discovery
 # ------------------------------------------------------------------
 
-def discover_stt_schema(stt_client: STTClient, out_dir: Path) -> dict:
+def discover_stt_schema(stt_client: STTClient, tts_client: TTSClient, out_dir: Path) -> dict:
     logger.info("=== 0.2 STT Schema Discovery ===")
 
-    sine_path = out_dir / "sine_test.wav"
-    if not sine_path.exists():
-        _make_sine_wav(sine_path, duration_s=5.0, sr=16000)
-    audio_bytes, sr = stt_client.audio_to_bytes(str(sine_path))
+    # Use real synthesized speech, not a sine — the sine yields an empty
+    # transcript and no words, which makes the response schema look
+    # unsupported when it is not.
+    audio_bytes, sr, clip_path = _speech_probe_clip(stt_client, tts_client, out_dir)
+    is_speech = clip_path.name != "sine_test.wav"
 
     result = stt_client.recognize_batch(audio_bytes, sr)
 
@@ -121,20 +156,20 @@ def discover_stt_schema(stt_client: STTClient, out_dir: Path) -> dict:
         ),
         "sample_transcript": result.get("transcript", "")[:200],
         "batch_latency_s": result.get("elapsed_s"),
+        "probe_audio": "speech" if is_speech else "sine_fallback",
     }
 
     logger.info("STT batch schema: %s", json.dumps(schema, indent=2))
     return schema
 
 
-def discover_stt_streaming_schema(stt_client: STTClient, out_dir: Path) -> dict:
+def discover_stt_streaming_schema(stt_client: STTClient, tts_client: TTSClient, out_dir: Path) -> dict:
     logger.info("=== 0.2b STT Streaming Schema Discovery ===")
 
-    sine_path = out_dir / "sine_test.wav"
-    if not sine_path.exists():
-        _make_sine_wav(sine_path, duration_s=5.0, sr=16000)
+    _, _, clip_path = _speech_probe_clip(stt_client, tts_client, out_dir)
+    is_speech = clip_path.name != "sine_test.wav"
 
-    result = stt_client.stream_recognize(str(sine_path))
+    result = stt_client.stream_recognize(str(clip_path))
 
     schema = {
         "has_partials": bool(result.get("partials")),
@@ -149,6 +184,7 @@ def discover_stt_streaming_schema(stt_client: STTClient, out_dir: Path) -> dict:
         "finalization_latency": result.get("finalization_latency"),
         "streaming_rtf": result.get("streaming_rtf"),
         "final_transcript": result.get("transcript", "")[:200],
+        "probe_audio": "speech" if is_speech else "sine_fallback",
     }
 
     logger.info("STT streaming schema: %s", json.dumps(schema, indent=2, default=str))
@@ -214,16 +250,101 @@ def explore_parameters(stt_client: STTClient, tts_client: TTSClient, out_dir: Pa
         except Exception as e:
             results["stt_sample_rates"][test_sr] = f"error: {e}"
 
-    # SSML test
+    # SSML test — acceptance AND functional effect. A <break> should lengthen
+    # the audio vs the same words with no tag; a longer clip is the honored
+    # signal (acceptance alone, L218-era, didn't prove the gateway did anything).
     try:
-        ssml_text = '<speak>Hello <break time="500ms"/> world.</speak>'
-        resp = tts_client.synthesize_batch(ssml_text)
-        results["tts_ssml"] = "supported" if resp["audio_duration"] > 0 else "no_audio"
+        plain_text = "<speak>Hello world.</speak>"
+        ssml_text = '<speak>Hello <break time="1s"/> world.</speak>'
+        plain = tts_client.synthesize_batch(plain_text)
+        variant = tts_client.synthesize_batch(ssml_text)
+        plain_dur = plain["audio_duration"]
+        ssml_dur = variant["audio_duration"]
+        ratio = ssml_dur / plain_dur if plain_dur > 0 else None
+        accepted = ssml_dur > 0
+        effect = ratio is not None and ratio >= 1.15
+        results["tts_ssml"] = {
+            "acceptance": "supported" if accepted else "no_audio",
+            "plain_duration_s": round(plain_dur, 3),
+            "ssml_duration_s": round(ssml_dur, 3),
+            "duration_ratio": round(ratio, 3) if ratio else None,
+            "break_effect": "honored" if effect else ("accepted_no_effect" if accepted else "no_audio"),
+        }
     except Exception as e:
-        results["tts_ssml"] = f"error: {e}"
+        results["tts_ssml"] = {"acceptance": f"error: {e}", "break_effect": "error"}
 
-    logger.info("Parameters: %s", json.dumps(results, indent=2))
+    logger.info("Parameters: %s", json.dumps(results, indent=2, default=str))
     return results
+
+
+# ------------------------------------------------------------------
+# 0.4b  STT Serving-Feature Acceptance Snapshot
+# ------------------------------------------------------------------
+
+def probe_stt_features(stt_client: STTClient, tts_client: TTSClient, out_dir: Path) -> dict:
+    """Fast per-flag acceptance snapshot for the Riva STT serving features.
+
+    One recognize call per feature flag against a short synthesized utterance,
+    recording two layers: ``accepted`` (the client set the field and the call
+    returned without error) and ``populated`` (the response actually carried the
+    corresponding data — word times, >1 alternative, a speaker_tag). The scored
+    Tests 1.14–1.18 do the depth; this is the cheap gateway-honor glance that
+    lives in discovery.json. A real spoken clip is used so the "populated" check
+    is meaningful (a sine wave yields no words).
+    """
+    logger.info("=== 0.4b STT Feature Acceptance Snapshot ===")
+    features: dict = {}
+
+    # A short real utterance so word/alternative/speaker fields can populate.
+    try:
+        synth = tts_client.synthesize_batch(
+            "The quick brown fox jumps over the lazy dog."
+        )
+        audio_bytes = synth["audio_bytes"]
+        sr = tts_client.sample_rate
+    except Exception as e:
+        logger.warning("Feature-probe TTS failed, falling back to sine: %s", e)
+        sine_path = out_dir / "sine_test.wav"
+        if not sine_path.exists():
+            _make_sine_wav(sine_path, duration_s=3.0, sr=16000)
+        audio_bytes, sr = stt_client.audio_to_bytes(str(sine_path))
+
+    def _probe(name: str, populated_fn, **kwargs) -> None:
+        try:
+            resp = stt_client.recognize_batch(audio_bytes, sr, **kwargs)
+            features[name] = {"accepted": True, "populated": bool(populated_fn(resp))}
+        except Exception as e:
+            features[name] = {"accepted": False, "error": str(e)[:200]}
+
+    _probe(
+        "word_timestamps",
+        lambda r: any((w.get("start_time") or 0) > 0 or (w.get("end_time") or 0) > 0
+                      for w in r.get("words", [])),
+        enable_word_times=True,
+    )
+    _probe(
+        "nbest",
+        lambda r: len(r.get("alternatives", [])) > 1,
+        max_alternatives=5,
+    )
+    _probe(
+        "word_boosting",
+        lambda r: bool(r.get("transcript")),
+        speech_contexts=[{"phrases": ["Nemotron", "Magpie"], "boost": 20.0}],
+    )
+    _probe(
+        "profanity_filter",
+        lambda r: r.get("transcript") is not None,
+        profanity_filter=True,
+    )
+    _probe(
+        "diarization",
+        lambda r: any(w.get("speaker_tag") is not None for w in r.get("words", [])),
+        diarization=True, max_speaker_count=2,
+    )
+
+    logger.info("STT feature snapshot: %s", json.dumps(features, indent=2, default=str))
+    return features
 
 
 # ------------------------------------------------------------------
@@ -455,10 +576,11 @@ def run(config: Config | None = None) -> dict:
 
     # Each sub-phase is isolated — a failure records its error and moves on.
     _run_subphase("connectivity",           check_connectivity,           out_dir, results, stt_client, tts_client, out_dir)
-    _run_subphase("stt_schema",             discover_stt_schema,          out_dir, results, stt_client, out_dir)
-    _run_subphase("stt_streaming_schema",   discover_stt_streaming_schema, out_dir, results, stt_client, out_dir)
+    _run_subphase("stt_schema",             discover_stt_schema,          out_dir, results, stt_client, tts_client, out_dir)
+    _run_subphase("stt_streaming_schema",   discover_stt_streaming_schema, out_dir, results, stt_client, tts_client, out_dir)
     _run_subphase("tts_schema",             discover_tts_schema,          out_dir, results, tts_client, out_dir)
     _run_subphase("parameters",             explore_parameters,           out_dir, results, stt_client, tts_client, out_dir)
+    _run_subphase("stt_features",           probe_stt_features,           out_dir, results, stt_client, tts_client, out_dir)
     _run_subphase("smoke_tests",            smoke_tests,                  out_dir, results, stt_client, tts_client, out_dir)
     _run_subphase("cold_start",             cold_start_test,              out_dir, results, stt_client, tts_client, out_dir)
     _run_subphase("language_acceptance",    _language_acceptance_subphase, out_dir, results, stt_client, out_dir)

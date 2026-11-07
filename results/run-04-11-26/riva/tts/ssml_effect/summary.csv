@@ -1,0 +1,2 @@
+verdict,n_tags,honored,literal,ignored,rejected,per_tag
+ignored,3,0,0,2,1,break:ignored; prosody_rate:ignored; say_as_characters:rejected

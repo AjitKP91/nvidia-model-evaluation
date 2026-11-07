@@ -1,0 +1,2 @@
+verdict,n_clips,requested,max_returned,mean_returned,clips_multi_alt,clips_alts_differ,distribution
+ignored,30,5,1,1.0,0,0,1:30

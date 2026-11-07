@@ -58,6 +58,36 @@ class STTClient:
     # gRPC batch
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _apply_asr_features(
+        config: "riva.client.RecognitionConfig",
+        *,
+        speech_contexts: list[dict] | None = None,
+        diarization: bool = False,
+        max_speaker_count: int = 0,
+    ) -> "riva.client.RecognitionConfig":
+        """Attach serving-layer feature sub-messages to a RecognitionConfig.
+
+        No-op when ``speech_contexts`` is empty and ``diarization`` is False, so
+        the default call path produces a byte-identical config to before.
+
+        * ``speech_contexts`` — word-boosting: list of ``{"phrases": [...],
+          "boost": <float>}``; each becomes one ``SpeechContext`` entry.
+        * ``diarization`` — flips ``diarization_config.enable_speaker_diarization``
+          (optionally capping ``max_speaker_count``).
+        """
+        if speech_contexts:
+            for sc in speech_contexts:
+                entry = config.speech_contexts.add()
+                entry.phrases.extend(sc.get("phrases", []))
+                if sc.get("boost") is not None:
+                    entry.boost = float(sc["boost"])
+        if diarization:
+            config.diarization_config.enable_speaker_diarization = True
+            if max_speaker_count:
+                config.diarization_config.max_speaker_count = int(max_speaker_count)
+        return config
+
     @retry_with_backoff()
     def recognize_batch(
         self,
@@ -67,6 +97,11 @@ class STTClient:
         enable_punctuation: bool = True,
         enable_word_times: bool = True,
         language_code: str | None = None,
+        max_alternatives: int = 1,
+        profanity_filter: bool = False,
+        speech_contexts: list[dict] | None = None,
+        diarization: bool = False,
+        max_speaker_count: int = 0,
     ) -> dict[str, Any]:
         self._apply_token()
         lang = language_code or self.stt_cfg.language_code
@@ -81,16 +116,26 @@ class STTClient:
                 enable_punctuation=enable_punctuation,
                 enable_word_times=enable_word_times,
                 language_code=lang,
+                max_alternatives=max_alternatives,
+                profanity_filter=profanity_filter,
+                speech_contexts=speech_contexts,
+                diarization=diarization,
+                max_speaker_count=max_speaker_count,
             )
 
         config = riva.client.RecognitionConfig(
             encoding=riva.client.AudioEncoding.LINEAR_PCM,
             language_code=lang,
-            max_alternatives=1,
+            max_alternatives=max_alternatives,
+            profanity_filter=profanity_filter,
             enable_automatic_punctuation=enable_punctuation,
             enable_word_time_offsets=enable_word_times,
             sample_rate_hertz=sample_rate,
             audio_channel_count=1,
+        )
+        self._apply_asr_features(
+            config, speech_contexts=speech_contexts,
+            diarization=diarization, max_speaker_count=max_speaker_count,
         )
 
         start = time.perf_counter()
@@ -100,6 +145,7 @@ class STTClient:
         transcript = ""
         confidence = 0.0
         words = []
+        alternatives: list[dict] = []
         # Riva returns one `result` per segment (chunked at VAD boundaries on
         # long or silence-bearing audio). Joining all segments is required;
         # reading only `response.results[0]` truncates the hypothesis and
@@ -111,6 +157,14 @@ class STTClient:
             for result in response.results:
                 if not result.alternatives:
                     continue
+                # n-best: surface the alternatives of the first segment that
+                # carries any (short clips are single-segment, so this is the
+                # true n-best; len==1 means the gateway ignored max_alternatives).
+                if not alternatives:
+                    alternatives = [
+                        {"transcript": a.transcript, "confidence": a.confidence}
+                        for a in result.alternatives
+                    ]
                 alt = result.alternatives[0]
                 if alt.transcript:
                     transcript_parts.append(alt.transcript)
@@ -121,6 +175,7 @@ class STTClient:
                         "start_time": w.start_time,
                         "end_time": w.end_time,
                         "confidence": getattr(w, "confidence", None),
+                        "speaker_tag": getattr(w, "speaker_tag", None),
                     }
                     for w in getattr(alt, "words", [])
                 ])
@@ -134,6 +189,7 @@ class STTClient:
             "transcript": transcript,
             "confidence": confidence,
             "words": words,
+            "alternatives": alternatives,
             "elapsed_s": elapsed,
             "interface": "grpc",
             "mode": "batch",
@@ -152,6 +208,11 @@ class STTClient:
         enable_word_times: bool = True,
         chunk_duration_s: float = 0.1,
         language_code: str | None = None,
+        max_alternatives: int = 1,
+        profanity_filter: bool = False,
+        speech_contexts: list[dict] | None = None,
+        diarization: bool = False,
+        max_speaker_count: int = 0,
     ) -> dict[str, Any]:
         """Transcribe raw PCM via StreamingRecognize and aggregate finals.
 
@@ -159,16 +220,22 @@ class STTClient:
         Recognize is UNIMPLEMENTED. Returns the same dict shape.
         """
         lang = language_code or self.stt_cfg.language_code
+        inner = riva.client.RecognitionConfig(
+            encoding=riva.client.AudioEncoding.LINEAR_PCM,
+            language_code=lang,
+            max_alternatives=max_alternatives,
+            profanity_filter=profanity_filter,
+            enable_automatic_punctuation=enable_punctuation,
+            enable_word_time_offsets=enable_word_times,
+            sample_rate_hertz=sample_rate,
+            audio_channel_count=1,
+        )
+        self._apply_asr_features(
+            inner, speech_contexts=speech_contexts,
+            diarization=diarization, max_speaker_count=max_speaker_count,
+        )
         streaming_config = riva.client.StreamingRecognitionConfig(
-            config=riva.client.RecognitionConfig(
-                encoding=riva.client.AudioEncoding.LINEAR_PCM,
-                language_code=lang,
-                max_alternatives=1,
-                enable_automatic_punctuation=enable_punctuation,
-                enable_word_time_offsets=enable_word_times,
-                sample_rate_hertz=sample_rate,
-                audio_channel_count=1,
-            ),
+            config=inner,
             interim_results=False,
         )
 
@@ -187,10 +254,16 @@ class STTClient:
         transcript_parts: list[str] = []
         confidence_parts: list[float] = []
         words: list[dict] = []
+        alternatives: list[dict] = []
         for response in responses:
             for result in response.results:
                 if not result.is_final or not result.alternatives:
                     continue
+                if not alternatives:
+                    alternatives = [
+                        {"transcript": a.transcript, "confidence": a.confidence}
+                        for a in result.alternatives
+                    ]
                 alt = result.alternatives[0]
                 if alt.transcript:
                     transcript_parts.append(alt.transcript)
@@ -201,6 +274,7 @@ class STTClient:
                         "start_time": w.start_time,
                         "end_time": w.end_time,
                         "confidence": getattr(w, "confidence", None),
+                        "speaker_tag": getattr(w, "speaker_tag", None),
                     }
                     for w in getattr(alt, "words", [])
                 ])
@@ -216,6 +290,7 @@ class STTClient:
             "transcript": transcript,
             "confidence": confidence,
             "words": words,
+            "alternatives": alternatives,
             "elapsed_s": elapsed,
             "interface": "grpc",
             "mode": "batch",            # preserve downstream semantics
@@ -297,6 +372,11 @@ class STTClient:
         audio_path: str,
         chunk_duration_s: float = 0.1,
         language_code: str | None = None,
+        max_alternatives: int = 1,
+        profanity_filter: bool = False,
+        speech_contexts: list[dict] | None = None,
+        diarization: bool = False,
+        max_speaker_count: int = 0,
     ) -> dict[str, Any]:
         self._apply_token()
         lang = language_code or self.stt_cfg.language_code
@@ -306,14 +386,20 @@ class STTClient:
             total_frames = wf.getnframes()
             audio_duration = total_frames / sr
 
+        inner = riva.client.RecognitionConfig(
+            encoding=riva.client.AudioEncoding.LINEAR_PCM,
+            language_code=lang,
+            max_alternatives=max_alternatives,
+            profanity_filter=profanity_filter,
+            enable_automatic_punctuation=True,
+            sample_rate_hertz=sr,
+        )
+        self._apply_asr_features(
+            inner, speech_contexts=speech_contexts,
+            diarization=diarization, max_speaker_count=max_speaker_count,
+        )
         streaming_config = riva.client.StreamingRecognitionConfig(
-            config=riva.client.RecognitionConfig(
-                encoding=riva.client.AudioEncoding.LINEAR_PCM,
-                language_code=lang,
-                max_alternatives=1,
-                enable_automatic_punctuation=True,
-                sample_rate_hertz=sr,
-            ),
+            config=inner,
             interim_results=True,
         )
 

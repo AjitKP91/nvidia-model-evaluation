@@ -2,13 +2,13 @@
   "connectivity": {
     "grpc_stt": {
       "status": "ok",
-      "latency_s": 0.5423634350008797,
+      "latency_s": 1.1097171660512686,
       "transcript_len": 0
     },
     "grpc_tts": {
       "status": "ok",
-      "latency_s": 0.6721776600024896,
-      "audio_len_bytes": 92160
+      "latency_s": 1.5207672079559416,
+      "audio_len_bytes": 81920
     },
     "rest_stt": {
       "status": "error",
@@ -18,35 +18,43 @@
       "status": "error",
       "error": "REST synthesis is not available on this endpoint (tts.supports_rest is false)."
     },
-    "network_rtt_s": 0.125071847000072
+    "network_rtt_s": 0.5456555829150602
   },
   "stt_schema": {
-    "has_transcript": false,
+    "has_transcript": true,
     "has_confidence": true,
-    "has_words": false,
-    "word_fields": [],
-    "sample_transcript": "",
-    "batch_latency_s": 0.3918730549994507
+    "has_words": true,
+    "word_fields": [
+      "word",
+      "start_time",
+      "end_time",
+      "confidence",
+      "speaker_tag"
+    ],
+    "sample_transcript": "The quick brown fox jumps over the lazy dog.",
+    "batch_latency_s": 0.4939524589572102,
+    "probe_audio": "speech"
   },
   "stt_streaming_schema": {
-    "has_partials": false,
-    "num_partials": 0,
-    "has_finals": false,
-    "has_stability": false,
-    "ttfw": null,
-    "finalization_latency": null,
-    "streaming_rtf": 1.035464590499032,
-    "final_transcript": ""
+    "has_partials": true,
+    "num_partials": 6,
+    "has_finals": true,
+    "has_stability": true,
+    "ttfw": 0.8243064159760252,
+    "finalization_latency": 0.308858250034973,
+    "streaming_rtf": 1.1652224659817043,
+    "final_transcript": "The quick brown fox jumps over the lazy dog.",
+    "probe_audio": "speech"
   },
   "tts_schema": {
-    "batch_audio_bytes": 81920,
-    "batch_audio_duration_s": 1.8575963718820863,
-    "batch_latency_s": 0.4474479489981604,
+    "batch_audio_bytes": 65536,
+    "batch_audio_duration_s": 1.486077097505669,
+    "batch_latency_s": 0.4806282500503585,
     "sample_rate": 22050,
-    "stream_ttfb": 0.31793500400090124,
-    "stream_n_chunks": 10,
-    "stream_audio_duration_s": 1.5325170068027212,
-    "stream_total_latency_s": 0.3967097159984405,
+    "stream_ttfb": 0.4551464170217514,
+    "stream_n_chunks": 11,
+    "stream_audio_duration_s": 1.6718367346938776,
+    "stream_total_latency_s": 0.532832833006978,
     "sample_saved": "results/run-04-11-26/riva/phase0/tts_sample.wav"
   },
   "parameters": {
@@ -57,16 +65,44 @@
       "44100": "ok",
       "48000": "ok"
     },
-    "tts_ssml": "supported"
+    "tts_ssml": {
+      "acceptance": "supported",
+      "plain_duration_s": 0.836,
+      "ssml_duration_s": 0.743,
+      "duration_ratio": 0.889,
+      "break_effect": "accepted_no_effect"
+    }
+  },
+  "stt_features": {
+    "word_timestamps": {
+      "accepted": true,
+      "populated": true
+    },
+    "nbest": {
+      "accepted": true,
+      "populated": false
+    },
+    "word_boosting": {
+      "accepted": true,
+      "populated": true
+    },
+    "profanity_filter": {
+      "accepted": true,
+      "populated": true
+    },
+    "diarization": {
+      "accepted": true,
+      "populated": true
+    }
   },
   "smoke_tests": {
     "stt_10s": {
       "status": "pass",
-      "latency_s": 0.43277475500144647
+      "latency_s": 0.568906040978618
     },
     "stt_60s": {
       "status": "pass",
-      "latency_s": 1.5150262150018534
+      "latency_s": 1.6524372920393944
     },
     "tts_rest": {
       "status": "fail",
@@ -74,30 +110,29 @@
     },
     "tts_grpc_stream": {
       "status": "pass",
-      "ttfb_s": 0.23207650600306806
+      "ttfb_s": 0.38293579092714936
     }
   },
   "cold_start": {
     "stt": {
-      "t_first_s": 0.43399828399924445,
-      "t_warm_mean_s": 0.4885239654002362,
-      "cold_ratio": 0.8883868852650451
+      "t_first_s": 0.5653620410012081,
+      "t_warm_mean_s": 0.602298658399377,
+      "cold_ratio": 0.9386739171952851
     },
     "tts": {
-      "t_first_s": 0.4969449500022165,
-      "t_warm_mean_s": 0.4875497271990753,
-      "cold_ratio": 1.0192702862477554
+      "t_first_s": 0.60002545802854,
+      "t_warm_mean_s": 1.0515462041134014,
+      "cold_ratio": 0.5706125472008567
     }
   },
   "language_acceptance": {
     "phase": "language_acceptance",
-    "total": 40,
+    "total": 34,
     "by_status": {
-      "ok": 32,
-      "empty": 8
+      "ok": 34
     },
-    "joule_total": 18,
-    "joule_ok": 15,
+    "joule_total": 16,
+    "joule_ok": 16,
     "matrix_csv": "results/run-04-11-26/riva/stt/language_acceptance/language_acceptance.csv"
   }
 }

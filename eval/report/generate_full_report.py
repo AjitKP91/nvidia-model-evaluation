@@ -981,7 +981,7 @@ section.card.hero{padding:26px 28px 24px;margin-top:18px;
   color:var(--ink);line-height:1.4;word-break:break-word}
 .hero .herotitle{margin:0 0 8px;font-size:30px;font-weight:700;letter-spacing:-.025em;
   line-height:1.1}
-.hero .summ{margin-top:0}
+.hero .summ{margin-top:0;max-width:none}
 section.card>h3{margin:0 0 4px;font-size:17px;font-weight:700;display:flex;
   align-items:center;gap:10px;flex-wrap:wrap}
 .summ{color:var(--ink2);font-size:14.5px;margin:4px 0 14px;max-width:72ch}

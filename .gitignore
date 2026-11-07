@@ -21,8 +21,14 @@ data/l2_arctic/
 .vscode/
 .idea/
 
+# Local Claude Code tooling (project-scoped skills, etc.)
+.claude/
+
 # Playwright MCP scratch output
 .playwright-mcp/
 
 # Generated tmux launcher (may contain a pasted bearer token)
 scripts/_tmux_launcher.sh
+
+# Local MCP server config (may reference secrets via env)
+.mcp.json

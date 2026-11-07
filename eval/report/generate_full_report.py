@@ -1,7 +1,7 @@
 """Comprehensive single-file HTML report — a beginner-friendly website.
 
-Covers Phase 0 discovery, STT 1.1-1.13 (including the full 34-language
-multilingual acceptance matrix), and TTS 2.1-2.9 — each test led by a
+Covers Phase 0 discovery, STT 1.1-1.18 (including the full 34-language
+multilingual acceptance matrix), and TTS 2.1-2.10 — each test led by a
 plain-language explanation (what it is, how the code computes it, which dataset
 it uses, with clickable links) followed by an interactive chart and a compact
 results table.
@@ -826,6 +826,162 @@ TEST_META.update({
         ],
         "metrics": ["round-trip WER"],
     },
+    "1.14": {
+        "summary": "Word timestamps — does the gateway return per-word start/end "
+                   "times, or accept the flag and send none?",
+        "what": "A serving-feature honor check. The Riva proto lets a caller ask "
+                "for per-word timing (enable_word_time_offsets). This confirms the "
+                "deployment actually fills those offsets in rather than silently "
+                "accepting the request and returning zeros.",
+        "how": "Clean LibriSpeech clips are transcribed with enable_word_times=True. "
+               "For each clip the returned word list is checked for non-zero, "
+               "monotonically non-decreasing start/end times that span a plausible "
+               "fraction of the clip's duration (0.5–1.5×). The verdict is honored "
+               "when most clips carry non-zero covering offsets, ignored when every "
+               "offset is zero (flag accepted but not honored), and partial in "
+               "between. The honor distinction is the whole point — a set-but-ignored "
+               "field is itself the recorded finding.",
+        "code": [
+            _code("word_timestamps.py — run() (offset coverage + verdict)",
+                  "eval/stt/word_timestamps.py", 33),
+            _code("client.py — recognize_batch() (enable_word_times → WordInfo)",
+                  "eval/stt/client.py", 92),
+        ],
+        "datasets": [
+            _ds("LibriSpeech (test-clean)",
+                "https://huggingface.co/datasets/openslr/librispeech_asr"),
+        ],
+        "metrics": ["non-zero %", "covering %", "verdict"],
+    },
+    "1.15": {
+        "summary": "N-best alternatives — does max_alternatives return more than "
+                   "one hypothesis, or collapse to 1-best?",
+        "what": "A serving-feature honor check on RecognitionConfig.max_alternatives. "
+                "The client can request N hypotheses; this records how many the "
+                "gateway actually returns.",
+        "how": "Clean clips are transcribed with max_alternatives=5. The length of "
+               "the returned alternatives list is recorded per clip, along with "
+               "whether alternatives 2..N differ from the top hypothesis. Honored "
+               "means multiple distinct alternatives came back for a meaningful share "
+               "of clips; ignored means every clip returned a single alternative — a "
+               "valid, recorded finding that the deployment collapses to 1-best.",
+        "code": [
+            _code("nbest.py — run() (alternative-count distribution + verdict)",
+                  "eval/stt/nbest.py", 29),
+            _code("client.py — recognize_batch() (max_alternatives → alternatives)",
+                  "eval/stt/client.py", 92),
+        ],
+        "datasets": [
+            _ds("LibriSpeech (test-clean)",
+                "https://huggingface.co/datasets/openslr/librispeech_asr"),
+        ],
+        "metrics": ["max alternatives returned", "verdict"],
+    },
+    "1.16": {
+        "summary": "Word boosting — does speech_contexts bias the decoder toward "
+                   "rare phrases, or get dropped?",
+        "what": "A serving-feature honor check on RecognitionConfig.speech_contexts "
+                "(phrase boosting). Clips are self-constructed: the live TTS endpoint "
+                "synthesizes carrier sentences containing rare proper nouns the base "
+                "model tends to mis-transcribe.",
+        "how": "Each self-synthesized clip is transcribed twice — once plain, once "
+               "with speech_contexts=[{phrases:[name], boost:20}]. Per-phrase hit "
+               "rate (substring match after normalization) is compared across the two "
+               "passes. Honored means boosting lifted recall of the target phrases "
+               "(more gained than lost, and boosted hits exceed baseline); ignored "
+               "means byte-identical output — the bias was dropped; inconclusive "
+               "means output shifted but not toward the phrases.",
+        "code": [
+            _code("word_boosting.py — run() (baseline vs boosted hit-rate)",
+                  "eval/stt/word_boosting.py", 54),
+            _code("client.py — _apply_asr_features() (SpeechContext build)",
+                  "eval/stt/client.py", 62),
+        ],
+        "datasets": [
+            _ds("Self-synthesized from the live TTS endpoint (no committed corpus)",
+                None),
+        ],
+        "metrics": ["baseline hits", "boosted hits", "gained", "verdict"],
+    },
+    "1.17": {
+        "summary": "Profanity filter — does profanity_filter mask offending words, "
+                   "or pass through unchanged?",
+        "what": "A serving-feature honor check on RecognitionConfig.profanity_filter. "
+                "Clips are self-constructed: the live TTS endpoint synthesizes short "
+                "utterances containing mild, common expletives in neutral carrier "
+                "sentences.",
+        "how": "Each self-synthesized clip is transcribed with profanity_filter=False "
+               "then True, and the two transcripts are compared for masking (asterisk "
+               "or <profanity> markers) that appears only in the filtered pass. "
+               "Honored means the filter masked words the plain pass surfaced; ignored "
+               "means identical output; inconclusive means the model never transcribed "
+               "the target words plainly, so masking could not be probed — recorded "
+               "honestly rather than scored as a pass or fail.",
+        "code": [
+            _code("profanity.py — run() (filtered vs unfiltered masking delta)",
+                  "eval/stt/profanity.py", 43),
+            _code("client.py — recognize_batch() (profanity_filter flag)",
+                  "eval/stt/client.py", 92),
+        ],
+        "datasets": [
+            _ds("Self-synthesized from the live TTS endpoint (no committed corpus)",
+                None),
+        ],
+        "metrics": ["words heard plain", "masked when filtered", "verdict"],
+    },
+    "1.18": {
+        "summary": "Speaker diarization — does diarization tag words by speaker, or "
+                   "accept the flag against a model that emits no tags?",
+        "what": "A serving-feature honor check on "
+                "RecognitionConfig.diarization_config. A two-speaker clip is "
+                "self-constructed and checked for distinct per-word speaker tags.",
+        "how": "Speaker A is the one verified EN-US Magpie voice (Aria). Speaker B is "
+               "a second distinct EN-US persona if the deployment serves one (probed "
+               "at run time), otherwise a pitch-shifted copy of Aria (−4 semitones via "
+               "librosa). The two turns are concatenated with a short silence gap and "
+               "transcribed with diarization=True, max_speaker_count=2. Honored means "
+               "≥2 distinct non-null speaker_tags; partial means tags present but only "
+               "one id; ignored means the flag was accepted but no speaker_tag came "
+               "back. The construction field records how speaker B was made so the "
+               "verdict is never fabricated.",
+        "code": [
+            _code("diarization.py — run() (two-speaker clip, tag count, verdict)",
+                  "eval/stt/diarization.py", 58),
+            _code("client.py — _apply_asr_features() (diarization_config)",
+                  "eval/stt/client.py", 62),
+        ],
+        "datasets": [
+            _ds("Self-synthesized two-speaker clip from the live TTS endpoint",
+                None),
+        ],
+        "metrics": ["distinct speaker tags", "construction", "verdict"],
+    },
+    "2.10": {
+        "summary": "SSML functional effect — do SSML tags change the audio, or get "
+                   "accepted and ignored (or spoken literally)?",
+        "what": "Test 2.7 proves SSML is accepted (the call returns audio). This "
+                "proves SSML has a functional effect by measuring the expected "
+                "acoustic delta between a plain baseline and an SSML variant of the "
+                "same utterance.",
+        "how": "Three tags are probed: <break time=\"1s\"/> and <prosody rate=\"slow\"> "
+               "should lengthen the audio; <say-as interpret-as=\"characters\"> should "
+               "change it. Plain and SSML clips are synthesized and their durations "
+               "compared. Because an engine that ignores SSML but speaks the tags "
+               "literally also lengthens audio, each SSML clip is transcribed and "
+               "checked for tag-keyword leakage. Per tag: honored (effect, no leak), "
+               "literal (tags spoken verbatim), or ignored (no effect). All SSML is "
+               "rooted at <speak> so the Magpie parser does not fail fast.",
+        "code": [
+            _code("ssml_effect.py — run() (duration delta + leak check + verdict)",
+                  "eval/tts/ssml_effect.py", 71),
+            _code("client.py — _is_permanent_tts_error() (SSML root guard)",
+                  "eval/tts/client.py", 35),
+        ],
+        "datasets": [
+            _ds("Self-synthesized plain vs SSML pairs (no committed corpus)", None),
+        ],
+        "metrics": ["duration ratio", "honored/literal/ignored", "verdict"],
+    },
     "phase0": {
         "summary": "Discovery — connectivity, schema and parameter checks run "
                    "before the scored suite.",
@@ -1102,6 +1258,51 @@ footer{color:var(--muted);font-size:12px;text-align:center;padding:40px 20px;
   nav.side{transition:none}
   nav.side a{transition:none}
 }
+
+/* Phase 0 — capability board (KPI rollup + status legend + tile grid) */
+.p0wrap{margin-top:2px}
+.p0roll{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 16px}
+.p0roll .ri{flex:1 1 150px;min-width:150px;background:var(--surface);
+  border:1px solid var(--line);border-radius:12px;padding:12px 14px;
+  display:flex;flex-direction:column;gap:3px;box-shadow:var(--shadow-sm)}
+.p0roll .ri.good{border-left:3px solid var(--good)}
+.p0roll .ri.warn{border-left:3px solid var(--serious)}
+.p0roll .ri.bad{border-left:3px solid var(--crit)}
+.p0roll .ri .n{font-size:23px;font-weight:800;letter-spacing:-.01em;line-height:1.05;
+  font-variant-numeric:tabular-nums;color:var(--ink);display:flex;align-items:center;gap:8px}
+.p0roll .ri .l{font-size:12px;color:var(--ink2);line-height:1.3;font-weight:600}
+.p0roll .ri .l.sub{color:var(--muted);font-weight:400;font-size:11px}
+
+.p0legend{display:flex;flex-wrap:wrap;gap:16px;margin:0 2px 15px;
+  font-size:11.5px;color:var(--muted)}
+.p0legend span{display:inline-flex;align-items:center;gap:7px}
+
+.p0grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.p0tile{background:var(--surface);border:1px solid var(--line);border-radius:13px;
+  overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-sm)}
+.p0thead{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:11px 15px;border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,var(--accent-weak),transparent)}
+.p0ttitle{font-weight:700;font-size:13.5px;letter-spacing:.01em;color:var(--ink);
+  display:inline-flex;align-items:center;gap:9px;min-width:0}
+.p0ttitle svg{width:16px;height:16px;flex:none;color:var(--accent);opacity:.9}
+.p0body{padding:3px 15px 7px}
+.p0row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  padding:8px 0;border-bottom:1px solid var(--line)}
+.p0row:last-child{border-bottom:0}
+.p0row.col{flex-direction:column;align-items:stretch;gap:7px}
+.p0k{color:var(--ink2);font-size:12.5px;flex:1 1 auto;min-width:0}
+.p0v{flex:none;display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap;
+  justify-content:flex-end}
+.p0v.wrap{justify-content:flex-start;gap:6px}
+.p0mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+  color:var(--ink);font-variant-numeric:tabular-nums}
+.p0tick{font-weight:800;font-size:13px}
+.p0tick.y{color:var(--good)} .p0tick.n{color:var(--crit)}
+.p0dot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block}
+.p0dot.ok{background:var(--good)} .p0dot.warn{background:var(--serious)}
+.p0dot.bad{background:var(--crit)} .p0dot.off{background:var(--axis)}
+@media (max-width:560px){.p0grid{grid-template-columns:1fr}}
 """
 
 
@@ -2098,8 +2299,131 @@ def render_tts_acceptance(rows):
 
 
 # ----------------------------------------------------------------------------
-# multilingual acceptance matrix (1.13) — the centrepiece
+# serving-feature honor checks (STT 1.14–1.18, TTS 2.10)
+#   each test writes a single-row summary.csv whose `verdict` is the headline
 # ----------------------------------------------------------------------------
+
+_VERDICT_KIND = {
+    "honored": "pass",
+    "partial": "warn", "inconclusive": "warn", "literal": "warn",
+    "accepted_no_effect": "warn", "mixed": "warn",
+    "ignored": "fail", "error": "fail", "rejected": "fail",
+    "no_data": "muted",
+}
+
+
+def _verdict_badge(v) -> str:
+    return badge(v or "no_data", _VERDICT_KIND.get(v, "muted"))
+
+
+def render_word_timestamps(rows):
+    if not rows:
+        return notice("No data on disk for this test in the selected run.")
+    r = rows[0]
+    cards = ('<div class="cards">'
+             + card(_verdict_badge(r.get("verdict")), "verdict",
+                    _VERDICT_KIND.get(r.get("verdict"), ""))
+             + card(esc(r.get("n_clips", "—")), "clips", "")
+             + card(pct(r.get("nonzero_pct")) if r.get("nonzero_pct") not in (None, "", "None") else "—",
+                    "clips with non-zero offsets", "")
+             + card(pct(r.get("covering_pct")) if r.get("covering_pct") not in (None, "", "None") else "—",
+                    "clips with covering span", "")
+             + "</div>")
+    return cards
+
+
+def render_nbest(rows):
+    if not rows:
+        return notice("No data on disk for this test in the selected run.")
+    r = rows[0]
+    cards = ('<div class="cards">'
+             + card(_verdict_badge(r.get("verdict")), "verdict",
+                    _VERDICT_KIND.get(r.get("verdict"), ""))
+             + card(esc(r.get("n_clips", "—")), "clips", "")
+             + card(esc(r.get("max_alternatives_returned", "—")), "max alternatives returned", "")
+             + card(esc(r.get("requested", "—")), "alternatives requested", "")
+             + "</div>")
+    note = ""
+    if str(r.get("max_alternatives_returned")) in ("1", "0"):
+        note = notice("The gateway returned a single alternative for every clip — "
+                      "<code>max_alternatives</code> is accepted by the client but not "
+                      "honored by this deployment.", "warn")
+    return cards + note
+
+
+def render_word_boosting(rows):
+    if not rows:
+        return notice("No data on disk for this test in the selected run.")
+    r = rows[0]
+    cards = ('<div class="cards">'
+             + card(_verdict_badge(r.get("verdict")), "verdict",
+                    _VERDICT_KIND.get(r.get("verdict"), ""))
+             + card(esc(r.get("n_cases", "—")), "phrases", "")
+             + card(f"{esc(r.get('baseline_hits', '—'))} → {esc(r.get('boosted_hits', '—'))}",
+                    "hits baseline → boosted", "")
+             + card(esc(r.get("gained", "—")), "phrases gained", "")
+             + "</div>")
+    return cards
+
+
+def render_profanity(rows):
+    if not rows:
+        return notice("No data on disk for this test in the selected run.")
+    r = rows[0]
+    cards = ('<div class="cards">'
+             + card(_verdict_badge(r.get("verdict")), "verdict",
+                    _VERDICT_KIND.get(r.get("verdict"), ""))
+             + card(esc(r.get("n_cases", "—")), "utterances", "")
+             + card(esc(r.get("words_recognized_plain", "—")), "target words heard (plain)", "")
+             + card(esc(r.get("words_masked_when_filtered", "—")), "masked when filtered", "")
+             + "</div>")
+    note = ""
+    if r.get("verdict") == "inconclusive" and str(r.get("words_recognized_plain")) == "0":
+        note = notice("The model never surfaced the target words even unfiltered, so "
+                      "masking behavior could not be probed — recorded as inconclusive, "
+                      "not a pass or fail.", "warn")
+    return cards + note
+
+
+def render_diarization(rows):
+    if not rows:
+        return notice("No data on disk for this test in the selected run.")
+    r = rows[0]
+    cards = ('<div class="cards">'
+             + card(_verdict_badge(r.get("verdict")), "verdict",
+                    _VERDICT_KIND.get(r.get("verdict"), ""))
+             + card(esc(r.get("distinct_speaker_tags", "—")), "distinct speaker tags", "")
+             + card(esc(r.get("n_words_tagged", "—")), "words tagged", "")
+             + card(esc(r.get("construction", "—")), "two-speaker construction", "")
+             + "</div>")
+    note = notice(
+        "Two-speaker clip is self-constructed. The <b>construction</b> field records "
+        "how speaker B was made — a second Magpie persona (<code>two_voices</code>), a "
+        "pitch-shifted copy of speaker A (<code>pitch_shift</code>), or the same voice "
+        "(<code>same_voice</code>) — so the verdict is never fabricated.", "muted")
+    return cards + note
+
+
+def render_ssml_effect(rows):
+    if not rows:
+        return notice("No data on disk for this test in the selected run.")
+    r = rows[0]
+    cards = ('<div class="cards">'
+             + card(_verdict_badge(r.get("verdict")), "verdict",
+                    _VERDICT_KIND.get(r.get("verdict"), ""))
+             + card(esc(r.get("n_tags", "—")), "SSML tags tested", "")
+             + card(esc(r.get("honored", "—")), "honored", "pass")
+             + card(esc(r.get("literal", "—")), "spoken literally", "warn")
+             + card(esc(r.get("ignored", "—")), "accepted, no effect", "")
+             + card(esc(r.get("rejected", "—")), "rejected (unsupported)", "fail")
+             + "</div>")
+    per = ""
+    if r.get("per_tag"):
+        per = notice(f"Per tag: {esc(r.get('per_tag'))}", "muted")
+    return cards + per
+
+
+
 
 STATUS_KIND = {"ok": "pass", "empty": "fail", "error": "fail", "load_failed": "warn"}
 JOULE_LABEL = {"ga": "GA", "preview": "Preview", "": "—", None: "—"}
@@ -2212,35 +2536,377 @@ def render_acceptance(matrix: list[dict]) -> str:
 # ----------------------------------------------------------------------------
 
 
+def _p0_latency(v) -> str:
+    try:
+        return f"{float(v):.2f}s"
+    except (TypeError, ValueError):
+        return "—"
+
+
+# ---------------------------------------------------------------------------
+# Phase 0 "capability board": a KPI rollup strip + a responsive grid of
+# per-domain tiles, each a clean label→value/verdict list. Replaces the old
+# flat 3-column table whose Detail cell crammed metrics and verdicts into one
+# wrapping pill-stream. Each sub-phase builder returns (rows_html, tally) so the
+# tile-header chip and the rollup derive from the exact same pass over the data.
+# ---------------------------------------------------------------------------
+
+_P0_ICON = {
+    "connectivity": '<path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/>'
+                    '<path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>',
+    "stt_schema": '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>'
+                  '<line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>'
+                  '<line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+    "stt_streaming_schema": '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+    "tts_schema": '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>'
+                  '<path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>',
+    "parameters": '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>'
+                  '<line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>'
+                  '<line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>'
+                  '<line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/>'
+                  '<line x1="17" y1="16" x2="23" y2="16"/>',
+    "stt_features": '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+    "smoke_tests": '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'
+                   '<polyline points="9 12 11 14 15 10"/>',
+    "language_acceptance": '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>'
+                           '<path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 '
+                           '15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+}
+
+# (title, builder) per known sub-phase; order defines tile order on screen.
+_P0_SUBPHASES = [
+    ("connectivity", "Connectivity"),
+    ("stt_schema", "STT response schema"),
+    ("stt_streaming_schema", "STT streaming schema"),
+    ("tts_schema", "TTS response schema"),
+    ("parameters", "Parameters & SSML"),
+    ("stt_features", "STT serving features"),
+    ("smoke_tests", "Smoke tests"),
+    ("language_acceptance", "Language acceptance"),
+]
+
+
+def _tally(ok: int = 0, warn: int = 0, bad: int = 0) -> dict:
+    return {"ok": ok, "warn": warn, "bad": bad}
+
+
+def _p0_mono(s) -> str:
+    return f'<span class="p0mono">{esc(s)}</span>'
+
+
+def _p0_tickv(v) -> str:
+    return '<span class="p0tick y">✓</span>' if v else '<span class="p0tick n">✗</span>'
+
+
+def _p0_line(label: str, right: str, col: bool = False) -> str:
+    cls = "p0row col" if col else "p0row"
+    vcls = "p0v wrap" if col else "p0v"
+    return (f'<div class="{cls}"><span class="p0k">{esc(label)}</span>'
+            f'<span class="{vcls}">{right}</span></div>')
+
+
+def _b_connectivity(r: dict):
+    rows, t = [], _tally()
+    for key, lab in (("grpc_stt", "gRPC · STT"), ("grpc_tts", "gRPC · TTS"),
+                     ("rest_stt", "REST · STT"), ("rest_tts", "REST · TTS")):
+        sub = r.get(key)
+        if not isinstance(sub, dict):
+            continue
+        if sub.get("status") == "ok":
+            lat = sub.get("latency_s")
+            right = badge("ok", "pass") + (_p0_mono(_p0_latency(lat)) if lat is not None else "")
+            t["ok"] += 1
+        else:
+            right = badge("unsupported", "warn")
+            t["warn"] += 1
+        rows.append(_p0_line(lab, right))
+    net = r.get("network_rtt_s")
+    if net is not None:
+        rows.append(_p0_line("network RTT", _p0_mono(_p0_latency(net))))
+    return "".join(rows), t
+
+
+def _b_stt_schema(r: dict):
+    rows, t = [], _tally()
+    for key, lab in (("has_transcript", "transcript"), ("has_confidence", "confidence"),
+                     ("has_words", "word list")):
+        v = r.get(key)
+        rows.append(_p0_line(lab, _p0_tickv(v)))
+        t["ok" if v else "bad"] += 1
+    fields = r.get("word_fields") or []
+    if fields:
+        chips = "".join(f"<code>{esc(f)}</code>" for f in fields)
+        rows.append(_p0_line("word fields", chips, col=True))
+    if r.get("batch_latency_s") is not None:
+        rows.append(_p0_line("batch latency", _p0_mono(_p0_latency(r.get("batch_latency_s")))))
+    return "".join(rows), t
+
+
+def _b_stt_streaming(r: dict):
+    rows, t = [], _tally()
+    for key, lab in (("has_partials", "partial results"), ("has_finals", "final results"),
+                     ("has_stability", "stability field")):
+        v = r.get(key)
+        right = _p0_tickv(v)
+        if key == "has_partials" and r.get("num_partials") is not None:
+            right += _p0_mono(f"{r.get('num_partials')}×")
+        rows.append(_p0_line(lab, right))
+        t["ok" if v else "bad"] += 1
+    for key, lab in (("ttfw", "time to first word"), ("finalization_latency", "finalize latency")):
+        if r.get(key) is not None:
+            rows.append(_p0_line(lab, _p0_mono(_p0_latency(r.get(key)))))
+    if r.get("streaming_rtf") is not None:
+        rows.append(_p0_line("streaming RTF", _p0_mono(fnum(r.get("streaming_rtf"), 3))))
+    return "".join(rows), t
+
+
+def _b_tts_schema(r: dict):
+    rows = []
+    specs = (
+        ("batch_latency_s", "batch latency", lambda v: _p0_latency(v)),
+        ("batch_audio_duration_s", "batch audio", lambda v: f"{fnum(v, 2)}s"),
+        ("stream_ttfb", "stream TTFB", lambda v: _p0_latency(v)),
+        ("stream_n_chunks", "stream chunks", lambda v: f"{v}"),
+        ("sample_rate", "sample rate", lambda v: f"{int(v) / 1000:g} kHz"),
+    )
+    for key, lab, fmt in specs:
+        v = r.get(key)
+        if v is not None:
+            rows.append(_p0_line(lab, _p0_mono(fmt(v))))
+    return "".join(rows), _tally()
+
+
+def _b_parameters(r: dict):
+    rows, t = [], _tally()
+    srs = r.get("stt_sample_rates") or {}
+    if isinstance(srs, dict) and srs:
+        n_ok = sum(1 for v in srs.values() if str(v) == "ok")
+        allok = n_ok == len(srs)
+        rates = ", ".join(f"{int(k) // 1000}k" for k in sorted(srs, key=lambda x: int(x)))
+        right = badge(f"{n_ok}/{len(srs)} accepted", "pass" if allok else "warn") + _p0_mono(rates)
+        rows.append(_p0_line("STT sample rates", right, col=True))
+        t["ok" if allok else "warn"] += 1
+    ssml = r.get("tts_ssml")
+    if isinstance(ssml, dict):
+        eff = ssml.get("break_effect")
+        kind = {"honored": "pass", "accepted_no_effect": "warn"}.get(eff, "fail")
+        txt = {"honored": "honored", "accepted_no_effect": "accepted · no effect"}.get(
+            eff, eff or "error")
+        ratio = ssml.get("duration_ratio")
+        right = badge(txt, kind) + (_p0_mono(f"×{ratio}") if ratio else "")
+        rows.append(_p0_line("SSML <break>", right))
+        t["ok" if kind == "pass" else ("bad" if kind == "fail" else "warn")] += 1
+    elif ssml is not None:
+        rows.append(_p0_line("SSML", _p0_mono(ssml)))
+    return "".join(rows), t
+
+
+def _b_stt_features(r: dict):
+    labels = {
+        "word_timestamps": "word timestamps", "nbest": "n-best alternatives",
+        "word_boosting": "word boosting", "profanity_filter": "profanity filter",
+        "diarization": "speaker diarization",
+    }
+    rows, t = [], _tally()
+    for key, lab in labels.items():
+        sub = r.get(key)
+        if not isinstance(sub, dict):
+            continue
+        if not sub.get("accepted"):
+            rows.append(_p0_line(lab, badge("rejected", "fail")))
+            t["bad"] += 1
+        elif sub.get("populated"):
+            rows.append(_p0_line(lab, badge("honored", "pass")))
+            t["ok"] += 1
+        else:
+            rows.append(_p0_line(lab, badge("accepted · no effect", "warn")))
+            t["warn"] += 1
+    return "".join(rows), t
+
+
+def _b_smoke(r: dict):
+    rows, t = [], _tally()
+    pretty = {"stt_10s": "STT · 10s clip", "stt_60s": "STT · 60s clip",
+              "tts_rest": "TTS · REST", "tts_grpc_stream": "TTS · gRPC stream"}
+    for key, sub in r.items():
+        if not isinstance(sub, dict):
+            continue
+        if sub.get("status") == "pass":
+            lat = sub.get("latency_s")
+            if lat is None:
+                lat = sub.get("ttfb_s")
+            right = badge("pass", "pass") + (_p0_mono(_p0_latency(lat)) if lat is not None else "")
+            t["ok"] += 1
+        else:
+            right = badge("fail", "fail")
+            t["bad"] += 1
+        rows.append(_p0_line(pretty.get(key, key), right))
+    return "".join(rows), t
+
+
+def _b_language(r: dict):
+    rows, t = [], _tally()
+    by = r.get("by_status") if isinstance(r.get("by_status"), dict) else {}
+    total, ok = r.get("total"), by.get("ok")
+    if ok is not None and total:
+        allok = ok == total
+        rows.append(_p0_line("model languages",
+                             badge(f"{ok}/{total} accepted", "pass" if allok else "warn")))
+        t["ok" if allok else "warn"] += 1
+    jt, jo = r.get("joule_total"), r.get("joule_ok")
+    if jt is not None and jo is not None:
+        allok = jo == jt
+        rows.append(_p0_line("SAP Joule languages",
+                             badge(f"{jo}/{jt} accepted", "pass" if allok else "warn")))
+        t["ok" if allok else "warn"] += 1
+    return "".join(rows), t
+
+
+def _b_fallback(r: dict):
+    """Unknown sub-phase shape → readable key→value rows, never raw JSON."""
+    rows = []
+    for k, v in r.items():
+        if isinstance(v, (dict, list)):
+            v = f"{len(v)} item(s)" if v else "—"
+        s = str(v)
+        if len(s) > 60:
+            s = s[:60] + "…"
+        rows.append(_p0_line(k, _p0_mono(s)))
+        if len(rows) >= 8:
+            break
+    return "".join(rows), _tally(ok=1)
+
+
+_P0_BUILDERS = {
+    "connectivity": _b_connectivity,
+    "stt_schema": _b_stt_schema,
+    "stt_streaming_schema": _b_stt_streaming,
+    "tts_schema": _b_tts_schema,
+    "parameters": _b_parameters,
+    "stt_features": _b_stt_features,
+    "smoke_tests": _b_smoke,
+    "language_acceptance": _b_language,
+}
+
+
+def _p0_tile(name: str, title: str, rows_html: str, tally: dict) -> str:
+    bad, warn = tally.get("bad", 0), tally.get("warn", 0)
+    if bad:
+        chip_html = badge(f"{bad} failed", "fail")
+    elif warn:
+        if name == "connectivity":
+            word = "unsupported"
+        elif name in ("stt_features", "parameters"):
+            word = "no effect"
+        else:
+            word = "partial"
+        chip_html = badge(f"{warn} {word}", "warn")
+    else:
+        chip_html = badge("ok", "pass")
+    icon = _P0_ICON.get(name, "")
+    icon_svg = (f'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+                f'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{icon}</svg>'
+                if icon else "")
+    return (f'<div class="p0tile"><div class="p0thead">'
+            f'<span class="p0ttitle">{icon_svg}{esc(title)}</span>{chip_html}</div>'
+            f'<div class="p0body">{rows_html}</div></div>')
+
+
+def _p0_rollup(data: dict) -> str:
+    """At-a-glance KPIs. Each tile derives from one sub-phase (no fragile
+    cross-counting); missing data simply omits its tile."""
+    tiles = []
+
+    conn = data.get("connectivity")
+    if isinstance(conn, dict):
+        legs = [k for k in ("grpc_stt", "grpc_tts", "rest_stt", "rest_tts")
+                if isinstance(conn.get(k), dict)]
+        if legs:
+            okn = sum(1 for k in legs if conn[k].get("status") == "ok")
+            kind = "ok" if okn == len(legs) else ("warn" if okn else "bad")
+            sub = "all transports up" if okn == len(legs) else "gRPC up · REST n/a"
+            tiles.append((f"{okn}/{len(legs)}", "transports live", sub, kind))
+
+    feat = data.get("stt_features")
+    fsub = [v for v in feat.values() if isinstance(v, dict)] if isinstance(feat, dict) else []
+    no_effect = 0
+    if fsub:
+        fhon = sum(1 for v in fsub if v.get("accepted") and v.get("populated"))
+        no_effect = sum(1 for v in fsub if v.get("accepted") and not v.get("populated"))
+        kind = "ok" if fhon == len(fsub) else "warn"
+        sub = ("populated in response" if fhon == len(fsub)
+               else f"{len(fsub) - fhon} set but ignored")
+        tiles.append((f"{fhon}/{len(fsub)}", "STT features honored", sub, kind))
+
+    params = data.get("parameters")
+    ssml = params.get("tts_ssml") if isinstance(params, dict) else None
+    if isinstance(ssml, dict) and ssml.get("break_effect") == "accepted_no_effect":
+        no_effect += 1
+    if fsub or isinstance(ssml, dict):
+        tiles.append((str(no_effect), "accepted · no effect",
+                      "set by client, ignored by gateway" if no_effect else "no honor-layer gaps",
+                      "warn" if no_effect else "ok"))
+
+    smoke = data.get("smoke_tests")
+    ssub = [v for v in smoke.values() if isinstance(v, dict)] if isinstance(smoke, dict) else []
+    if ssub:
+        spass = sum(1 for v in ssub if v.get("status") == "pass")
+        kind = "ok" if spass == len(ssub) else "warn"
+        sub = ("end-to-end calls succeed" if spass == len(ssub)
+               else f"{len(ssub) - spass} failing · REST n/a")
+        tiles.append((f"{spass}/{len(ssub)}", "smoke tests pass", sub, kind))
+
+    if not tiles:
+        return ""
+    kmap = {"ok": "good", "warn": "warn", "bad": "bad"}
+    out = []
+    for big, lab, sub, kind in tiles:
+        out.append(f'<div class="ri {kmap.get(kind, "good")}">'
+                   f'<div class="n"><i class="p0dot {kind}"></i>{esc(big)}</div>'
+                   f'<div class="l">{esc(lab)}</div>'
+                   f'<div class="l sub">{esc(sub)}</div></div>')
+    return f'<div class="p0roll">{"".join(out)}</div>'
+
+
 def render_phase0(data: dict) -> str:
     if not data:
         return notice("Phase 0 discovery.json not found in the selected run.")
-    rows = []
-    for name, r in data.items():
+    titles = dict(_P0_SUBPHASES)
+    order = [n for n, _ in _P0_SUBPHASES]
+    names = sorted(data.keys(),
+                   key=lambda n: order.index(n) if n in order else len(order))
+    tiles = []
+    for name in names:
         if name == "cold_start":
             continue
+        r = data[name]
+        title = titles.get(name, name.replace("_", " ").capitalize())
         if not isinstance(r, dict):
-            rows.append({"check": name, "status": badge("info", "muted"),
-                         "detail": esc(r)})
+            tiles.append(_p0_tile(name, title, _p0_line("value", _p0_mono(r)), _tally(ok=1)))
             continue
         if r.get("error"):
-            rows.append({"check": name, "status": badge("error", "fail"),
-                         "detail": esc(r.get("error"))[:120]})
-        elif "by_status" in r:
-            rows.append({"check": name, "status": badge("ok", "pass"),
-                         "detail": f"acceptance matrix: {esc(r.get('by_status'))}; "
-                                   f"Joule ok {esc(r.get('joule_ok'))}/{esc(r.get('joule_total'))}"})
-        else:
-            rows.append({"check": name, "status": badge("ok", "pass"),
-                         "detail": esc(json.dumps(r, default=str))[:140]})
-    return table(rows, [("check", "Sub-phase"), ("status", "Status"),
-                        ("detail", "Detail")])
+            body = (_p0_line("status", badge("error", "fail"))
+                    + _p0_line("detail", esc(str(r.get("error")))[:200], col=True))
+            tiles.append(_p0_tile(name, title, body, _tally(bad=1)))
+            continue
+        builder = _P0_BUILDERS.get(name, _b_fallback)
+        rows_html, tally = builder(r)
+        if not rows_html:
+            rows_html = _p0_line("status", badge("ok", "pass"))
+        tiles.append(_p0_tile(name, title, rows_html, tally))
+
+    legend = ('<div class="p0legend">'
+              '<span><i class="p0dot ok"></i> honored — field returns populated</span>'
+              '<span><i class="p0dot warn"></i> accepted · no effect — set but ignored</span>'
+              '<span><i class="p0dot bad"></i> unsupported / failed</span></div>')
+    return (f'<div class="p0wrap">{_p0_rollup(data)}{legend}'
+            f'<div class="p0grid">{"".join(tiles)}</div></div>')
 
 
 def chip(rows_present: bool, na: bool = False) -> str:
-    if na:
-        return badge("N/A", "warn")
-    return badge("live data", "pass") if rows_present else badge("not run", "muted")
+    # Per-card provenance badge (live data / not run / N/A) intentionally
+    # suppressed — the cards render their own status, so the header stays clean.
+    return ""
 
 
 # (anchor, test-id, title)
@@ -2258,6 +2924,11 @@ STT_TESTS = [
     ("t1_10", "1.10", "Test 1.10 — Confidence Calibration"),
     ("t1_11", "1.11", "Test 1.11 — Format Robustness"),
     ("t1_13", "1.13", "Test 1.13 — Language Acceptance (34 languages)"),
+    ("t1_14", "1.14", "Test 1.14 — Word Timestamps"),
+    ("t1_15", "1.15", "Test 1.15 — N-Best Alternatives"),
+    ("t1_16", "1.16", "Test 1.16 — Word Boosting"),
+    ("t1_17", "1.17", "Test 1.17 — Profanity Filter"),
+    ("t1_18", "1.18", "Test 1.18 — Speaker Diarization"),
 ]
 TTS_TESTS = [
     ("t2_1", "2.1", "Test 2.1 — Naturalness"),
@@ -2269,6 +2940,7 @@ TTS_TESTS = [
     ("t2_7", "2.7", "Test 2.7 — Edge Cases"),
     ("t2_8", "2.8", "Test 2.8 — Long-Form Consistency"),
     ("t2_9", "2.9", "Test 2.9 — Language Acceptance"),
+    ("t2_10", "2.10", "Test 2.10 — SSML Functional Effect"),
 ]
 
 
@@ -2294,6 +2966,11 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
     conf = read_csv(stt / "confidence" / "summary.csv")
     fmt = read_csv(stt / "format_robustness" / "summary.csv")
     mling = read_csv(stt / "multilingual" / "summary.csv")
+    wts = read_csv(stt / "word_timestamps" / "summary.csv")
+    nbest = read_csv(stt / "nbest" / "summary.csv")
+    boost = read_csv(stt / "word_boosting" / "summary.csv")
+    prof = read_csv(stt / "profanity" / "summary.csv")
+    diar = read_csv(stt / "diarization" / "summary.csv")
 
     # ---- load TTS ----
     nat = read_csv(tts / "naturalness" / "summary.csv")
@@ -2305,6 +2982,7 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
     edge = read_csv(tts / "edge_cases" / "summary.csv")
     tlong = read_csv(tts / "long_form" / "summary.csv")
     tacc = read_csv(tts / "language_acceptance" / "summary.csv")
+    ssml = read_csv(tts / "ssml_effect" / "summary.csv")
 
     # ---- exec summary ----
     clean_wer = next((pct(r["wer"]) for r in acc
@@ -2342,11 +3020,18 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
         "1.11": render_format(fmt),
         "1.12": render_multilingual(mling),
         "1.13": render_acceptance(matrix),
+        "1.14": render_word_timestamps(wts),
+        "1.15": render_nbest(nbest),
+        "1.16": render_word_boosting(boost),
+        "1.17": render_profanity(prof),
+        "1.18": render_diarization(diar),
     }
     stt_present = {"1.1": acc, "1.2": perf or conc, "1.3": stream, "1.4": rest,
                    "1.5": noise, "1.6": accent, "1.7": longf, "1.8": domain,
                    "1.9": outq, "1.10": conf, "1.11": fmt, "1.12": mling,
-                   "1.13": matrix}
+                   "1.13": matrix,
+                   "1.14": wts, "1.15": nbest, "1.16": boost, "1.17": prof,
+                   "1.18": diar}
 
     stt_cards = []
     for anchor, tid, title in STT_TESTS:
@@ -2366,9 +3051,11 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
         "2.7": render_edge(edge),
         "2.8": render_tts_longform(tlong),
         "2.9": render_tts_acceptance(tacc),
+        "2.10": render_ssml_effect(ssml),
     }
     tts_present = {"2.1": nat, "2.2": intel, "2.3": pros, "2.4": sig, "2.5": tlat,
-                   "2.6": tconc, "2.7": edge, "2.8": tlong, "2.9": tacc}
+                   "2.6": tconc, "2.7": edge, "2.8": tlong, "2.9": tacc,
+                   "2.10": ssml}
     tts_cards = []
     for anchor, tid, title in TTS_TESTS:
         na = tid == "2.4"
@@ -2437,8 +3124,8 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
         '<section class="card hero" id="summary">'
         '<p class="kicker"><span class="lv" aria-hidden="true"></span>Evaluation Report</p>'
         '<h2 class="herotitle">Executive Summary</h2>'
-        '<p class="summ">One report covering Phase 0 discovery, STT tests 1.1–1.13 '
-        '(including the full 34-language multilingual matrix) and TTS tests 2.1–2.9. '
+        '<p class="summ">One report covering Phase 0 discovery, STT tests 1.1–1.18 '
+        '(including the full 34-language multilingual matrix) and TTS tests 2.1–2.10. '
         'All metrics are computed client-side. Every test leads with a plain-language '
         'explanation you can expand; any test with no data on disk says so rather '
         'than showing a fabricated number.</p>'
@@ -2456,16 +3143,16 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
         '<button class="navclose" id="navClose" type="button" aria-label="Close navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg></button>'
         '<a href="#summary">Executive Summary</a>'
         '<a href="#phase0">Phase 0 — Discovery</a>'
-        '<div class="grp">Speech-to-Text · 13 tests</div>'
+        f'<div class="grp">Speech-to-Text · {len(STT_TESTS)} tests</div>'
         + nav_links(STT_TESTS)
-        + '<div class="grp">Text-to-Speech · 9 tests</div>'
+        + f'<div class="grp">Text-to-Speech · {len(TTS_TESTS)} tests</div>'
         + nav_links(TTS_TESTS)
         + "</nav>")
 
-    stt_band = band("stt", "Speech-to-Text (STT) — 13 tests",
+    stt_band = band("stt", f"Speech-to-Text (STT) — {len(STT_TESTS)} tests",
                     "Transcription quality, speed, robustness and multilingual "
                     "coverage for the Nemotron-3.5 ASR model.")
-    tts_band = band("tts", "Text-to-Speech (TTS) — 9 tests",
+    tts_band = band("tts", f"Text-to-Speech (TTS) — {len(TTS_TESTS)} tests",
                     "Naturalness, intelligibility, prosody, latency and language "
                     "coverage for the Magpie TTS Multilingual voice.")
 

@@ -830,14 +830,14 @@ TEST_META.update({
         "summary": "Discovery — connectivity, schema and parameter checks run "
                    "before the scored suite.",
         "what": "A pre-flight that confirms the endpoint is reachable, the "
-                "request/response schemas match, parameters behave, smoke tests "
-                "pass and cold-start behaviour is recorded.",
+                "request/response schemas match, parameters behave, and smoke "
+                "tests pass.",
         "how": "Run before any scored test, discovery confirms the deployment is "
                "usable and records what it found. Sub-checks probe connectivity, "
                "the STT / streaming / TTS request-response schemas, parameter "
-               "behaviour, a handful of smoke syntheses and transcriptions, and "
-               "cold-start latency (first-call warm-up), plus the language-"
-               "acceptance summary. Each sub-phase writes to phase0/discovery.json "
+               "behaviour, a handful of smoke syntheses and transcriptions, plus "
+               "the language-acceptance summary. Each sub-phase writes to "
+               "phase0/discovery.json "
                "immediately, so even a crash mid-run leaves a readable record of "
                "everything verified so far.",
         "code": [
@@ -845,8 +845,6 @@ TEST_META.update({
                   "eval/phase0/discovery.py", 361),
             _code("discovery.py — smoke_tests()",
                   "eval/phase0/discovery.py", 233),
-            _code("discovery.py — cold_start_test()",
-                  "eval/phase0/discovery.py", 295),
         ],
         "datasets": [],
         "metrics": [],
@@ -2167,6 +2165,8 @@ def render_phase0(data: dict) -> str:
         return notice("Phase 0 discovery.json not found in the selected run.")
     rows = []
     for name, r in data.items():
+        if name == "cold_start":
+            continue
         if not isinstance(r, dict):
             rows.append({"check": name, "status": badge("info", "muted"),
                          "detail": esc(r)})
@@ -2324,16 +2324,6 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
         tts_cards.append(test_card(anchor, title, TEST_META.get(tid, {}),
                                    c, tts_bodies[tid]))
 
-    gaps = (
-        "<ul>"
-        "<li><b>1.6 dialect &amp; 1.8 domain</b> — multilingual coverage gaps; need "
-        "per-locale / multilingual domain corpora. Deliberately not faked.</li>"
-        "<li><b>1.3 / 1.4 / 1.11</b> — English-only by design (serving-stack / "
-        "audio-frontend properties; 1.4 N/A — gRPC-only deployment).</li>"
-        "<li><b>Full 1.12 accuracy + per-language depth</b> — opt-in; run with the "
-        "multilingual config lists populated to replace the acceptance-only view.</li>"
-        "</ul>")
-
     phase0_card = test_card("phase0", "Phase 0 — Discovery",
                             TEST_META.get("phase0", {}),
                             chip(bool(read_json(run_dir / "phase0" / "discovery.json"))),
@@ -2353,10 +2343,6 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
         'than showing a fabricated number.</p>'
         + exec_cards + "</section>")
 
-    gaps_card = ('<section class="card" id="gaps"><h3>Known Gaps &amp; Honest Scope</h3>'
-                 '<p class="summ">What this run does <i>not</i> claim, stated plainly.</p>'
-                 + gaps + "</section>")
-
     # ---- sidebar nav ----
     def nav_links(items):
         return "".join(f'<a href="#{a}">{esc(t.split("—")[0].strip())}'
@@ -2368,13 +2354,11 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
         '<nav class="side" id="sidenav" aria-label="Report sections">'
         '<button class="navclose" id="navClose" type="button" aria-label="Close navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg></button>'
         '<a href="#summary">Executive Summary</a>'
+        '<a href="#phase0">Phase 0 — Discovery</a>'
         '<div class="grp">Speech-to-Text · 13 tests</div>'
         + nav_links(STT_TESTS)
         + '<div class="grp">Text-to-Speech · 9 tests</div>'
         + nav_links(TTS_TESTS)
-        + '<div class="grp">More</div>'
-        + '<a href="#phase0">Phase 0 — Discovery</a>'
-        + '<a href="#gaps">Known Gaps &amp; Scope</a>'
         + "</nav>")
 
     stt_band = band("stt", "Speech-to-Text (STT) — 13 tests",
@@ -2384,11 +2368,9 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
                     "Naturalness, intelligibility, prosody, latency and language "
                     "coverage for the Magpie TTS Multilingual voice.")
 
-    main_html = (summary_card + stt_band + "".join(stt_cards)
-                 + tts_band + "".join(tts_cards)
-                 + '<div class="bandhead" id="more"><h2>Discovery &amp; Scope</h2>'
-                   '<p>Pre-flight checks and an honest statement of what is out of scope.</p></div>'
-                 + phase0_card + gaps_card)
+    main_html = (summary_card + phase0_card
+                 + stt_band + "".join(stt_cards)
+                 + tts_band + "".join(tts_cards))
 
     dual_btn = (f'<a class="hbtn" href="{esc(dual_run_link)}" aria-label="Dual-run comparison report">'
                 '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>'

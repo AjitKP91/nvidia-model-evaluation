@@ -569,7 +569,7 @@ TEST_META = {
                    "does each one actually return a transcript on this endpoint?",
         "what": "The multilingual centrepiece. Rather than trusting the model "
                 "card, it sends one real clip per language and records whether "
-                "the deployment returns usable text — rendered SAP-Joule-first.",
+                "the deployment returns usable text — rendered Joule-first.",
         "how": "Before trusting any accuracy number, this confirms the endpoint "
                "actually returns text for each language. For every one of the "
                "model's languages it streams a few real FLEURS clips and "
@@ -1200,7 +1200,8 @@ tbody tr:hover td{background:var(--surface)}
   border-left:3px solid var(--accent);border-radius:11px;padding:14px 16px;
   box-shadow:var(--shadow-sm)}
 .stat .big{font-family:var(--font-mono);font-size:27px;font-weight:700;
-  letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+  letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1;
+  overflow-wrap:anywhere}
 .stat .lbl{color:var(--muted);font-size:12px;margin-top:5px;line-height:1.35}
 .stat.pass{border-left-color:var(--good)} .stat.pass .big{color:var(--goodtext)}
 .stat.fail{border-left-color:var(--crit)} .stat.fail .big{color:var(--crit)}
@@ -1270,18 +1271,45 @@ footer{color:var(--muted);font-size:12px;text-align:center;padding:40px 20px;
 .p0roll .ri.bad{border-left:3px solid var(--crit)}
 .p0roll .ri .n{font-size:23px;font-weight:800;letter-spacing:-.01em;line-height:1.05;
   font-variant-numeric:tabular-nums;color:var(--ink);display:flex;align-items:center;gap:8px}
-.p0roll .ri .l{font-size:12px;color:var(--ink2);line-height:1.3;font-weight:600}
+.p0roll .ri .l{font-size:12px;color:var(--ink2);line-height:1.3;font-weight:600;
+  display:flex;align-items:center;gap:6px}
 .p0roll .ri .l.sub{color:var(--muted);font-weight:400;font-size:11px}
 
 .p0legend{display:flex;flex-wrap:wrap;gap:16px;margin:0 2px 15px;
   font-size:11.5px;color:var(--muted)}
 .p0legend span{display:inline-flex;align-items:center;gap:7px}
 
+.p0sec{margin:24px 0 0}
+.p0sec:first-of-type{margin-top:6px}
+.p0sechead{display:flex;align-items:center;gap:9px;margin:0 2px 11px;
+  padding-bottom:7px;border-bottom:1px solid var(--line)}
+.p0sechead h4{font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--ink2);margin:0}
+.p0sechead .cnt{font-size:11px;color:var(--muted);font-weight:600;margin-left:auto}
+
+/* accessible info affordance — hover or keyboard-focus reveals a 1–2 line tip */
+.info{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;
+  border-radius:50%;border:1px solid var(--line);color:var(--muted);font-size:9.5px;
+  font-weight:800;font-style:normal;line-height:1;cursor:help;position:relative;flex:none;
+  user-select:none}
+.info:hover,.info:focus-visible{color:var(--accent);border-color:var(--accent);outline:none}
+.info::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 9px);left:50%;
+  transform:translateX(-50%);width:max-content;max-width:250px;background:var(--ink);
+  color:var(--surface);padding:8px 11px;border-radius:9px;font-size:11.5px;font-weight:400;
+  letter-spacing:0;line-height:1.45;text-align:left;text-transform:none;white-space:normal;
+  opacity:0;visibility:hidden;transition:opacity .12s ease;z-index:60;
+  box-shadow:0 8px 24px rgba(0,0,0,.22);pointer-events:none}
+.info::before{content:"";position:absolute;bottom:calc(100% + 4px);left:50%;
+  transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--ink);
+  opacity:0;visibility:hidden;transition:opacity .12s ease;z-index:60}
+.info:hover::after,.info:focus-visible::after,
+.info:hover::before,.info:focus-visible::before{opacity:1;visibility:visible}
+
 .p0grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
 .p0tile{background:var(--surface);border:1px solid var(--line);border-radius:13px;
-  overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow-sm)}
+  overflow:visible;display:flex;flex-direction:column;box-shadow:var(--shadow-sm)}
 .p0thead{display:flex;align-items:center;justify-content:space-between;gap:10px;
-  padding:11px 15px;border-bottom:1px solid var(--line);
+  padding:11px 15px;border-bottom:1px solid var(--line);border-radius:13px 13px 0 0;
   background:linear-gradient(180deg,var(--accent-weak),transparent)}
 .p0ttitle{font-weight:700;font-size:13.5px;letter-spacing:.01em;color:var(--ink);
   display:inline-flex;align-items:center;gap:9px;min-width:0}
@@ -2311,9 +2339,18 @@ _VERDICT_KIND = {
     "no_data": "muted",
 }
 
+_VERDICT_LABEL = {
+    "accepted_no_effect": "no effect", "no_data": "no data",
+}
 
-def _verdict_badge(v) -> str:
-    return badge(v or "no_data", _VERDICT_KIND.get(v, "muted"))
+
+def _verdict_label(v) -> str:
+    # Plain, concise verdict word for a .stat tile's big slot. The tile's colour
+    # comes from _VERDICT_KIND passed separately to card() — do NOT return badge
+    # HTML here: card() escapes its big argument, so a span would leak as text.
+    if not v:
+        return "no data"
+    return _VERDICT_LABEL.get(v, str(v).replace("_", " "))
 
 
 def render_word_timestamps(rows):
@@ -2321,7 +2358,7 @@ def render_word_timestamps(rows):
         return notice("No data on disk for this test in the selected run.")
     r = rows[0]
     cards = ('<div class="cards">'
-             + card(_verdict_badge(r.get("verdict")), "verdict",
+             + card(_verdict_label(r.get("verdict")), "verdict",
                     _VERDICT_KIND.get(r.get("verdict"), ""))
              + card(esc(r.get("n_clips", "—")), "clips", "")
              + card(pct(r.get("nonzero_pct")) if r.get("nonzero_pct") not in (None, "", "None") else "—",
@@ -2337,7 +2374,7 @@ def render_nbest(rows):
         return notice("No data on disk for this test in the selected run.")
     r = rows[0]
     cards = ('<div class="cards">'
-             + card(_verdict_badge(r.get("verdict")), "verdict",
+             + card(_verdict_label(r.get("verdict")), "verdict",
                     _VERDICT_KIND.get(r.get("verdict"), ""))
              + card(esc(r.get("n_clips", "—")), "clips", "")
              + card(esc(r.get("max_alternatives_returned", "—")), "max alternatives returned", "")
@@ -2356,7 +2393,7 @@ def render_word_boosting(rows):
         return notice("No data on disk for this test in the selected run.")
     r = rows[0]
     cards = ('<div class="cards">'
-             + card(_verdict_badge(r.get("verdict")), "verdict",
+             + card(_verdict_label(r.get("verdict")), "verdict",
                     _VERDICT_KIND.get(r.get("verdict"), ""))
              + card(esc(r.get("n_cases", "—")), "phrases", "")
              + card(f"{esc(r.get('baseline_hits', '—'))} → {esc(r.get('boosted_hits', '—'))}",
@@ -2371,7 +2408,7 @@ def render_profanity(rows):
         return notice("No data on disk for this test in the selected run.")
     r = rows[0]
     cards = ('<div class="cards">'
-             + card(_verdict_badge(r.get("verdict")), "verdict",
+             + card(_verdict_label(r.get("verdict")), "verdict",
                     _VERDICT_KIND.get(r.get("verdict"), ""))
              + card(esc(r.get("n_cases", "—")), "utterances", "")
              + card(esc(r.get("words_recognized_plain", "—")), "target words heard (plain)", "")
@@ -2390,7 +2427,7 @@ def render_diarization(rows):
         return notice("No data on disk for this test in the selected run.")
     r = rows[0]
     cards = ('<div class="cards">'
-             + card(_verdict_badge(r.get("verdict")), "verdict",
+             + card(_verdict_label(r.get("verdict")), "verdict",
                     _VERDICT_KIND.get(r.get("verdict"), ""))
              + card(esc(r.get("distinct_speaker_tags", "—")), "distinct speaker tags", "")
              + card(esc(r.get("n_words_tagged", "—")), "words tagged", "")
@@ -2409,7 +2446,7 @@ def render_ssml_effect(rows):
         return notice("No data on disk for this test in the selected run.")
     r = rows[0]
     cards = ('<div class="cards">'
-             + card(_verdict_badge(r.get("verdict")), "verdict",
+             + card(_verdict_label(r.get("verdict")), "verdict",
                     _VERDICT_KIND.get(r.get("verdict"), ""))
              + card(esc(r.get("n_tags", "—")), "SSML tags tested", "")
              + card(esc(r.get("honored", "—")), "honored", "pass")
@@ -2450,7 +2487,7 @@ def render_acceptance(matrix: list[dict]) -> str:
 
     cards = (f'<div class="cards">'
              f'{card(f"{ok}/{total}", "languages transcribe", "pass")}'
-             f'{card(f"{joule_ok}/{len(joule)}", "SAP Joule languages transcribe", "pass" if joule_ok == len(joule) else "warn")}'
+             f'{card(f"{joule_ok}/{len(joule)}", "Joule languages transcribe", "pass" if joule_ok == len(joule) else "warn")}'
              f'{card(str(len(empty)), "return blank output", "fail")}'
              f'</div>')
 
@@ -2481,7 +2518,7 @@ def render_acceptance(matrix: list[dict]) -> str:
     if joule_blank:
         names = ", ".join(f'<b>{esc(r["label"])}</b>' for r in joule_blank)
         gap = (f'<p class="notice fail"><b>Serving gap:</b> {len(joule_blank)} '
-               f'SAP Joule GA language(s) — {names} — return empty transcripts on '
+               f'Joule GA language(s) — {names} — return empty transcripts on '
                f'this endpoint despite being GA on the Nemotron-3.5 model card. '
                f'A deployment/gateway issue, not a model capability gap.</p>')
 
@@ -2519,9 +2556,9 @@ def render_acceptance(matrix: list[dict]) -> str:
 
     blanks = ", ".join(f'{esc(r["label"])} ({esc(r["key"])})' for r in empty)
     blocks = [cards, sum_chart, gap]
-    blocks.append(f"<h4>SAP Joule — GA ({len(ga)})</h4>")
+    blocks.append(f"<h4>Joule — GA ({len(ga)})</h4>")
     blocks.append(table(prep(ga), cols, highlight=row_style))
-    blocks.append(f"<h4>SAP Joule — Preview ({len(prev)})</h4>")
+    blocks.append(f"<h4>Joule — Preview ({len(prev)})</h4>")
     blocks.append(table(prep(prev), cols, highlight=row_style))
     blocks.append(f"<h4>Model-supported, outside Joule scope ({len(non)})</h4>")
     blocks.append(table(prep(non), cols, highlight=row_style))
@@ -2571,23 +2608,77 @@ _P0_ICON = {
     "language_acceptance": '<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>'
                            '<path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 '
                            '15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+    "ssml": '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
 }
 
-# (title, builder) per known sub-phase; order defines tile order on screen.
-_P0_SUBPHASES = [
-    ("connectivity", "Connectivity"),
-    ("stt_schema", "STT response schema"),
-    ("stt_streaming_schema", "STT streaming schema"),
-    ("tts_schema", "TTS response schema"),
-    ("parameters", "Parameters & SSML"),
-    ("stt_features", "STT serving features"),
-    ("smoke_tests", "Smoke tests"),
-    ("language_acceptance", "Language acceptance"),
+# Grouped tile registry. Each tile reads one discovery sub-phase (`src`); the
+# "parameters" sub-phase feeds two tiles (STT sample rates + TTS SSML) so the
+# STT/TTS split stays clean. `warn` is the word shown in the header chip when a
+# tile has warnings; `tip` is the 1–2 line explanation behind its info icon.
+_P0_TILES = {
+    "connectivity": dict(
+        src="connectivity", title="Connectivity", icon="connectivity", warn="unsupported",
+        tip="Opens each transport (gRPC/REST, STT/TTS) and checks it answers — "
+            "reachability and round-trip latency only, not a full job."),
+    "smoke_tests": dict(
+        src="smoke_tests", title="Smoke tests", icon="smoke_tests", warn="partial",
+        tip="Minimal real jobs run end-to-end: short & long transcription, and "
+            "REST & streaming synthesis. Proves the pipeline works, not just the socket."),
+    "stt_schema": dict(
+        src="stt_schema", title="STT response schema", icon="stt_schema", warn="partial",
+        tip="Which fields a batch transcription response populates — transcript, "
+            "confidence, and the per-word timing list."),
+    "stt_streaming_schema": dict(
+        src="stt_streaming_schema", title="STT streaming schema", icon="stt_streaming_schema",
+        warn="partial",
+        tip="Which fields streaming transcription emits (partials, finals, stability) "
+            "and its first-word / finalize latency."),
+    "stt_features": dict(
+        src="stt_features", title="STT serving features", icon="stt_features", warn="no effect",
+        tip="Per-flag honor check — honored (extra data came back), accepted · no "
+            "effect (request accepted but flag ignored), or rejected."),
+    "stt_acceptance": dict(
+        multi=True, srcs=["parameters", "language_acceptance"],
+        title="STT input acceptance", icon="language_acceptance", warn="partial",
+        tip="Inputs the gateway accepts for transcription — audio sample rates, the "
+            "STT model's languages, and the Joule supported subset."),
+    "tts_schema": dict(
+        src="tts_schema", title="TTS response schema", icon="tts_schema", warn="partial",
+        tip="What a synthesis response returns — audio bytes, sample rate, and "
+            "streaming chunk / first-byte timing."),
+    "tts_ssml": dict(
+        src="parameters", title="TTS SSML effect", icon="ssml", warn="no effect",
+        tip="Whether SSML markup changes the synthesized audio (e.g. <break> "
+            "lengthens duration) or is accepted but has no effect."),
+}
+
+# Section grouping: (title, info tip, [tile ids]).
+_P0_SECTIONS = [
+    ("Transport & health",
+     "Does the endpoint answer, and do minimal real jobs complete — checked before "
+     "any scored test runs.",
+     ["connectivity", "smoke_tests"]),
+    ("Speech-to-Text (STT)",
+     "What the Nemotron ASR response exposes and which serving-layer features the "
+     "gateway actually honors.",
+     ["stt_schema", "stt_streaming_schema", "stt_features", "stt_acceptance"]),
+    ("Text-to-Speech (TTS)",
+     "What the Magpie TTS response exposes and whether SSML markup changes the audio.",
+     ["tts_schema", "tts_ssml"]),
 ]
 
 
 def _tally(ok: int = 0, warn: int = 0, bad: int = 0) -> dict:
     return {"ok": ok, "warn": warn, "bad": bad}
+
+
+def _info(tip: str) -> str:
+    """Small accessible info affordance; reveals `tip` on hover or keyboard focus."""
+    if not tip:
+        return ""
+    t = esc(tip)
+    return (f'<span class="info" tabindex="0" role="note" aria-label="{t}" '
+            f'data-tip="{t}">i</span>')
 
 
 def _p0_mono(s) -> str:
@@ -2676,16 +2767,40 @@ def _b_tts_schema(r: dict):
     return "".join(rows), _tally()
 
 
-def _b_parameters(r: dict):
+def _b_stt_acceptance(data: dict):
+    """Combined STT input-acceptance tile: audio sample rates (from the shared
+    `parameters` sub-phase) + model / Joule language acceptance."""
     rows, t = [], _tally()
-    srs = r.get("stt_sample_rates") or {}
+    params = data.get("parameters") if isinstance(data.get("parameters"), dict) else {}
+    srs = params.get("stt_sample_rates") or {}
     if isinstance(srs, dict) and srs:
         n_ok = sum(1 for v in srs.values() if str(v) == "ok")
         allok = n_ok == len(srs)
         rates = ", ".join(f"{int(k) // 1000}k" for k in sorted(srs, key=lambda x: int(x)))
         right = badge(f"{n_ok}/{len(srs)} accepted", "pass" if allok else "warn") + _p0_mono(rates)
-        rows.append(_p0_line("STT sample rates", right, col=True))
+        rows.append(_p0_line("sample rates", right, col=True))
         t["ok" if allok else "warn"] += 1
+    lang = data.get("language_acceptance") if isinstance(data.get("language_acceptance"), dict) \
+        else {}
+    by = lang.get("by_status") if isinstance(lang.get("by_status"), dict) else {}
+    total, ok = lang.get("total"), by.get("ok")
+    if ok is not None and total:
+        allok = ok == total
+        rows.append(_p0_line("model languages",
+                             badge(f"{ok}/{total} accepted", "pass" if allok else "warn")))
+        t["ok" if allok else "warn"] += 1
+    jt, jo = lang.get("joule_total"), lang.get("joule_ok")
+    if jt is not None and jo is not None:
+        allok = jo == jt
+        rows.append(_p0_line("Joule languages",
+                             badge(f"{jo}/{jt} accepted", "pass" if allok else "warn")))
+        t["ok" if allok else "warn"] += 1
+    return "".join(rows), t
+
+
+def _b_tts_ssml(r: dict):
+    """TTS SSML functional-effect check (from the shared `parameters` sub-phase)."""
+    rows, t = [], _tally()
     ssml = r.get("tts_ssml")
     if isinstance(ssml, dict):
         eff = ssml.get("break_effect")
@@ -2694,8 +2809,12 @@ def _b_parameters(r: dict):
             eff, eff or "error")
         ratio = ssml.get("duration_ratio")
         right = badge(txt, kind) + (_p0_mono(f"×{ratio}") if ratio else "")
-        rows.append(_p0_line("SSML <break>", right))
+        rows.append(_p0_line("<break> effect", right))
         t["ok" if kind == "pass" else ("bad" if kind == "fail" else "warn")] += 1
+        pd, sd = ssml.get("plain_duration_s"), ssml.get("ssml_duration_s")
+        if pd is not None and sd is not None:
+            rows.append(_p0_line("plain → SSML audio",
+                                 _p0_mono(f"{fnum(pd, 3)}s → {fnum(sd, 3)}s")))
     elif ssml is not None:
         rows.append(_p0_line("SSML", _p0_mono(ssml)))
     return "".join(rows), t
@@ -2744,24 +2863,6 @@ def _b_smoke(r: dict):
     return "".join(rows), t
 
 
-def _b_language(r: dict):
-    rows, t = [], _tally()
-    by = r.get("by_status") if isinstance(r.get("by_status"), dict) else {}
-    total, ok = r.get("total"), by.get("ok")
-    if ok is not None and total:
-        allok = ok == total
-        rows.append(_p0_line("model languages",
-                             badge(f"{ok}/{total} accepted", "pass" if allok else "warn")))
-        t["ok" if allok else "warn"] += 1
-    jt, jo = r.get("joule_total"), r.get("joule_ok")
-    if jt is not None and jo is not None:
-        allok = jo == jt
-        rows.append(_p0_line("SAP Joule languages",
-                             badge(f"{jo}/{jt} accepted", "pass" if allok else "warn")))
-        t["ok" if allok else "warn"] += 1
-    return "".join(rows), t
-
-
 def _b_fallback(r: dict):
     """Unknown sub-phase shape → readable key→value rows, never raw JSON."""
     rows = []
@@ -2777,44 +2878,47 @@ def _b_fallback(r: dict):
     return "".join(rows), _tally(ok=1)
 
 
-_P0_BUILDERS = {
+_P0_TILE_BUILD = {
     "connectivity": _b_connectivity,
+    "smoke_tests": _b_smoke,
     "stt_schema": _b_stt_schema,
     "stt_streaming_schema": _b_stt_streaming,
-    "tts_schema": _b_tts_schema,
-    "parameters": _b_parameters,
     "stt_features": _b_stt_features,
-    "smoke_tests": _b_smoke,
-    "language_acceptance": _b_language,
+    "stt_acceptance": _b_stt_acceptance,
+    "tts_schema": _b_tts_schema,
+    "tts_ssml": _b_tts_ssml,
 }
+# sub-phase keys consumed by the tiles above (used to detect unmapped leftovers)
+_P0_COVERED = {"cold_start"}
+for _spec in _P0_TILES.values():
+    if _spec.get("src"):
+        _P0_COVERED.add(_spec["src"])
+    for _s in _spec.get("srcs", []):
+        _P0_COVERED.add(_s)
 
 
-def _p0_tile(name: str, title: str, rows_html: str, tally: dict) -> str:
+def _p0_tile(spec: dict, rows_html: str, tally: dict) -> str:
     bad, warn = tally.get("bad", 0), tally.get("warn", 0)
     if bad:
         chip_html = badge(f"{bad} failed", "fail")
     elif warn:
-        if name == "connectivity":
-            word = "unsupported"
-        elif name in ("stt_features", "parameters"):
-            word = "no effect"
-        else:
-            word = "partial"
-        chip_html = badge(f"{warn} {word}", "warn")
+        chip_html = badge(f"{warn} {spec.get('warn', 'partial')}", "warn")
     else:
         chip_html = badge("ok", "pass")
-    icon = _P0_ICON.get(name, "")
+    icon = _P0_ICON.get(spec.get("icon", ""), "")
     icon_svg = (f'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
                 f'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{icon}</svg>'
                 if icon else "")
     return (f'<div class="p0tile"><div class="p0thead">'
-            f'<span class="p0ttitle">{icon_svg}{esc(title)}</span>{chip_html}</div>'
+            f'<span class="p0ttitle">{icon_svg}{esc(spec["title"])}{_info(spec.get("tip", ""))}'
+            f'</span>{chip_html}</div>'
             f'<div class="p0body">{rows_html}</div></div>')
 
 
 def _p0_rollup(data: dict) -> str:
     """At-a-glance KPIs. Each tile derives from one sub-phase (no fragile
-    cross-counting); missing data simply omits its tile."""
+    cross-counting); missing data simply omits its tile. The 4th tuple slot is
+    an info tip explaining the metric."""
     tiles = []
 
     conn = data.get("connectivity")
@@ -2825,7 +2929,9 @@ def _p0_rollup(data: dict) -> str:
             okn = sum(1 for k in legs if conn[k].get("status") == "ok")
             kind = "ok" if okn == len(legs) else ("warn" if okn else "bad")
             sub = "all transports up" if okn == len(legs) else "gRPC up · REST n/a"
-            tiles.append((f"{okn}/{len(legs)}", "transports live", sub, kind))
+            tiles.append((f"{okn}/{len(legs)}", "transports live", sub, kind,
+                          "How many of the gRPC/REST STT & TTS transports answered a "
+                          "minimal reachability probe."))
 
     feat = data.get("stt_features")
     fsub = [v for v in feat.values() if isinstance(v, dict)] if isinstance(feat, dict) else []
@@ -2836,7 +2942,9 @@ def _p0_rollup(data: dict) -> str:
         kind = "ok" if fhon == len(fsub) else "warn"
         sub = ("populated in response" if fhon == len(fsub)
                else f"{len(fsub) - fhon} set but ignored")
-        tiles.append((f"{fhon}/{len(fsub)}", "STT features honored", sub, kind))
+        tiles.append((f"{fhon}/{len(fsub)}", "STT features honored", sub, kind,
+                      "STT serving flags where the gateway actually returned the extra "
+                      "data — vs. accepting the request and ignoring the flag."))
 
     params = data.get("parameters")
     ssml = params.get("tts_ssml") if isinstance(params, dict) else None
@@ -2845,7 +2953,10 @@ def _p0_rollup(data: dict) -> str:
     if fsub or isinstance(ssml, dict):
         tiles.append((str(no_effect), "accepted · no effect",
                       "set by client, ignored by gateway" if no_effect else "no honor-layer gaps",
-                      "warn" if no_effect else "ok"))
+                      "warn" if no_effect else "ok",
+                      "Fields the client set that the gateway accepted without error but "
+                      "that changed nothing — e.g. n-best returned 1 alternative; SSML "
+                      "<break> didn't lengthen audio. A 'set-but-ignored' finding."))
 
     smoke = data.get("smoke_tests")
     ssub = [v for v in smoke.values() if isinstance(v, dict)] if isinstance(smoke, dict) else []
@@ -2854,53 +2965,77 @@ def _p0_rollup(data: dict) -> str:
         kind = "ok" if spass == len(ssub) else "warn"
         sub = ("end-to-end calls succeed" if spass == len(ssub)
                else f"{len(ssub) - spass} failing · REST n/a")
-        tiles.append((f"{spass}/{len(ssub)}", "smoke tests pass", sub, kind))
+        tiles.append((f"{spass}/{len(ssub)}", "smoke tests pass", sub, kind,
+                      "Minimal end-to-end jobs (short & long transcription, synthesis) "
+                      "that completed successfully."))
 
     if not tiles:
         return ""
     kmap = {"ok": "good", "warn": "warn", "bad": "bad"}
     out = []
-    for big, lab, sub, kind in tiles:
+    for big, lab, sub, kind, tip in tiles:
         out.append(f'<div class="ri {kmap.get(kind, "good")}">'
                    f'<div class="n"><i class="p0dot {kind}"></i>{esc(big)}</div>'
-                   f'<div class="l">{esc(lab)}</div>'
+                   f'<div class="l">{esc(lab)}{_info(tip)}</div>'
                    f'<div class="l sub">{esc(sub)}</div></div>')
     return f'<div class="p0roll">{"".join(out)}</div>'
+
+
+def _p0_render_tile(data: dict, tid: str):
+    """Build one tile from its registry spec, or None if its source is absent/empty."""
+    spec = _P0_TILES[tid]
+    if spec.get("multi"):
+        if not any(isinstance(data.get(s), dict) for s in spec.get("srcs", [])):
+            return None
+        rows_html, tally = _P0_TILE_BUILD[tid](data)
+        return _p0_tile(spec, rows_html, tally) if rows_html else None
+    r = data.get(spec["src"])
+    if not isinstance(r, dict):
+        return None
+    if r.get("error"):
+        body = (_p0_line("status", badge("error", "fail"))
+                + _p0_line("detail", esc(str(r.get("error")))[:200], col=True))
+        return _p0_tile(spec, body, _tally(bad=1))
+    rows_html, tally = _P0_TILE_BUILD[tid](r)
+    if not rows_html:
+        return None  # e.g. the parameters sub-phase has no data for this half
+    return _p0_tile(spec, rows_html, tally)
 
 
 def render_phase0(data: dict) -> str:
     if not data:
         return notice("Phase 0 discovery.json not found in the selected run.")
-    titles = dict(_P0_SUBPHASES)
-    order = [n for n, _ in _P0_SUBPHASES]
-    names = sorted(data.keys(),
-                   key=lambda n: order.index(n) if n in order else len(order))
-    tiles = []
-    for name in names:
-        if name == "cold_start":
-            continue
-        r = data[name]
-        title = titles.get(name, name.replace("_", " ").capitalize())
-        if not isinstance(r, dict):
-            tiles.append(_p0_tile(name, title, _p0_line("value", _p0_mono(r)), _tally(ok=1)))
-            continue
-        if r.get("error"):
-            body = (_p0_line("status", badge("error", "fail"))
-                    + _p0_line("detail", esc(str(r.get("error")))[:200], col=True))
-            tiles.append(_p0_tile(name, title, body, _tally(bad=1)))
-            continue
-        builder = _P0_BUILDERS.get(name, _b_fallback)
-        rows_html, tally = builder(r)
-        if not rows_html:
-            rows_html = _p0_line("status", badge("ok", "pass"))
-        tiles.append(_p0_tile(name, title, rows_html, tally))
 
     legend = ('<div class="p0legend">'
               '<span><i class="p0dot ok"></i> honored — field returns populated</span>'
               '<span><i class="p0dot warn"></i> accepted · no effect — set but ignored</span>'
               '<span><i class="p0dot bad"></i> unsupported / failed</span></div>')
-    return (f'<div class="p0wrap">{_p0_rollup(data)}{legend}'
-            f'<div class="p0grid">{"".join(tiles)}</div></div>')
+
+    sections = []
+    for sec_title, sec_tip, ids in _P0_SECTIONS:
+        tiles = [t for t in (_p0_render_tile(data, tid) for tid in ids) if t]
+        if not tiles:
+            continue
+        head = (f'<div class="p0sechead"><h4>{esc(sec_title)}</h4>{_info(sec_tip)}'
+                f'<span class="cnt">{len(tiles)} '
+                f'{"check" if len(tiles) == 1 else "checks"}</span></div>')
+        sections.append(f'<section class="p0sec">{head}'
+                        f'<div class="p0grid">{"".join(tiles)}</div></section>')
+
+    # Any discovery sub-phase not mapped to a tile — render it rather than drop it.
+    leftover = [k for k in data if k not in _P0_COVERED and isinstance(data[k], dict)]
+    if leftover:
+        extra = []
+        for name in leftover:
+            spec = {"title": name.replace("_", " ").capitalize(), "icon": "", "tip": ""}
+            rows_html, tally = _b_fallback(data[name])
+            extra.append(_p0_tile(spec, rows_html or _p0_line("status", badge("ok", "pass")),
+                                  tally))
+        sections.append('<section class="p0sec"><div class="p0sechead">'
+                        '<h4>Other probes</h4></div>'
+                        f'<div class="p0grid">{"".join(extra)}</div></section>')
+
+    return f'<div class="p0wrap">{_p0_rollup(data)}{legend}{"".join(sections)}</div>'
 
 
 def chip(rows_present: bool, na: bool = False) -> str:
@@ -2999,7 +3134,7 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
     exec_cards = (
         '<div class="cards">'
         + card(clean_wer, "STT clean WER (LibriSpeech)", "pass")
-        + card(f"{joule_ok}/{len(joule) or '—'}", "SAP Joule languages transcribe",
+        + card(f"{joule_ok}/{len(joule) or '—'}", "Joule languages transcribe",
                "pass" if joule and joule_ok == len(joule) else "warn")
         + card(f"{ok}/{len(matrix) or '—'}", "model languages transcribe", "")
         + card(utmos, "TTS naturalness (UTMOS, en)", "pass")

@@ -860,68 +860,115 @@ TEST_META.update({
 
 CSS = """
 :root{
-  --surface:#fcfcfb; --plane:#f9f9f7; --card:#ffffff;
+  --font-sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --headerh:58px;
+  --surface:#fbfbf9; --plane:#f4f4f1; --card:#ffffff;
   --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
   --grid:#e1e0d9; --line:rgba(11,11,11,.10); --axis:#c3c2b7;
   --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
   --goodtext:#006300;
   --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
   --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948;
-  --accent:#2a78d6; --accent-ink:#1c5cab;
+  --accent:#2a78d6; --accent-ink:#1c5cab; --accent-weak:rgba(42,120,214,.09);
+  --ring:rgba(42,120,214,.45);
   --shadow:0 1px 2px rgba(11,11,11,.04),0 2px 8px rgba(11,11,11,.05);
+  --shadow-sm:0 1px 2px rgba(11,11,11,.05);
+  --shadow-md:0 2px 4px rgba(11,11,11,.05),0 8px 24px rgba(11,11,11,.08);
 }
 @media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){
-  --surface:#1a1a19; --plane:#0d0d0d; --card:#201f1e;
+  --surface:#232322; --plane:#0d0d0d; --card:#1c1b1a;
   --ink:#f0efec; --ink2:#c3c2b7; --muted:#898781;
-  --grid:#2c2c2a; --line:rgba(255,255,255,.10); --axis:#383835;
+  --grid:#2c2c2a; --line:rgba(255,255,255,.12); --axis:#383835;
   --goodtext:#0ca30c;
   --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
   --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
-  --accent:#3987e5; --accent-ink:#86b6ef;
+  --accent:#3987e5; --accent-ink:#86b6ef; --accent-weak:rgba(57,135,229,.16);
+  --ring:rgba(134,182,239,.55);
   --shadow:0 1px 2px rgba(0,0,0,.3),0 2px 10px rgba(0,0,0,.35);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.35);
+  --shadow-md:0 2px 6px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.5);
 }}
 :root[data-theme="dark"]{
-  --surface:#1a1a19; --plane:#0d0d0d; --card:#201f1e;
+  --surface:#232322; --plane:#0d0d0d; --card:#1c1b1a;
   --ink:#f0efec; --ink2:#c3c2b7; --muted:#898781;
-  --grid:#2c2c2a; --line:rgba(255,255,255,.10); --axis:#383835;
+  --grid:#2c2c2a; --line:rgba(255,255,255,.12); --axis:#383835;
   --goodtext:#0ca30c;
   --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
   --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
-  --accent:#3987e5; --accent-ink:#86b6ef;
+  --accent:#3987e5; --accent-ink:#86b6ef; --accent-weak:rgba(57,135,229,.16);
+  --ring:rgba(134,182,239,.55);
   --shadow:0 1px 2px rgba(0,0,0,.3),0 2px 10px rgba(0,0,0,.35);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.35);
+  --shadow-md:0 2px 6px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.5);
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);
+body{font:15px/1.6 var(--font-sans);color:var(--ink);
   margin:0;background:var(--plane);-webkit-font-smoothing:antialiased}
 a{color:var(--accent-ink)}
-header.top{background:var(--card);border-bottom:1px solid var(--line);
-  padding:22px 32px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
-header.top h1{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
+:focus-visible{outline:2px solid var(--ring);outline-offset:2px;border-radius:4px}
+*:focus:not(:focus-visible){outline:none}
+header.top{position:sticky;top:0;z-index:40;background:var(--card);
+  border-bottom:1px solid var(--line);min-height:var(--headerh);
+  padding:10px 24px;display:flex;align-items:center;gap:14px;
+  box-shadow:var(--shadow-sm)}
+header.top .brand{margin:0;font-size:15.5px;font-weight:700;letter-spacing:-.01em;
+  display:flex;align-items:center;gap:9px;color:var(--ink)}
+header.top .brand .dot{width:9px;height:9px;border-radius:50%;flex:none;
+  background:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
 header.top .meta{color:var(--muted);font-size:12.5px;line-height:1.5}
 header.top .spacer{flex:1}
 .hbtn{font:inherit;font-size:13px;font-weight:600;cursor:pointer;
   border:1px solid var(--line);background:var(--surface);color:var(--ink);
-  padding:8px 14px;border-radius:9px;text-decoration:none;display:inline-flex;
-  align-items:center;gap:7px}
-.hbtn:hover{border-color:var(--accent)}
+  padding:8px 13px;border-radius:9px;text-decoration:none;display:inline-flex;
+  align-items:center;gap:7px;min-height:38px}
+.hbtn svg{width:16px;height:16px;flex:none}
+.hbtn:hover{border-color:var(--accent);color:var(--accent-ink)}
+.themeBtn .icon-sun{display:none}
+[data-theme="dark"] .themeBtn .icon-sun{display:inline}
+[data-theme="dark"] .themeBtn .icon-moon{display:none}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .themeBtn .icon-sun{display:inline}
+  :root:not([data-theme="light"]) .themeBtn .icon-moon{display:none}
+}
+.hamburger{display:none;align-items:center;justify-content:center;
+  width:42px;height:42px;padding:0;border:1px solid var(--line);border-radius:9px;
+  background:var(--surface);color:var(--ink);cursor:pointer}
+.hamburger svg{width:20px;height:20px}
+.hamburger:hover{border-color:var(--accent);color:var(--accent-ink)}
 .layout{display:flex;align-items:flex-start;max-width:1320px;margin:0 auto}
-nav.side{position:sticky;top:0;align-self:flex-start;width:264px;flex:none;
-  height:100vh;overflow-y:auto;padding:22px 14px 40px;border-right:1px solid var(--line)}
-nav.side .grp{font-size:11px;font-weight:700;text-transform:uppercase;
-  letter-spacing:.06em;color:var(--muted);margin:18px 10px 6px}
+nav.side{position:sticky;top:var(--headerh);align-self:flex-start;width:264px;flex:none;
+  height:calc(100vh - var(--headerh));overflow-y:auto;padding:20px 14px 40px;
+  border-right:1px solid var(--line)}
+nav.side .navclose{display:none}
+nav.side .grp{font-size:10.5px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--muted);margin:18px 10px 6px;
+  padding-bottom:6px;border-bottom:1px solid var(--line)}
 nav.side a{display:block;color:var(--ink2);text-decoration:none;font-size:13px;
-  padding:6px 10px;border-radius:7px;border-left:2px solid transparent}
+  padding:7px 11px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .12s,color .12s}
 nav.side a:hover{background:var(--surface);color:var(--ink)}
 nav.side a.active{color:var(--accent-ink);border-left-color:var(--accent);
-  background:var(--surface);font-weight:600}
+  background:var(--accent-weak);font-weight:600}
+.navbackdrop{display:none}
 main{flex:1;min-width:0;padding:28px 40px 100px;max-width:980px}
 .bandhead{margin:36px 0 10px;padding-bottom:10px;border-bottom:2px solid var(--accent)}
 .bandhead:first-child{margin-top:4px}
 .bandhead h2{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}
 .bandhead p{margin:6px 0 0;color:var(--ink2);font-size:14px;max-width:70ch}
 section.card{background:var(--card);border:1px solid var(--line);border-radius:14px;
-  padding:22px 24px;margin:0 0 22px;box-shadow:var(--shadow);scroll-margin-top:16px}
+  padding:22px 24px;margin:0 0 22px;box-shadow:var(--shadow);
+  scroll-margin-top:calc(var(--headerh) + 14px)}
+section.card.hero{padding:26px 28px 24px;margin-top:18px;
+  background:linear-gradient(180deg,var(--accent-weak),transparent 120px),var(--card);
+  box-shadow:var(--shadow-md)}
+.hero .eyebrow{margin:0 0 10px;font-family:var(--font-mono);font-size:11.5px;
+  font-weight:600;letter-spacing:.01em;color:var(--muted);line-height:1.7}
+.hero .eyebrow b{color:var(--ink2);font-weight:700}
+.hero .herotitle{margin:0 0 8px;font-size:30px;font-weight:700;letter-spacing:-.025em;
+  line-height:1.1}
+.hero .summ{margin-top:0}
 section.card>h3{margin:0 0 4px;font-size:17px;font-weight:700;display:flex;
   align-items:center;gap:10px;flex-wrap:wrap}
 .summ{color:var(--ink2);font-size:14.5px;margin:4px 0 14px;max-width:72ch}
@@ -954,15 +1001,15 @@ details.dd .ddnote b{color:var(--ink)}
   border:1px solid var(--line);border-radius:999px;overflow:hidden;
   background:var(--surface)}
 .vtoggle button{appearance:none;-webkit-appearance:none;border:0;background:transparent;
-  cursor:pointer;font:600 11.5px system-ui,-apple-system,'Segoe UI',sans-serif;
+  cursor:pointer;font:600 11.5px var(--font-sans);
   color:var(--ink2);padding:5px 14px;letter-spacing:.02em;line-height:1.4}
 .vtoggle button.active{background:var(--accent);color:#fff}
 .vtoggle button:not(.active):hover{color:var(--ink)}
 .views .view-table{display:none}
 .views[data-view=table] .view-chart{display:none}
-.views[data-view=table] .view-table{display:block}
+.views[data-view=table] .view-table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .heat{display:grid;gap:3px;margin:10px 0 6px;overflow-x:auto;
-  font:600 11.5px system-ui,-apple-system,'Segoe UI',sans-serif}
+  font:600 11.5px var(--font-mono);font-variant-numeric:tabular-nums}
 .heat .hcell{padding:8px 9px;border-radius:5px;text-align:center;white-space:nowrap;
   min-width:52px}
 .heat .hhead{background:transparent;color:var(--muted);font-weight:700;
@@ -979,13 +1026,16 @@ th,td{border-bottom:1px solid var(--grid);padding:7px 10px;text-align:left}
 th{color:var(--muted);font-weight:600;font-size:11.5px;text-transform:uppercase;
   letter-spacing:.03em;border-bottom:1px solid var(--axis)}
 tbody tr:hover td{background:var(--surface)}
-.cards{display:flex;flex-wrap:wrap;gap:12px;margin:8px 0 14px}
-.stat{flex:1;min-width:140px;background:var(--surface);border:1px solid var(--line);
-  border-radius:11px;padding:14px 16px}
-.stat .big{font-size:26px;font-weight:800;letter-spacing:-.01em}
-.stat .lbl{color:var(--muted);font-size:12px;margin-top:3px;line-height:1.35}
-.stat.pass .big{color:var(--goodtext)} .stat.fail .big{color:var(--crit)}
-.stat.warn .big{color:var(--serious)}
+.cards{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0 4px}
+.stat{flex:1;min-width:150px;background:var(--card);border:1px solid var(--line);
+  border-left:3px solid var(--accent);border-radius:11px;padding:14px 16px;
+  box-shadow:var(--shadow-sm)}
+.stat .big{font-family:var(--font-mono);font-size:27px;font-weight:700;
+  letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat .lbl{color:var(--muted);font-size:12px;margin-top:5px;line-height:1.35}
+.stat.pass{border-left-color:var(--good)} .stat.pass .big{color:var(--goodtext)}
+.stat.fail{border-left-color:var(--crit)} .stat.fail .big{color:var(--crit)}
+.stat.warn{border-left-color:var(--serious)} .stat.warn .big{color:var(--serious)}
 .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;
   border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.02em}
 .badge::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
@@ -1005,12 +1055,38 @@ code{background:var(--surface);border:1px solid var(--line);padding:1px 5px;
 footer{color:var(--muted);font-size:12px;text-align:center;padding:40px 20px;
   border-top:1px solid var(--line);margin-top:30px}
 @media (max-width:900px){
-  .layout{flex-direction:column}
-  nav.side{position:static;width:100%;height:auto;border-right:none;
-    border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:2px}
-  nav.side .grp{width:100%;margin:8px 10px 2px}
-  nav.side a{border-left:none;border-bottom:2px solid transparent}
+  .hamburger{display:inline-flex}
+  nav.side{position:fixed;top:0;left:0;z-index:60;width:300px;max-width:84vw;
+    height:100vh;background:var(--card);border-right:1px solid var(--line);
+    box-shadow:var(--shadow-md);padding:18px 16px 40px;
+    transform:translateX(-100%);transition:transform .22s ease;
+    overscroll-behavior:contain}
+  nav.side.open{transform:translateX(0)}
+  nav.side .navclose{display:inline-flex;align-items:center;justify-content:center;
+    position:absolute;top:12px;right:12px;width:40px;height:40px;padding:0;
+    border:1px solid var(--line);border-radius:9px;background:var(--surface);
+    color:var(--ink);cursor:pointer}
+  nav.side .navclose svg{width:18px;height:18px}
+  nav.side .grp:first-of-type{margin-top:36px}
+  .navbackdrop.show{display:block;position:fixed;inset:0;z-index:55;
+    background:rgba(0,0,0,.45);backdrop-filter:blur(1px)}
+  body.navopen{overflow:hidden}
   main{padding:20px 18px 80px;max-width:100%}
+  header.top{padding:8px 16px}
+  .hero .herotitle{font-size:24px}
+  section.card{padding:18px 17px}
+  section.card table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  header.top .hbtn span{display:none}
+  header.top .hbtn{width:42px;height:42px;min-height:42px;padding:0;justify-content:center}
+  header.top .hbtn svg{width:17px;height:17px}
+}
+@media (max-width:560px){
+  header.top .brand{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  nav.side{transition:none}
+  nav.side a{transition:none}
 }
 """
 
@@ -2263,8 +2339,13 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
                             chip(bool(read_json(run_dir / "phase0" / "discovery.json"))),
                             render_phase0(read_json(run_dir / "phase0" / "discovery.json")))
 
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
     summary_card = (
-        '<section class="card" id="summary"><h3>Executive Summary</h3>'
+        '<section class="card hero" id="summary">'
+        f'<p class="eyebrow"><b>STT</b> {esc(model)} &nbsp;·&nbsp; '
+        f'<b>TTS</b> {esc(tts_model)}<br>{esc(endpoint)} &nbsp;·&nbsp; '
+        f'run {esc(run_dir.name)} &nbsp;·&nbsp; generated {esc(now)}</p>'
+        '<h2 class="herotitle">Executive Summary</h2>'
         '<p class="summ">One report covering Phase 0 discovery, STT tests 1.1–1.13 '
         '(including the full 34-language multilingual matrix) and TTS tests 2.1–2.9. '
         'All metrics are computed client-side. Every test leads with a plain-language '
@@ -2283,7 +2364,9 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
                        if "—" in t else f'<a href="#{a}">{esc(t)}</a>'
                        for a, _, t in items)
     nav = (
-        '<nav class="side" aria-label="Report sections">'
+        '<div class="navbackdrop" id="navBackdrop"></div>'
+        '<nav class="side" id="sidenav" aria-label="Report sections">'
+        '<button class="navclose" id="navClose" type="button" aria-label="Close navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg></button>'
         '<a href="#summary">Executive Summary</a>'
         '<div class="grp">Speech-to-Text · 13 tests</div>'
         + nav_links(STT_TESTS)
@@ -2307,26 +2390,28 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
                    '<p>Pre-flight checks and an honest statement of what is out of scope.</p></div>'
                  + phase0_card + gaps_card)
 
-    dual_btn = (f'<a class="hbtn" href="{esc(dual_run_link)}">📊 Dual-run comparison report</a>'
+    dual_btn = (f'<a class="hbtn" href="{esc(dual_run_link)}" aria-label="Dual-run comparison report">'
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>'
+                '<span>Dual-run comparison</span></a>'
                 if dual_run_link else "")
     specs_json = json.dumps(_CHARTS)
-    now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     doc = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Speech Model Evaluation — Full Report</title>
 <script>(function(){{try{{var t=localStorage.getItem('report-theme');
 if(t)document.documentElement.setAttribute('data-theme',t);}}catch(e){{}}}})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap">
 <style>{CSS}</style></head>
 <body>
 <header class="top">
-<div><h1>Speech Model Evaluation</h1>
-<div class="meta"><b>STT</b> · {esc(model)} &nbsp;·&nbsp; <b>TTS</b> · {esc(tts_model)}<br>
-{esc(endpoint)} &nbsp;·&nbsp; Run <code>{esc(run_dir.name)}</code> &nbsp;·&nbsp; generated {esc(now)}</div></div>
+<button class="hamburger" id="navToggle" type="button" aria-label="Open navigation" aria-controls="sidenav" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+<p class="brand"><span class="dot" aria-hidden="true"></span>Speech Model Evaluation</p>
 <div class="spacer"></div>
 {dual_btn}
-<button class="hbtn" id="themeBtn" type="button" aria-label="Toggle dark mode">
-<span id="themeIcon">🌙</span><span id="themeTxt">Dark</span></button>
+<button class="hbtn themeBtn" id="themeBtn" type="button" aria-label="Toggle dark mode"><svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg><span id="themeTxt">Dark</span></button>
 </header>
 <div class="layout">{nav}<main>{main_html}</main></div>
 <footer>Generated by eval/report/generate_full_report.py — stdlib only, no fabricated data. Charts by Chart.js.</footer>
@@ -2378,7 +2463,7 @@ function toggleView(btn,mode){{
 }}
 function buildCharts(){{
   CHARTS.forEach(c=>c.destroy());CHARTS=[];
-  Chart.defaults.font.family="system-ui,-apple-system,'Segoe UI',sans-serif";
+  Chart.defaults.font.family="'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif";
   Chart.defaults.color=cssVar('--ink2');
   Chart.defaults.borderColor=cssVar('--grid');
   Chart.defaults.plugins.legend.labels.boxWidth=12;
@@ -2395,16 +2480,14 @@ function setTheme(t){{
   document.documentElement.setAttribute('data-theme',t);
   try{{localStorage.setItem('report-theme',t);}}catch(e){{}}
   const dark=t==='dark';
-  document.getElementById('themeIcon').textContent=dark?'☀️':'🌙';
-  document.getElementById('themeTxt').textContent=dark?'Light':'Dark';
+  var tt=document.getElementById('themeTxt');if(tt)tt.textContent=dark?'Light':'Dark';
   buildCharts();
 }}
 (function(){{
   const cur=document.documentElement.getAttribute('data-theme')||
     (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
   const dark=cur==='dark';
-  document.getElementById('themeIcon').textContent=dark?'☀️':'🌙';
-  document.getElementById('themeTxt').textContent=dark?'Light':'Dark';
+  var tt0=document.getElementById('themeTxt');if(tt0)tt0.textContent=dark?'Light':'Dark';
   document.getElementById('themeBtn').addEventListener('click',()=>{{
     const now=(document.documentElement.getAttribute('data-theme')==='dark')?'light':'dark';
     setTheme(now);
@@ -2420,6 +2503,30 @@ function setTheme(t){{
     }}}});
   }},{{rootMargin:'-20% 0px -70% 0px'}});
   document.querySelectorAll('section.card[id]').forEach(s=>obs.observe(s));
+  // mobile nav drawer
+  const nav=document.getElementById('sidenav');
+  const navToggle=document.getElementById('navToggle');
+  const navBackdrop=document.getElementById('navBackdrop');
+  const navClose=document.getElementById('navClose');
+  let lastFocus=null;
+  function openNav(){{
+    lastFocus=document.activeElement;
+    nav.classList.add('open');navBackdrop.classList.add('show');
+    document.body.classList.add('navopen');
+    navToggle.setAttribute('aria-expanded','true');
+    if(navClose)navClose.focus();
+  }}
+  function closeNav(){{
+    nav.classList.remove('open');navBackdrop.classList.remove('show');
+    document.body.classList.remove('navopen');
+    navToggle.setAttribute('aria-expanded','false');
+    if(lastFocus&&lastFocus.focus)lastFocus.focus();
+  }}
+  if(navToggle)navToggle.addEventListener('click',openNav);
+  if(navClose)navClose.addEventListener('click',closeNav);
+  if(navBackdrop)navBackdrop.addEventListener('click',closeNav);
+  links.forEach(a=>a.addEventListener('click',()=>{{if(nav.classList.contains('open'))closeNav();}}));
+  document.addEventListener('keydown',e=>{{if(e.key==='Escape'&&nav.classList.contains('open'))closeNav();}});
 }})();
 </script>
 </body></html>"""

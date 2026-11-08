@@ -985,17 +985,49 @@ TEST_META.update({
     "phase0": {
         "summary": "Discovery — connectivity, schema and parameter checks run "
                    "before the scored suite.",
-        "what": "A pre-flight that confirms the endpoint is reachable, the "
-                "request/response schemas match, parameters behave, and smoke "
-                "tests pass.",
-        "how": "Run before any scored test, discovery confirms the deployment is "
-               "usable and records what it found. Sub-checks probe connectivity, "
-               "the STT / streaming / TTS request-response schemas, parameter "
-               "behaviour, a handful of smoke syntheses and transcriptions, plus "
-               "the language-acceptance summary. Each sub-phase writes to "
-               "phase0/discovery.json "
-               "immediately, so even a crash mid-run leaves a readable record of "
-               "everything verified so far.",
+        "what": "A pre-flight, go/no-go health check that runs before any scored "
+                "test. It confirms the gateway is reachable, the STT and TTS "
+                "request/response schemas are what the client expects, parameters "
+                "behave, and real synth/transcribe round-trips succeed. Nothing "
+                "here is scored — it decides whether the rest of the suite can run "
+                "at all, and records exactly what the deployment supports.",
+        "how": "Discovery runs as a sequence of isolated sub-checks, each wrapped "
+               "so one failure can't abort the others. Every sub-check targets one "
+               "concern:",
+        "steps": [
+            ("Connectivity",
+             "Opens the gRPC channel (and REST where available) and times a "
+             "round-trip, so a dead or mis-authenticated endpoint fails here "
+             "rather than 40 tests later."),
+            ("STT schema",
+             "Transcribes one known clip and checks the response carries the "
+             "fields the client relies on — transcript, confidence, and per-word "
+             "timings."),
+            ("Streaming schema",
+             "Runs the same clip through StreamingRecognize and confirms partial "
+             "results and a time-to-first-word arrive."),
+            ("TTS schema",
+             "Synthesises one short utterance and checks audio comes back with the "
+             "expected sample rate and streaming first-byte timing."),
+            ("Parameters",
+             "Probes which request fields the gateway actually honours — accepted "
+             "sample rates, and whether SSML changes the audio or is silently "
+             "ignored."),
+            ("STT features",
+             "A fast accept/honour snapshot for the serving-layer flags (word "
+             "timestamps, n-best, word boosting, profanity filter, diarization); "
+             "tests 1.14–1.18 measure these in depth."),
+            ("Smoke tests",
+             "A handful of end-to-end synth-and-transcribe round-trips to catch "
+             "gross breakage before scoring begins."),
+            ("Language acceptance",
+             "Summarises the full STT language matrix — which of the advertised "
+             "locales return usable text."),
+        ],
+        "note": "Each sub-check writes its result to phase0/discovery.json the "
+                "moment it finishes, so even a crash mid-run leaves a readable "
+                "record of everything verified up to that point. The cold-start "
+                "probe is intentionally skipped on a warm deployment.",
         "code": [
             _code("discovery.py — _run_subphase() (runs + persists each check)",
                   "eval/phase0/discovery.py", 361),
@@ -1193,11 +1225,20 @@ details.dd .dslist a,.dslist .dsflat{font-size:12.5px;background:var(--card);
 .dslist.code a{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px}
 .mdef{font-size:12.5px;color:var(--ink2);margin:2px 0}
 .mdef b{color:var(--ink)}
+details.dd .ddsteps{margin:4px 0 10px;display:grid;gap:8px}
+details.dd .ddsteps .mdef{margin:0;padding-left:13px;font-size:13px;line-height:1.5;
+  border-left:2px solid var(--accent-weak)}
+details.dd .ddsteps .mdef b{font-weight:600}
 details.dd .ddnote{font-size:13px;color:var(--ink2);background:var(--surface);
   border:1px solid var(--line);border-left:3px solid var(--accent);
   border-radius:6px;padding:10px 13px;margin:2px 0 8px}
 details.dd .ddnote b{color:var(--ink)}
 .chartbox{position:relative;margin:4px 0 16px;width:100%}
+.dblegend{display:flex;gap:20px;flex-wrap:wrap;margin:-6px 0 14px;
+  font-size:12.5px;color:var(--ink2)}
+.dbl{display:inline-flex;align-items:center;gap:7px}
+.dbdot{width:11px;height:11px;border-radius:50%;
+  box-shadow:0 0 0 1.5px var(--card)}
 .vtoggle{margin-left:auto;display:inline-flex;align-self:center;
   border:1px solid var(--line);border-radius:999px;overflow:hidden;
   background:var(--surface)}
@@ -1407,6 +1448,12 @@ def deepdive(meta: dict) -> str:
         parts.append(f'<h4>What it measures</h4><p>{esc(meta["what"])}</p>')
     if meta.get("how"):
         parts.append(f'<h4>How the code does it</h4><p>{esc(meta["how"])}</p>')
+    steps = meta.get("steps") or []
+    if steps:
+        parts.append('<h4>What each sub-check does</h4><div class="ddsteps">')
+        for term, desc in steps:
+            parts.append(f'<p class="mdef"><b>{esc(term)}</b> — {esc(desc)}</p>')
+        parts.append("</div>")
     ds = meta.get("datasets") or []
     if ds:
         chips = []
@@ -1576,6 +1623,40 @@ def scatter(cid, series, *, x_title="", y_title="", height=340):
                        "y": dict({"beginAtZero": True},
                                  **(_axis_titles("", y_title).get("y", {})))}}
     return add_chart(cid, "scatter", {"datasets": datasets}, opts, height)
+
+
+def dumbbell(cid, labels, ours, card, *, x_title="", ours_label="Ours",
+             card_label="Reference", height=340):
+    """Dumbbell (connected-dot) plot: one row per label, a dot for our score and
+    — where a reference figure exists — a second dot joined by a connector, so the
+    per-row *gap* reads at a glance while absolute positions stay visible. Rows
+    with no reference figure show a single dot.
+
+    `ours`/`card` are parallel lists of numbers (None allowed). The connector and
+    dots are painted by the client-side 'dumbbell' plugin; we emit transparent
+    floating bars ([lo, hi]) only so the category axis and autoscale come for free.
+    The dataset carries side-channel `_ours`/`_card` arrays the plugin reads."""
+    if not labels:
+        return ""
+    data = []
+    for o, c in zip(ours, card):
+        vals = [v for v in (o, c) if v is not None]
+        data.append([min(vals), max(vals)] if vals else None)
+    ds = {"label": "", "data": data, "_ours": list(ours), "_card": list(card),
+          "backgroundColor": "transparent", "borderColor": "transparent",
+          "borderWidth": 0, "maxBarThickness": 1}
+    opts = {"indexAxis": "y", "_dumbbell": True,
+            "plugins": {"legend": {"display": False}},
+            "interaction": {"mode": "nearest", "axis": "y", "intersect": False},
+            "scales": {"x": dict({"beginAtZero": True, "grace": "6%"},
+                                 **(_axis_titles(x_title).get("x", {})))}}
+    height = max(height, 60 + 30 * len(labels))
+    chart = add_chart(cid, "bar", {"labels": labels, "datasets": [ds]}, opts, height)
+    legend = ('<div class="dblegend">'
+              f'<span class="dbl"><span class="dbdot" style="background:var(--s1)"></span>{esc(ours_label)}</span>'
+              f'<span class="dbl"><span class="dbdot" style="background:var(--s4)"></span>{esc(card_label)}</span>'
+              '</div>')
+    return chart + legend
 
 
 def reliability(cid, conf, acc, height=340):
@@ -1907,8 +1988,8 @@ def render_output_quality(rows):
         tiles = ('<div class="cards">'
                  + card(pct(overall.get("caps")), "Capitalisation (overall)", "")
                  + card(pct(overall.get("num")), "Number formatting (overall)", "")
-                 + card(fnum(overall.get("period"), 2), "Period F1 (overall)", "")
-                 + card(fnum(overall.get("comma"), 2), "Comma F1 (overall)", "")
+                 + card(pct(overall.get("period")), "Period F1 (overall)", "")
+                 + card(pct(overall.get("comma")), "Comma F1 (overall)", "")
                  + "</div>")
 
     # heatmap grid
@@ -2021,18 +2102,25 @@ def render_multilingual(rows):
     # it out of the chart/table and explain why in a note below.
     greek = [r for r in rows if r.get("key") == "el"]
     rows = [r for r in rows if r.get("key") != "el"]
-    labels = [r.get("language", r.get("key", "")) for r in rows]
-    ours = [None if fval(r.get("primary_value"), 4) is None
-            else round(fval(r.get("primary_value"), 4) * 100, 2) for r in rows]
-    # Second series = NVIDIA's published card figure (None where the card has no
-    # number — Chart.js simply leaves that bar out, so our-only languages still
-    # show their single Ours bar). A direct Ours-vs-card comparison is the whole
-    # point of this test, so it becomes the default visual.
-    card_series = [NVIDIA_CARD_FLEURS.get(r.get("key")) for r in rows]
-    chart = grouped_bar(
-        "c_ml", labels,
-        [("Ours (FLEURS, 200 clips)", ours), ("NVIDIA card (FLEURS)", card_series)],
-        horizontal=True, x_title="WER / CER (%) — lower is better")
+    # Each language becomes a dumbbell row: our score and NVIDIA's published card
+    # figure as two dots joined by a connector, so the per-language *gap* — the
+    # whole point of this test — reads at a glance. Languages the card has no
+    # number for (None) render a single dot. Sorted by our score (best on top) so
+    # the chart doubles as a ranking; the connector length then shows the gap.
+    triples = []
+    for r in rows:
+        o = (None if fval(r.get("primary_value"), 4) is None
+             else round(fval(r.get("primary_value"), 4) * 100, 2))
+        c = NVIDIA_CARD_FLEURS.get(r.get("key"))
+        triples.append((r.get("language", r.get("key", "")), o, c))
+    triples.sort(key=lambda t: (t[1] is None, t[1] if t[1] is not None else 0))
+    labels = [t[0] for t in triples]
+    ours = [t[1] for t in triples]
+    card_series = [t[2] for t in triples]
+    chart = dumbbell(
+        "c_ml", labels, ours, card_series,
+        x_title="WER / CER (%) — lower is better",
+        ours_label="Ours (FLEURS, 200 clips)", card_label="NVIDIA card (FLEURS)")
     disp = []
     for r in rows:
         key = r.get("key")
@@ -2046,7 +2134,7 @@ def render_multilingual(rows):
             ("primary_value", "Our score"),
             ("card", "NVIDIA card (FLEURS)"), ("n", "N")]
     notes = notice(
-        "<b>NVIDIA card</b> figures (the second bar / the right-hand column) are the "
+        "<b>NVIDIA card</b> figures (the orange dot / the right-hand column) are the "
         "model card's FLEURS score for nemotron-3.5-asr-streaming-0.6b, auto-detect "
         "mode at the 1.12&nbsp;s chunk (the card's best operating point, matching our "
         "run). Same metric per language (WER, or CER for Japanese/Korean/Mandarin). "
@@ -3435,6 +3523,7 @@ function resolve(v){{
 const barValueLabels={{
   id:'barvaluelabels',
   afterDatasetsDraw(chart){{
+    if(chart.options._dumbbell) return;
     if(chart.config.type!=='bar') return;
     if((chart.options.indexAxis||'x')!=='y') return;
     if(chart.data.datasets.length!==1) return;
@@ -3452,6 +3541,39 @@ const barValueLabels={{
   }}
 }};
 Chart.register(barValueLabels);
+// Dumbbell: draw a connector + two dots per row from the dataset's side-channel
+// _ours/_card arrays. The bars themselves are transparent (they exist only to
+// give us the category axis + autoscale). Ours dot is drawn last so it sits on
+// top where the two overlap; rows with no reference value show a single dot.
+const dumbbellDots={{
+  id:'dumbbelldots',
+  afterDatasetsDraw(chart){{
+    if(!chart.options._dumbbell) return;
+    const meta=chart.getDatasetMeta(0);const ds=chart.data.datasets[0];
+    const xs=chart.scales.x;const {{ctx}}=chart;ctx.save();
+    const cOurs=cssVar('--s1')||'#6366f1';
+    const cCard=cssVar('--s4')||'#9a9a9a';
+    const cLine=cssVar('--line')||'#d9d7d2';
+    const cRing=cssVar('--card')||'#ffffff';
+    const dot=(x,y,fill)=>{{
+      ctx.beginPath();ctx.arc(x,y,5,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill();
+      ctx.lineWidth=1.5;ctx.strokeStyle=cRing;ctx.stroke();
+    }};
+    meta.data.forEach((el,i)=>{{
+      const o=ds._ours[i],c=ds._card[i],y=el.y;
+      const xo=(o==null)?null:xs.getPixelForValue(o);
+      const xc=(c==null)?null:xs.getPixelForValue(c);
+      if(xo!=null&&xc!=null){{
+        ctx.beginPath();ctx.moveTo(xc,y);ctx.lineTo(xo,y);
+        ctx.lineWidth=2;ctx.strokeStyle=cLine;ctx.stroke();
+      }}
+      if(xc!=null) dot(xc,y,cCard);
+      if(xo!=null) dot(xo,y,cOurs);
+    }});
+    ctx.restore();
+  }}
+}};
+Chart.register(dumbbellDots);
 function toggleView(btn,mode){{
   const card=btn.closest('.card');if(!card)return;
   const v=card.querySelector('.views');if(v)v.setAttribute('data-view',mode);
@@ -3472,6 +3594,18 @@ function buildCharts(){{
     const cfg={{type:spec.type,data:resolve(spec.data),
       options:Object.assign({{responsive:true,maintainAspectRatio:false,
         interaction:{{mode:'nearest',intersect:false}}}},resolve(spec.options))}};
+    if(spec.options&&spec.options._dumbbell){{
+      cfg.options.plugins=cfg.options.plugins||{{}};
+      cfg.options.plugins.tooltip={{displayColors:false,callbacks:{{
+        label:function(ctx){{
+          const o=ctx.dataset._ours[ctx.dataIndex],c=ctx.dataset._card[ctx.dataIndex];
+          const out=['Ours: '+(o==null?'—':o.toFixed(1))];
+          if(c!=null){{out.push('NVIDIA card: '+c.toFixed(1));
+            if(o!=null){{const g=o-c;out.push('gap: '+(g>=0?'+':'')+g.toFixed(1));}}}}
+          return out;
+        }}
+      }}}};
+    }}
     CHARTS.push(new Chart(el,cfg));
   }});
 }}

@@ -10,13 +10,13 @@ from __future__ import annotations
 
 import io
 import logging
-import tempfile
 from pathlib import Path
 
 import numpy as np
 import soundfile as sf
-from pydub import AudioSegment
 from tqdm import tqdm
+
+import riva.client
 
 from eval.config import Config
 from eval.stt.client import STTClient
@@ -26,7 +26,19 @@ logger = logging.getLogger("eval.stt.format_robustness")
 
 SAMPLE_RATES = [8000, 16000, 22050, 44100, 48000]
 BIT_DEPTHS = ["pcm_16", "pcm_32", "float32"]
-FORMATS = ["wav", "flac", "mp3", "ogg"]
+
+# Audio formats mapped to the Riva AudioEncoding the gateway decodes them as.
+# Riva's gRPC API defines exactly this set of decoders, so each row genuinely
+# exercises the gateway's audio frontend (the old path forced every format
+# through REST, which this endpoint does not expose). MP3 is NOT in Riva's
+# AudioEncoding enum at all and is handled separately as unsupported-by-API.
+FORMAT_ENCODINGS = [
+    ("pcm_s16le", riva.client.AudioEncoding.LINEAR_PCM),
+    ("flac", riva.client.AudioEncoding.FLAC),
+    ("ogg_opus", riva.client.AudioEncoding.OGGOPUS),
+    ("mulaw", riva.client.AudioEncoding.MULAW),
+    ("alaw", riva.client.AudioEncoding.ALAW),
+]
 DURATION_EXTREMES = [0.5, 5, 60, 600]
 
 
@@ -36,32 +48,28 @@ def _create_test_audio(sr: int = 16000, duration_s: float = 5.0) -> np.ndarray:
     return 0.5 * np.sin(2 * np.pi * 440 * t)
 
 
-def _convert_format(audio: np.ndarray, sr: int, fmt: str, bit_depth: str = "pcm_16") -> tuple[bytes, int]:
-    """Convert audio to specified format and return bytes + sample rate."""
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-        sf.write(tmp.name, audio, sr, subtype="PCM_16")
-        wav_path = tmp.name
+def _encode_for_riva(audio: np.ndarray, sr: int, fmt: str) -> bytes:
+    """Encode the float32 sine clip into the bytes Riva expects for ``fmt``.
 
-    seg = AudioSegment.from_wav(wav_path)
-    Path(wav_path).unlink(missing_ok=True)
-
-    with tempfile.NamedTemporaryFile(suffix=f".{fmt}", delete=False) as out_tmp:
-        if fmt == "wav":
-            seg.export(out_tmp.name, format="wav")
-        elif fmt == "flac":
-            seg.export(out_tmp.name, format="flac")
-        elif fmt == "mp3":
-            seg.export(out_tmp.name, format="mp3")
-        elif fmt == "ogg":
-            seg.export(out_tmp.name, format="ogg", codec="libvorbis")
-        else:
-            seg.export(out_tmp.name, format=fmt)
-
-        with open(out_tmp.name, "rb") as f:
-            data = f.read()
-        Path(out_tmp.name).unlink(missing_ok=True)
-
-    return data, sr
+    Uses libsndfile (soundfile) only — no ffmpeg dependency — so it runs
+    anywhere the eval runs. LINEAR_PCM is headerless int16; FLAC and OGG_OPUS
+    are self-describing containers; MULAW/ALAW are raw 8-bit companded streams.
+    """
+    if fmt == "pcm_s16le":
+        return (audio * 32768).astype(np.int16).tobytes()
+    buf = io.BytesIO()
+    if fmt == "flac":
+        sf.write(buf, audio, sr, format="FLAC", subtype="PCM_16")
+    elif fmt == "ogg_opus":
+        sf.write(buf, audio, sr, format="OGG", subtype="OPUS")
+    elif fmt == "mulaw":
+        sf.write(buf, audio, sr, format="RAW", subtype="ULAW")
+    elif fmt == "alaw":
+        sf.write(buf, audio, sr, format="RAW", subtype="ALAW")
+    else:
+        raise ValueError(f"no soundfile encoder mapped for format {fmt!r}")
+    buf.seek(0)
+    return buf.read()
 
 
 def run(config: Config) -> dict:
@@ -93,20 +101,36 @@ def run(config: Config) -> dict:
         summary_rows.append(record)
 
     # ---- Format test ----
-    for fmt in tqdm(FORMATS, desc="Formats"):
+    # Each format is streamed to the gRPC endpoint with its matching Riva
+    # AudioEncoding, so this measures whether the gateway's audio frontend
+    # actually decodes the container — not just whether a REST shim exists.
+    for fmt, enc in tqdm(FORMAT_ENCODINGS, desc="Formats"):
         try:
-            audio_data, sr = _convert_format(base_audio, 16000, fmt)
-            # For non-WAV formats, try REST endpoint which may accept different content types
-            result = stt_client.recognize_batch_rest(audio_data, 16000, content_type=f"audio/{fmt}")
+            audio_data = _encode_for_riva(base_audio, 16000, fmt)
+            result = stt_client.recognize_batch(audio_data, 16000, encoding=enc)
             status = "pass"
             error = None
         except Exception as e:
             status = "fail"
             error = str(e)
 
-        record = {"test": "format", "value": fmt, "status": status, "error": error}
+        record = {"test": "format", "value": fmt, "status": status,
+                  "encoding": riva.client.AudioEncoding.Name(enc),
+                  "transport": "grpc_streaming", "error": error}
         write_jsonl(jsonl_path, record)
         summary_rows.append(record)
+
+    # MP3 is not representable in Riva's AudioEncoding enum, so the gateway
+    # cannot decode it over gRPC at all. Recorded as an API limitation
+    # (unsupported) rather than a gateway failure, so it is not mistaken for a
+    # rejected-but-supported format.
+    mp3_record = {"test": "format", "value": "mp3", "status": "unsupported",
+                  "encoding": "n/a", "transport": "grpc_streaming",
+                  "error": "Riva gRPC API has no MP3 AudioEncoding; the server "
+                           "cannot decode MP3. Transcode client-side to PCM/FLAC "
+                           "first."}
+    write_jsonl(jsonl_path, mp3_record)
+    summary_rows.append(mp3_record)
 
     # ---- Channels test ----
     for channels in [1, 2]:

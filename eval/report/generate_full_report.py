@@ -259,6 +259,37 @@ TEST_META = {
                "is also transcribed in batch and the WER compared, so you can see "
                "whether streaming costs accuracy. English-only: streaming timing "
                "is a property of the serving stack, not the language.",
+        "steps": [
+            ("Time-to-first-word (TTFW)",
+             "How long after audio starts streaming until the very first word "
+             "of text comes back. This is the number a live caption or dictation "
+             "user feels as 'lag before anything appears' — our P50 is 0.97s, but "
+             "the P99 tail reaches ~2.3s on the slowest clips."),
+            ("Finalization latency",
+             "After the audio ends, how long until the result stops changing and "
+             "the transcript is declared final. It measures the tail of the "
+             "stream — the wait between 'done speaking' and 'text locked in' "
+             "(P50 ~0.17s here, very tight)."),
+            ("Partial latency",
+             "The gap between consecutive interim (partial) hypotheses while "
+             "speech is still arriving — i.e. how often the on-screen text "
+             "refreshes. Lower means smoother, more responsive live updates "
+             "(P50 ~0.06s — updates roughly 16×/second)."),
+            ("Stability rate",
+             "Of the interim words the server shows mid-stream, the fraction that "
+             "survive unchanged into the final transcript. High stability means "
+             "text doesn't flicker or rewrite itself as you speak; jitter-free "
+             "streaming scores near 1.0 (here 0.95)."),
+            ("Streaming RTF (×realtime)",
+             "Real-Time Factor for the streaming path: processing time ÷ audio "
+             "duration. At/under ~1.0 the model keeps pace with live audio; above "
+             "1.0 it falls behind. A ratio, not a latency, so it is kept off the "
+             "seconds axis and shown as its own tile."),
+            ("Batch vs stream WER",
+             "The same clips are also transcribed in one-shot batch mode and the "
+             "Word Error Rate compared. A near-zero gap (both 3.3% here) means "
+             "streaming buys responsiveness without costing accuracy."),
+        ],
         "code": [
             _code("streaming.py — run() (drive StreamingRecognize, collect timings)",
                   "eval/stt/streaming.py", 68),
@@ -481,21 +512,27 @@ TEST_META = {
         "summary": "Format robustness — whether the endpoint accepts varied "
                    "audio encodings, sample rates and channel layouts.",
         "what": "An operational check that the service tolerates the audio "
-                "formats real clients send (WAV/FLAC, 8–48 kHz, mono/stereo) "
-                "rather than only one golden format.",
+                "formats real clients send — different container/codec, sample "
+                "rate, bit depth and channel layout — rather than only one "
+                "golden format.",
         "how": "This is an operational compatibility check, not an accuracy test. "
-               "One fixed utterance is re-encoded into many combinations of "
-               "container, codec, sample rate, bit depth and channel layout (WAV "
-               "and FLAC, 8–48 kHz, mono/stereo, and so on) and submitted to the "
-               "endpoint. Each variant is recorded pass or fail along with any "
-               "error the server returned, producing a support matrix. It stays "
-               "English-only because decoding and resampling happen in the audio "
-               "frontend and don't depend on the language.",
+               "One fixed sine utterance is submitted in many variants and each is "
+               "recorded pass/fail with any server error, producing a support "
+               "matrix. Sample-rate, channel and duration variants go through the "
+               "gRPC streaming path as raw PCM. The container/codec variants are "
+               "each streamed with the matching Riva AudioEncoding — LINEAR_PCM, "
+               "FLAC, OGG_OPUS, MULAW, ALAW — so the row reflects whether the "
+               "gateway's own audio frontend decodes that codec (the set Riva's "
+               "API defines). MP3 is not in that enum, so it is reported as "
+               "unsupported-by-API, not as a gateway failure. Clips are encoded "
+               "with libsndfile (no ffmpeg dependency). English-only: decoding and "
+               "resampling happen in the audio frontend and don't depend on the "
+               "language.",
         "code": [
             _code("format_robustness.py — run() (submit each variant, pass/fail)",
-                  "eval/stt/format_robustness.py", 67),
-            _code("format_robustness.py — _convert_format() (re-encode audio)",
-                  "eval/stt/format_robustness.py", 39),
+                  "eval/stt/format_robustness.py", 75),
+            _code("format_robustness.py — _encode_for_riva() (libsndfile encode)",
+                  "eval/stt/format_robustness.py", 51),
         ],
         "datasets": [
             _ds("LibriSpeech (re-encoded variants)",
@@ -1239,6 +1276,21 @@ details.dd .ddnote b{color:var(--ink)}
 .dbl{display:inline-flex;align-items:center;gap:7px}
 .dbdot{width:11px;height:11px;border-radius:50%;
   box-shadow:0 0 0 1.5px var(--card)}
+.ftable td.fdim{font-weight:600;color:var(--ink);white-space:nowrap;vertical-align:middle}
+.ftable td{vertical-align:middle}
+.ftable td:last-child{white-space:nowrap}
+.fchips{display:flex;flex-wrap:wrap;gap:6px;padding:3px 0}
+.fchip{display:inline-flex;align-items:center;gap:5px;font:600 11.5px var(--font-mono);
+  font-variant-numeric:tabular-nums;padding:3px 9px;border-radius:999px;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink2)}
+.fchip::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--good)}
+.fchip.na{color:var(--muted)}
+.fchip.na::before{background:var(--muted)}
+.fchip.bad{color:var(--crit);border-color:var(--crit)}
+.fchip.bad::before{background:var(--crit)}
+.fnote-full{color:var(--muted);font-size:12px;margin:12px 2px 2px;line-height:1.5}
+.fnote-full code{font-family:var(--font-mono);font-size:11px;
+  background:var(--surface);padding:1px 5px;border-radius:4px}
 .vtoggle{margin-left:auto;display:inline-flex;align-self:center;
   border:1px solid var(--line);border-radius:999px;overflow:hidden;
   background:var(--surface)}
@@ -1714,15 +1766,25 @@ def render_performance(rows, conc):
     if rows:
         labels = [f'{r.get("bucket_s", "")}s' for r in rows]
         vals = [fval(r.get("rtfx_mean"), 1) for r in rows]
-        chart += bar("c_perf", labels, vals, color="@s1",
-                     x_title="Audio-duration bucket",
-                     y_title="RTFx — higher is faster")
+        # Only two duration buckets — a tall vertical panel is mostly dead space.
+        # Compact horizontal bars read left-to-right and keep the clip-length
+        # throughput trend obvious in a fraction of the height.
+        chart += bar("c_perf", labels, vals, color="@s1", horizontal=True,
+                     x_title="RTFx — higher is faster", height=150)
     if conc:
-        pts = [{"x": fval(r.get("concurrency"), 0), "y": fval(r.get("p50"), 3)}
-               for r in conc if fval(r.get("concurrency"), 0) is not None]
-        chart += lines("c_perf_conc",
-                       [{"name": "P50 latency (s)", "points": pts}],
-                       x_title="Concurrency", y_title="P50 latency (s)")
+        def _series(name, key):
+            pts = [{"x": fval(r.get("concurrency"), 0), "y": fval(r.get(key), 3)}
+                   for r in conc
+                   if fval(r.get("concurrency"), 0) is not None
+                   and fval(r.get(key), 3) is not None]
+            return {"name": name, "points": pts}
+        # P50 alone looks nearly flat; the real finding is the tail blowing up
+        # under load (P99 ~0.90s → ~2.01s at concurrency 20). Plot the spread.
+        series = [s for s in (_series("P50 (median)", "p50"),
+                              _series("P95", "p95"),
+                              _series("P99 (tail)", "p99")) if s["points"]]
+        chart += lines("c_perf_conc", series,
+                       x_title="Concurrency", y_title="Latency (s)")
     for r in rows:
         r["rtfx_mean"] = fnum(r.get("rtfx_mean"), 1)
         r["rtf_mean"] = fnum(r.get("rtf_mean"), 4)
@@ -1747,8 +1809,8 @@ def render_streaming(rows):
         return notice("No data on disk for this test in the selected run.")
     r = rows[0]
     tiles = []
-    bar_lbl, bar_val, ptbl = [], [], []
-    # True latencies (seconds) — these share the bar's seconds axis.
+    bar_lbl, p50s, p95s, p99s, ptbl = [], [], [], [], []
+    # True latencies (seconds) — these share the grouped bar's seconds axis.
     for key, lbl in [("ttfw", "Time-to-first-word"),
                      ("finalization_latency", "Finalization latency"),
                      ("partial_latency", "Partial latency")]:
@@ -1756,7 +1818,9 @@ def render_streaming(rows):
         if isinstance(d, dict):
             tiles.append(card(f"{fnum(d.get('p50'), 3)}s", f"{lbl} P50", ""))
             bar_lbl.append(lbl)
-            bar_val.append(fval(d.get("p50"), 3))
+            p50s.append(fval(d.get("p50"), 3))
+            p95s.append(fval(d.get("p95"), 3))
+            p99s.append(fval(d.get("p99"), 3))
             ptbl.append({"metric": lbl, "unit": "seconds", "p50": fnum(d.get("p50"), 3),
                          "p90": fnum(d.get("p90"), 3), "p95": fnum(d.get("p95"), 3),
                          "p99": fnum(d.get("p99"), 3)})
@@ -1773,8 +1837,15 @@ def render_streaming(rows):
     tiles.append(card(pct(r.get("batch_wer")), "Batch WER", ""))
     tiles.append(card(pct(r.get("stream_wer")), "Stream WER", ""))
     tiles_html = '<div class="cards">' + "".join(tiles) + "</div>"
-    chart = bar("c_stream", bar_lbl, bar_val, horizontal=True, color="@s1",
-                x_title="P50 latency (s) — lower is better") if bar_lbl else ""
+    # Grouped bars (P50 / P95 / P99) per latency metric. The single-P50 bar hid
+    # the tail — TTFW's P99 (~2.28s) is ~2.4× its median, the key streaming
+    # finding — and forced the value-label plugin to round sub-second times to
+    # one decimal (1.0 / 0.2 / 0.1). Grouped bars drop the labels (tooltips carry
+    # full precision) and surface the spread; tiles above still give exact P50s.
+    chart = grouped_bar("c_stream", bar_lbl,
+                        [("P50 (median)", p50s), ("P95", p95s), ("P99 (tail)", p99s)],
+                        horizontal=True,
+                        x_title="Latency (s) — lower is better") if bar_lbl else ""
     cols = [("metric", "Metric"), ("unit", "Unit"), ("p50", "P50"), ("p90", "P90"),
             ("p95", "P95"), ("p99", "P99")]
     tbl = table(ptbl, cols) if ptbl else ""
@@ -2065,12 +2136,80 @@ def render_confidence(rows):
 def render_format(rows):
     if not rows:
         return table(rows, [])
+    # Collapse the 19 per-variant rows into one row per robustness dimension:
+    # the variants become inline chips and an aggregate N/N verdict, so the
+    # whole audio-frontend capability reads at a glance instead of scrolling.
+    groups = {}
     for r in rows:
-        r["status"] = badge(r.get("status", "?"),
-                            "pass" if r.get("status") == "pass" else "fail")
-    cols = [("test", "Test"), ("value", "Value"), ("status", "Status"),
-            ("error", "Error")]
-    return table(rows, cols)
+        groups.setdefault(r.get("test", "?"), []).append(r)
+
+    def _sr(v):
+        try:
+            return f"{float(v) / 1000:g} kHz"
+        except (TypeError, ValueError):
+            return str(v)
+
+    def _dur(v):
+        try:
+            return f"{float(v):g}s"
+        except (TypeError, ValueError):
+            return str(v)
+
+    DIM = [
+        ("sample_rate", "Sample rate", _sr),
+        ("format", "Container format", None),
+        ("channels", "Channels",
+         lambda v: {"1": "mono", "2": "stereo"}.get(str(v), str(v))),
+        ("duration", "Clip duration", _dur),
+        ("edge_case", "Edge cases", lambda v: str(v).replace("_", " ")),
+    ]
+
+    body = []
+    for key, label, fmt in DIM:
+        grp = groups.get(key)
+        if not grp:
+            continue
+        chips, n_pass, n_scored, n_na = [], 0, 0, 0
+        for r in grp:
+            st = r.get("status", "?")
+            val = r.get("value", "")
+            if key == "format":
+                enc = r.get("encoding")
+                disp = enc if (enc and enc != "n/a") else str(val)
+            else:
+                disp = fmt(val) if fmt else str(val)
+            if st == "pass":
+                n_pass += 1
+                n_scored += 1
+                chips.append(f'<span class="fchip">{esc(disp)}</span>')
+            elif st == "unsupported":
+                n_na += 1
+                chips.append(f'<span class="fchip na">{esc(disp)} · n/a</span>')
+            else:
+                n_scored += 1
+                chips.append(f'<span class="fchip bad">{esc(disp)}</span>')
+        if n_scored and n_pass == n_scored:
+            verdict = badge(f"{n_pass}/{n_scored} pass", "pass")
+        elif n_pass:
+            verdict = badge(f"{n_pass}/{n_scored} pass", "warn")
+        elif n_scored:
+            verdict = badge("fail", "fail")
+        else:
+            verdict = badge("n/a", "muted")
+        body.append(f'<tr><td class="fdim">{esc(label)}</td>'
+                    f'<td><div class="fchips">{"".join(chips)}</div></td>'
+                    f'<td>{verdict}</td></tr>')
+
+    tbl = ('<table class="ftable"><thead><tr><th>Dimension</th>'
+           '<th>Variants exercised</th><th>Result</th></tr></thead>'
+           f'<tbody>{"".join(body)}</tbody></table>')
+    if any(r.get("value") == "mp3" for r in groups.get("format", [])):
+        tbl += ('<p class="fnote-full">MP3 is not in Riva\'s '
+                '<code>AudioEncoding</code> enum, so the gateway cannot decode it '
+                'over gRPC — transcode to PCM/FLAC client-side first. Every other '
+                'container decodes natively; format chips show the Riva encoding '
+                'each is streamed as.</p>')
+    return tbl
 
 
 # NVIDIA model-card FLEURS scores for nemotron-3.5-asr-streaming-0.6b, from the

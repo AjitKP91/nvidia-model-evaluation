@@ -102,9 +102,11 @@ class STTClient:
         speech_contexts: list[dict] | None = None,
         diarization: bool = False,
         max_speaker_count: int = 0,
+        encoding: int | None = None,
     ) -> dict[str, Any]:
         self._apply_token()
         lang = language_code or self.stt_cfg.language_code
+        enc = encoding if encoding is not None else riva.client.AudioEncoding.LINEAR_PCM
 
         # The AI Core gateway does not implement offline Recognize — drive the
         # streaming RPC instead and aggregate the final segments. Same return
@@ -121,10 +123,11 @@ class STTClient:
                 speech_contexts=speech_contexts,
                 diarization=diarization,
                 max_speaker_count=max_speaker_count,
+                encoding=enc,
             )
 
         config = riva.client.RecognitionConfig(
-            encoding=riva.client.AudioEncoding.LINEAR_PCM,
+            encoding=enc,
             language_code=lang,
             max_alternatives=max_alternatives,
             profanity_filter=profanity_filter,
@@ -213,15 +216,23 @@ class STTClient:
         speech_contexts: list[dict] | None = None,
         diarization: bool = False,
         max_speaker_count: int = 0,
+        encoding: int | None = None,
     ) -> dict[str, Any]:
         """Transcribe raw PCM via StreamingRecognize and aggregate finals.
 
         Drop-in replacement for recognize_batch() on endpoints where offline
         Recognize is UNIMPLEMENTED. Returns the same dict shape.
+
+        ``encoding`` selects the Riva ``AudioEncoding`` the server decodes the
+        stream as (default LINEAR_PCM — raw PCM). For a compressed/companded
+        container (FLAC, OGG_OPUS, MULAW, ALAW) pass the matching enum and feed
+        the encoded bytes as ``audio_bytes``; the byte-chunking below just slices
+        the payload for transport, which is codec-agnostic.
         """
         lang = language_code or self.stt_cfg.language_code
+        enc = encoding if encoding is not None else riva.client.AudioEncoding.LINEAR_PCM
         inner = riva.client.RecognitionConfig(
-            encoding=riva.client.AudioEncoding.LINEAR_PCM,
+            encoding=enc,
             language_code=lang,
             max_alternatives=max_alternatives,
             profanity_filter=profanity_filter,

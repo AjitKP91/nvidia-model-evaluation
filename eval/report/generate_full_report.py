@@ -1099,18 +1099,45 @@ nav.side .navclose{display:none}
 nav.side .grp{font-size:10.5px;font-weight:700;text-transform:uppercase;
   letter-spacing:.07em;color:var(--muted);margin:18px 10px 6px;
   padding-bottom:6px;border-bottom:1px solid var(--line)}
-nav.side a{display:block;color:var(--ink2);text-decoration:none;font-size:13px;
-  padding:7px 11px;border-radius:8px;border-left:2px solid transparent;
+nav.side a{display:flex;align-items:baseline;gap:8px;justify-content:space-between;
+  color:var(--ink2);text-decoration:none;font-size:13px;
+  padding:6px 11px;border-radius:8px;border-left:2px solid transparent;
   transition:background .12s,color .12s}
-nav.side a:hover{background:var(--surface);color:var(--ink)}
-nav.side a.active{color:var(--accent-ink);border-left-color:var(--accent);
-  background:var(--accent-weak);font-weight:600}
+nav.side a .nvname{color:var(--ink);line-height:1.35}
+nav.side a .nvnum{font-family:var(--font-mono);font-size:10px;color:var(--muted);
+  flex:none;letter-spacing:.02em}
+nav.side a:hover{background:var(--surface)}
+nav.side a:hover .nvname{color:var(--ink)}
+nav.side a.active{border-left-color:var(--accent);background:var(--accent-weak)}
+nav.side a.active .nvname{color:var(--accent-ink);font-weight:600}
+nav.side a.active .nvnum{color:var(--accent-ink)}
+nav.side a.navtop .nvname{font-weight:600}
+/* collapsible test groups */
+nav.side .navgrp{margin:2px 0 4px}
+nav.side .navgrp>summary{list-style:none;cursor:pointer;user-select:none;
+  display:flex;align-items:center;gap:8px;margin:6px 0 2px;padding:6px 11px;
+  border-radius:7px;font-size:12px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--muted)}
+nav.side .navgrp>summary::-webkit-details-marker{display:none}
+nav.side .navgrp>summary::before{content:"▸";font-size:13px;line-height:1;
+  color:var(--muted);transition:transform .15s}
+nav.side .navgrp[open]>summary::before{transform:rotate(90deg)}
+nav.side .navgrp>summary:hover{color:var(--ink2);background:var(--surface)}
+nav.side .navgrp .gcount{margin-left:auto;font-family:var(--font-mono);
+  font-weight:600;font-size:11px;color:var(--muted)}
+nav.side .navgrp a{padding-left:21px}
 .navbackdrop{display:none}
 main{flex:1;min-width:0;padding:28px 40px 100px;max-width:980px}
 .bandhead{margin:36px 0 10px;padding-bottom:10px;border-bottom:2px solid var(--accent)}
 .bandhead:first-child{margin-top:4px}
 .bandhead h2{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}
 .bandhead p{margin:6px 0 0;color:var(--ink2);font-size:14px;max-width:70ch}
+.subband{display:flex;align-items:center;gap:10px;margin:26px 2px 12px;
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--muted)}
+.subband .sbline{flex:1;height:1px;background:var(--line)}
+.subband .sbcount{font-family:var(--font-mono);font-weight:600;font-size:10.5px;
+  letter-spacing:.02em;color:var(--muted);text-transform:none}
 section.card{background:var(--card);border:1px solid var(--line);border-radius:14px;
   padding:22px 24px;margin:0 0 22px;box-shadow:var(--shadow);
   scroll-margin-top:calc(var(--headerh) + 14px)}
@@ -3050,38 +3077,57 @@ def chip(rows_present: bool, na: bool = False) -> str:
 
 
 # (anchor, test-id, title)
-STT_TESTS = [
-    ("t1_1", "1.1", "Test 1.1 — Clean-Speech Accuracy"),
-    ("t1_12", "1.12", "Test 1.12 — Multilingual Accuracy"),
-    ("t1_2", "1.2", "Test 1.2 — Batch Performance"),
-    ("t1_3", "1.3", "Test 1.3 — Streaming Performance"),
-    ("t1_4", "1.4", "Test 1.4 — REST vs gRPC"),
-    ("t1_5", "1.5", "Test 1.5 — Noise Robustness"),
-    ("t1_6", "1.6", "Test 1.6 — Accent Robustness"),
-    ("t1_7", "1.7", "Test 1.7 — Long-Form Audio"),
-    ("t1_8", "1.8", "Test 1.8 — Domain Vocabulary"),
-    ("t1_9", "1.9", "Test 1.9 — Output Quality"),
-    ("t1_10", "1.10", "Test 1.10 — Confidence Calibration"),
-    ("t1_11", "1.11", "Test 1.11 — Format Robustness"),
-    ("t1_13", "1.13", "Test 1.13 — Language Acceptance (34 languages)"),
-    ("t1_14", "1.14", "Test 1.14 — Word Timestamps"),
-    ("t1_15", "1.15", "Test 1.15 — N-Best Alternatives"),
-    ("t1_16", "1.16", "Test 1.16 — Word Boosting"),
-    ("t1_17", "1.17", "Test 1.17 — Profanity Filter"),
-    ("t1_18", "1.18", "Test 1.18 — Speaker Diarization"),
+STT_GROUPS = [
+    ("Accuracy", [
+        ("t1_1", "1.1", "Test 1.1 — Clean-Speech Accuracy"),
+        ("t1_12", "1.12", "Test 1.12 — Multilingual Accuracy"),
+        ("t1_8", "1.8", "Test 1.8 — Domain Vocabulary"),
+        ("t1_9", "1.9", "Test 1.9 — Output Quality"),
+    ]),
+    ("Robustness", [
+        ("t1_5", "1.5", "Test 1.5 — Noise Robustness"),
+        ("t1_6", "1.6", "Test 1.6 — Accent Robustness"),
+        ("t1_11", "1.11", "Test 1.11 — Format Robustness"),
+    ]),
+    ("Performance", [
+        ("t1_2", "1.2", "Test 1.2 — Batch Performance"),
+        ("t1_3", "1.3", "Test 1.3 — Streaming Performance"),
+        ("t1_4", "1.4", "Test 1.4 — REST vs gRPC"),
+        ("t1_7", "1.7", "Test 1.7 — Long-Form Audio"),
+    ]),
+    ("Serving features", [
+        ("t1_10", "1.10", "Test 1.10 — Confidence Calibration"),
+        ("t1_13", "1.13", "Test 1.13 — Language Acceptance (34 languages)"),
+        ("t1_14", "1.14", "Test 1.14 — Word Timestamps"),
+        ("t1_15", "1.15", "Test 1.15 — N-Best Alternatives"),
+        ("t1_16", "1.16", "Test 1.16 — Word Boosting"),
+        ("t1_17", "1.17", "Test 1.17 — Profanity Filter"),
+        ("t1_18", "1.18", "Test 1.18 — Speaker Diarization"),
+    ]),
 ]
-TTS_TESTS = [
-    ("t2_1", "2.1", "Test 2.1 — Naturalness"),
-    ("t2_2", "2.2", "Test 2.2 — Intelligibility"),
-    ("t2_3", "2.3", "Test 2.3 — Prosody"),
-    ("t2_4", "2.4", "Test 2.4 — Signal Quality"),
-    ("t2_5", "2.5", "Test 2.5 — Streaming Latency"),
-    ("t2_6", "2.6", "Test 2.6 — Throughput & Concurrency"),
-    ("t2_7", "2.7", "Test 2.7 — Edge Cases"),
-    ("t2_8", "2.8", "Test 2.8 — Long-Form Consistency"),
-    ("t2_9", "2.9", "Test 2.9 — Language Acceptance"),
-    ("t2_10", "2.10", "Test 2.10 — SSML Functional Effect"),
+TTS_GROUPS = [
+    ("Quality", [
+        ("t2_1", "2.1", "Test 2.1 — Naturalness"),
+        ("t2_2", "2.2", "Test 2.2 — Intelligibility"),
+        ("t2_3", "2.3", "Test 2.3 — Prosody"),
+        ("t2_4", "2.4", "Test 2.4 — Signal Quality"),
+    ]),
+    ("Robustness", [
+        ("t2_7", "2.7", "Test 2.7 — Edge Cases"),
+        ("t2_8", "2.8", "Test 2.8 — Long-Form Consistency"),
+    ]),
+    ("Performance", [
+        ("t2_5", "2.5", "Test 2.5 — Streaming Latency"),
+        ("t2_6", "2.6", "Test 2.6 — Throughput & Concurrency"),
+    ]),
+    ("Serving features", [
+        ("t2_9", "2.9", "Test 2.9 — Language Acceptance"),
+        ("t2_10", "2.10", "Test 2.10 — SSML Functional Effect"),
+    ]),
 ]
+# Flat lists (counts, body/nav iteration) derived so nav + page order always match.
+STT_TESTS = [t for _, items in STT_GROUPS for t in items]
+TTS_TESTS = [t for _, items in TTS_GROUPS for t in items]
 
 
 def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
@@ -3173,12 +3219,21 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
                    "1.14": wts, "1.15": nbest, "1.16": boost, "1.17": prof,
                    "1.18": diar}
 
+    def _subband(slug: str, label: str, n: int) -> str:
+        gid = slug + "-" + label.lower().replace(" ", "-")
+        unit = "test" if n == 1 else "tests"
+        return (f'<div class="subband" id="{gid}"><span>{esc(label)}</span>'
+                f'<span class="sbline"></span>'
+                f'<span class="sbcount">{n} {unit}</span></div>')
+
     stt_cards = []
-    for anchor, tid, title in STT_TESTS:
-        na = tid == "1.4"
-        c = chip(bool(stt_present.get(tid)), na=na)
-        stt_cards.append(test_card(anchor, title, TEST_META.get(tid, {}),
-                                   c, stt_bodies[tid]))
+    for label, items in STT_GROUPS:
+        stt_cards.append(_subband("stt", label, len(items)))
+        for anchor, tid, title in items:
+            na = tid == "1.4"
+            c = chip(bool(stt_present.get(tid)), na=na)
+            stt_cards.append(test_card(anchor, title, TEST_META.get(tid, {}),
+                                       c, stt_bodies[tid]))
 
     # ---- TTS cards ----
     tts_bodies = {
@@ -3197,11 +3252,13 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
                    "2.6": tconc, "2.7": edge, "2.8": tlong, "2.9": tacc,
                    "2.10": ssml}
     tts_cards = []
-    for anchor, tid, title in TTS_TESTS:
-        na = tid == "2.4"
-        c = chip(bool(tts_present.get(tid)), na=na)
-        tts_cards.append(test_card(anchor, title, TEST_META.get(tid, {}),
-                                   c, tts_bodies[tid]))
+    for label, items in TTS_GROUPS:
+        tts_cards.append(_subband("tts", label, len(items)))
+        for anchor, tid, title in items:
+            na = tid == "2.4"
+            c = chip(bool(tts_present.get(tid)), na=na)
+            tts_cards.append(test_card(anchor, title, TEST_META.get(tid, {}),
+                                       c, tts_bodies[tid]))
 
     phase0_card = test_card("phase0", "Phase 0 — Discovery",
                             TEST_META.get("phase0", {}),
@@ -3296,21 +3353,29 @@ def build(run_dir: Path, acceptance_csv: Path, out: Path, model: str,
         + hero_meta + exec_cards + "</section>")
 
     # ---- sidebar nav ----
-    def nav_links(items):
-        return "".join(f'<a href="#{a}">{esc(t.split("—")[0].strip())}'
-                       f'<span style="color:var(--muted)"> {esc(t.split("—",1)[1].strip())}</span></a>'
-                       if "—" in t else f'<a href="#{a}">{esc(t)}</a>'
-                       for a, _, t in items)
+    def nav_link(a: str, num: str, t: str) -> str:
+        name = t.split("—", 1)[1].strip() if "—" in t else t
+        return (f'<a href="#{a}"><span class="nvname">{esc(name)}</span>'
+                f'<span class="nvnum">{esc(num)}</span></a>')
+
+    def nav_groups(groups) -> str:
+        out = []
+        for label, items in groups:
+            links = "".join(nav_link(a, num, t) for a, num, t in items)
+            out.append(
+                f'<details class="navgrp"><summary>{esc(label)}'
+                f'<span class="gcount">{len(items)}</span></summary>{links}</details>')
+        return "".join(out)
     nav = (
         '<div class="navbackdrop" id="navBackdrop"></div>'
         '<nav class="side" id="sidenav" aria-label="Report sections">'
         '<button class="navclose" id="navClose" type="button" aria-label="Close navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg></button>'
-        '<a href="#summary">Executive Summary</a>'
-        '<a href="#phase0">Phase 0 — Discovery</a>'
+        '<a class="navtop" href="#summary"><span class="nvname">Executive Summary</span></a>'
+        '<a class="navtop" href="#phase0"><span class="nvname">Phase 0 — Discovery</span></a>'
         f'<div class="grp">Speech-to-Text · {len(STT_TESTS)} tests</div>'
-        + nav_links(STT_TESTS)
+        + nav_groups(STT_GROUPS)
         + f'<div class="grp">Text-to-Speech · {len(TTS_TESTS)} tests</div>'
-        + nav_links(TTS_TESTS)
+        + nav_groups(TTS_GROUPS)
         + "</nav>")
 
     stt_band = band("stt", f"Speech-to-Text (STT) — {len(STT_TESTS)} tests",
@@ -3433,7 +3498,9 @@ function setTheme(t){{
   const obs=new IntersectionObserver(es=>{{
     es.forEach(e=>{{if(e.isIntersecting){{
       links.forEach(a=>a.classList.remove('active'));
-      const a=map[e.target.id];if(a)a.classList.add('active');
+      const a=map[e.target.id];if(a){{a.classList.add('active');
+        const d=a.closest('details.navgrp');
+        document.querySelectorAll('nav.side details.navgrp').forEach(x=>{{x.open=(x===d);}});}}
     }}}});
   }},{{rootMargin:'-20% 0px -70% 0px'}});
   document.querySelectorAll('section.card[id]').forEach(s=>obs.observe(s));

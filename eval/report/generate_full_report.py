@@ -2624,13 +2624,26 @@ def render_tts_latency(rows):
     chart = ""
     if rows:
         labels = [r.get("bucket", "") for r in rows]
-        vals = []
+        p50, p99 = [], []
         for r in rows:
             d = maybe_literal(r.get("ttfb"))
-            vals.append(fval(d.get("p50"), 3) if isinstance(d, dict) else fval(r.get("ttfb"), 3))
-        if any(v is not None for v in vals):
-            chart = bar("c_ttslat", labels, vals, color="@s1",
-                        x_title="Text-length bucket", y_title="TTFB P50 (s)")
+            if isinstance(d, dict):
+                p50.append(fval(d.get("p50"), 3))
+                p99.append(fval(d.get("p99"), 3))
+            else:
+                p50.append(fval(r.get("ttfb"), 3))
+                p99.append(None)
+        if any(v is not None for v in p50 + p99):
+            chart = grouped_bar(
+                "c_ttslat", labels,
+                [("TTFB P50", p50), ("TTFB P99", p99)],
+                x_title="Text-length bucket", y_title="TTFB (s)")
+            chart += notice(
+                "<b>P50</b> is the typical time-to-first-byte (half of calls start "
+                "faster); <b>P99</b> is the tail (99% start within this, so it's the "
+                "worst a user is likely to feel). The gap between them is the jitter — "
+                "a flat P50 with a tall P99 means usually-fast but occasionally-slow "
+                "starts, which longer text tends to widen.", "muted")
     return views(chart, render_percentile_table(
         rows, "bucket", "Bucket",
         [("ttfb", "TTFB (s)"), ("rtf", "RTF"), ("elapsed", "Elapsed (s)")]))
@@ -2641,13 +2654,17 @@ def render_tts_concurrency(rows):
     if rows:
         rps_pts = [{"x": fval(r.get("concurrency"), 0), "y": fval(r.get("rps"), 3)}
                    for r in rows if fval(r.get("concurrency"), 0) is not None]
-        lat_pts = [{"x": fval(r.get("concurrency"), 0), "y": fval(r.get("latency_p50"), 3)}
-                   for r in rows if fval(r.get("concurrency"), 0) is not None]
+        lat50_pts = [{"x": fval(r.get("concurrency"), 0), "y": fval(r.get("latency_p50"), 3)}
+                     for r in rows if fval(r.get("concurrency"), 0) is not None]
+        lat99_pts = [{"x": fval(r.get("concurrency"), 0), "y": fval(r.get("latency_p99"), 3)}
+                     for r in rows if fval(r.get("concurrency"), 0) is not None]
         chart = (lines("c_ttsrps", [{"name": "Requests/sec", "points": rps_pts}],
-                       x_title="Concurrency", y_title="RPS")
+                       x_title="Concurrency", y_title="RPS — higher is better")
                  + lines("c_ttsconclat",
-                         [{"name": "P50 latency (s)", "points": lat_pts}],
-                         x_title="Concurrency", y_title="P50 latency (s)"))
+                         [{"name": "P50 latency", "points": lat50_pts},
+                          {"name": "P99 latency", "points": lat99_pts}],
+                         x_title="Concurrency",
+                         y_title="Latency (s) — lower is better"))
     for r in rows:
         r["error_rate"] = pct(r.get("error_rate"))
         r["latency_p50"] = fnum(r.get("latency_p50"), 3)

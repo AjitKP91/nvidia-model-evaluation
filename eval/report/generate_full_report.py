@@ -43,6 +43,45 @@ def read_csv(path: Path) -> list[dict]:
         return list(csv.DictReader(f))
 
 
+def _load_card_tiers() -> dict:
+    """Parse eval/stt/languages.py (the single source of truth) for each
+    language's model-card tier (key -> quality).
+
+    The acceptance run CSV records whatever tier taxonomy was current when it
+    ran, which can drift from the registry. Reading the tier straight from
+    languages.py keeps the report's Model-tier column authoritative and
+    internally consistent without a live re-run. Stdlib-only (ast) and located
+    relative to this file so it works regardless of cwd.
+    """
+    path = Path(__file__).resolve().parent.parent / "stt" / "languages.py"
+    tiers = {}
+    try:
+        tree = ast.parse(path.read_text())
+        for node in ast.walk(tree):
+            # NEMOTRON_LANGUAGES is annotated (`: list[dict] = [...]`) → AnnAssign.
+            if isinstance(node, ast.AnnAssign):
+                targets = [node.target]
+            elif isinstance(node, ast.Assign):
+                targets = node.targets
+            else:
+                continue
+            if not any(isinstance(t, ast.Name) and t.id == "NEMOTRON_LANGUAGES"
+                       for t in targets):
+                continue
+            if not isinstance(node.value, (ast.List, ast.Tuple)):
+                continue
+            for elt in node.value.elts:
+                try:
+                    d = ast.literal_eval(elt)
+                except (ValueError, SyntaxError):
+                    continue
+                if isinstance(d, dict) and d.get("key") and d.get("quality"):
+                    tiers[d["key"]] = d["quality"]
+    except Exception:
+        pass
+    return tiers
+
+
 def read_json(path: Path) -> dict:
     if not path.exists():
         return {}
@@ -486,21 +525,59 @@ TEST_META = {
                 "what it says.",
         "how": "A confidence score is only useful if it tracks whether the model "
                "was actually right. Each recognised word is labelled correct or "
-               "not by aligning to the reference, then bucketed by its confidence. "
-               "Expected Calibration Error (ECE) is the average gap between a "
-               "bucket's stated confidence and its measured accuracy (0 = "
-               "perfectly calibrated). AUROC measures how well confidence alone "
-               "separates right from wrong words (0.5 = useless, 1.0 = perfect "
-               "error detector). The Brier score is the mean squared error of "
+               "not by aligning the transcript to the reference (after lowercasing "
+               "and stripping punctuation, so case and punctuation differences are "
+               "not counted as errors), then bucketed by its confidence. Expected "
+               "Calibration Error (ECE) is the average gap between a bucket's "
+               "stated confidence and its measured accuracy (0 = perfectly "
+               "calibrated). AUROC measures how well confidence alone separates "
+               "right from wrong words (0.5 = useless, 1.0 = perfect error "
+               "detector). The Brier score is the mean squared error of "
                "confidence-as-probability. A per-bin reliability curve is plotted "
                "against the ideal y=x line.",
+        "steps": [
+            ("Per-word confidence",
+             "Each clip is transcribed with word timings enabled, and the model's "
+             "confidence is read for every returned word. When the gateway returns "
+             "per-word confidences those are used directly; otherwise the single "
+             "utterance-level confidence is applied to each word as a fallback."),
+            ("Correctness labelling",
+             "The transcript is aligned to the reference word-by-word. Matched "
+             "words score 1 (correct); substitutions and inserted words score 0. "
+             "Both sides are first lowercased and depunctuated so 'April,' vs "
+             "'APRIL' counts as a match — without this normalisation the all-caps "
+             "reference corpus would mark nearly every word wrong."),
+            ("Reliability curve",
+             "Words are dropped into ten confidence buckets (0.0–0.1 … 0.9–1.0). "
+             "For each bucket the measured accuracy (fraction actually correct) is "
+             "plotted against the bucket's mean confidence. A perfectly calibrated "
+             "model sits on the diagonal; points below the line are over-confident, "
+             "above are under-confident."),
+            ("ECE (calibration gap)",
+             "The bucket-size-weighted average distance between stated confidence "
+             "and measured accuracy — one number summarising how far the curve "
+             "strays from the diagonal. 0 is perfect."),
+            ("AUROC (error ranking)",
+             "Treats confidence as an error detector: how often a correct word "
+             "outranks an incorrect one by confidence. 0.5 means confidence carries "
+             "no signal; above 0.5 means low confidence genuinely flags likely "
+             "errors."),
+            ("Brier score",
+             "Mean squared error of confidence read as a probability of being "
+             "correct — a single accuracy-and-calibration penalty where lower is "
+             "better."),
+            ("Deletion rate",
+             "Reference words the model dropped entirely (no hypothesis token). "
+             "These have no confidence to score, so they sit outside the curve and "
+             "are reported separately as a blind spot confidence cannot cover."),
+        ],
         "code": [
             _code("confidence.py — run() (bin words, build reliability curve)",
-                  "eval/stt/confidence.py", 45),
+                  "eval/stt/confidence.py", 75),
             _code("confidence.py — _calibration_summary() (ECE / AUROC / Brier)",
-                  "eval/stt/confidence.py", 145),
-            _code("confidence.py — _compute_word_correctness() (align to reference)",
-                  "eval/stt/confidence.py", 25),
+                  "eval/stt/confidence.py", 175),
+            _code("confidence.py — _compute_word_correctness() (normalise + align to reference)",
+                  "eval/stt/confidence.py", 49),
         ],
         "datasets": [
             _ds("LibriSpeech (word-level confidences)",
@@ -627,6 +704,19 @@ TEST_META = {
             _ds("FLEURS (one clip per language)",
                 "https://huggingface.co/datasets/google/fleurs"),
         ],
+        "note": "Two columns describe where each language sits, independent of "
+                "this run's result. Joule is SAP's product scope — GA (generally "
+                "available), Preview, or blank (the model supports it but Joule "
+                "does not currently expose it). Model tier is NVIDIA's own "
+                "model-card rating of how well the 0.6B streaming model handles "
+                "the language: transcription-ready (highest accuracy, usable out "
+                "of the box), broad-coverage (production ASR across additional "
+                "locales, typically a few points higher error) and "
+                "adaptation-ready (recognised by the tokenizer but needing "
+                "in-domain fine-tuning — e.g. Greek, whose ~50% WER reflects an "
+                "untuned language). The tier is read straight from the model card, "
+                "so it states what NVIDIA claims; the Status and Sample WER/CER "
+                "columns state what this endpoint actually did.",
         "metrics": ["WER", "CER"],
     },
 }
@@ -1595,7 +1685,7 @@ def _axis_titles(x="", y=""):
 
 
 def bar(cid, labels, values, *, horizontal=False, color="@s1", colors=None,
-        series_label="", x_title="", y_title="", height=320):
+        series_label="", x_title="", y_title="", height=320, value_labels=False):
     if not labels:
         return ""
     ds = {"label": series_label, "data": values,
@@ -1604,6 +1694,12 @@ def bar(cid, labels, values, *, horizontal=False, color="@s1", colors=None,
     opts = {"indexAxis": "y" if horizontal else "x",
             "plugins": {"legend": {"display": False}},
             "scales": _axis_titles(x_title, y_title)}
+    if value_labels:
+        # Opt-in numeric labels for vertical bars: a true 0 (e.g. a perfect 0%
+        # WER) draws a zero-height bar that reads as "missing" — the label makes
+        # the number explicit. (Horizontal single-series bars are always
+        # labelled by the client plugin regardless of this flag.)
+        opts["_valueLabels"] = True
     if horizontal:
         # match the tooltip to the row the cursor is on — nearest by the category
         # (y) axis only, so a short bar's endpoint can't steal the hover.
@@ -2378,9 +2474,45 @@ def render_intelligibility(rows, lang_rows=None):
         labels = [r.get("category", "") for r in rows]
         vals = [None if fval(r.get("round_trip_wer"), 4) is None
                 else round(fval(r.get("round_trip_wer"), 4) * 100, 2) for r in rows]
-        cat_chart = bar("c_intel", labels, vals, color="@s1",
+        # Colour each bar by WER band (lower = better): good green, borderline
+        # amber, poor red. Paired with the numeric label below so identity is
+        # never colour-alone. Self-adjusting if a re-run shifts a category.
+        def _wer_band(v):
+            if v is None:
+                return None
+            return "good" if v < 5 else ("warn" if v < 15 else "crit")
+        _BAND_TOK = {"good": "@good", "warn": "@warn", "crit": "@crit", None: "@muted"}
+        bands = [_wer_band(v) for v in vals]
+        bcolors = [_BAND_TOK[b] for b in bands]
+        cat_chart = bar("c_intel", labels, vals, colors=bcolors, value_labels=True,
                         x_title="Category",
                         y_title="Round-trip WER (%) — lower is better")
+        perfect = [labels[i] for i, v in enumerate(vals) if v == 0]
+        worst_i = max((i for i, v in enumerate(vals) if v is not None),
+                      key=lambda i: vals[i], default=None)
+        bits = []
+        if perfect:
+            bits.append(f"<b>{esc(', '.join(perfect))}</b> scored a flat 0% — every "
+                        "word was transcribed back correctly (a zero-height bar, not "
+                        "missing data).")
+        if worst_i is not None and vals[worst_i] >= 15:
+            bits.append(f"<b>{esc(labels[worst_i])}</b> is the one weak spot at "
+                        f"{vals[worst_i]:.1f}%.")
+        # Legend lists only the bands actually present, so an all-green chart
+        # doesn't advertise amber/red that isn't there.
+        _LEG = {"good": '<span style="color:var(--goodtext)">■</span> good &lt;5%',
+                "warn": '<span style="color:var(--warn)">■</span> 5–15%',
+                "crit": '<span style="color:var(--crit)">■</span> &ge;15%'}
+        present = [b for b in ("good", "warn", "crit") if b in bands]
+        legend = (" Bars coloured by band: " + " · ".join(_LEG[b] for b in present) + ".") \
+            if len(present) > 1 else ""
+        edge_note = ("An edge-format number set (phone numbers, times, version strings) was "
+                     "dropped from this test: round-trip WER on bare digit strings measures "
+                     "the ASR and its normalizer, not the voice.")
+        cap = notice(
+            "0% round-trip WER = perfect intelligibility. " + " ".join(bits) +
+            legend + " " + edge_note, "muted") if bits else ""
+        cat_chart = cat_chart + cap
     for r in rows:
         r["round_trip_wer"] = pct(r.get("round_trip_wer"))
         r["round_trip_cer"] = pct(r.get("round_trip_cer"))
@@ -2440,6 +2572,14 @@ def render_prosody(rows, lang_rows=None):
             vals.append(v)
     chart = bar("c_pros", labels, vals, horizontal=True, color="@s5",
                 x_title="F0 intra-std (Hz) — pitch dynamism") if labels else ""
+    chart_caption = notice(
+        "<b>How to read this:</b> higher = more pitch movement within a sentence "
+        "(expressive, less monotone); lower = flatter / more monotone. There is no "
+        "&ldquo;good&rdquo; value — only a near-0 bar would flag a dead, robotic "
+        "monotone (none here). The spread across languages mostly reflects the "
+        "language itself — tonal and pitch-accent languages (ja, zh, vi, it) "
+        "naturally sit higher — not voice quality, so don't rank the voice across "
+        "languages by this bar.", "muted") if labels else ""
     cols = [("language", "Lang"), ("f0_mean_hz", "F0 mean (Hz)"),
             ("f0_std_intra_hz", "F0 intra-std (Hz)"),
             ("f0_range_intra_hz", "F0 range (Hz)"), ("npvi", "nPVI"),
@@ -2450,7 +2590,23 @@ def render_prosody(rows, lang_rows=None):
         "nPVI), pause ratio and speaking rate. Intrusive F0-vs-reference metrics "
         "need a same-speaker ground truth, which a fixed synthetic voice lacks "
         "(see 2.4).", "muted")
-    return views(note + chart, note + table(display, cols))
+    # None of these metrics has a single "good" direction — they describe a voice,
+    # they don't score it. Spell out what each column means so a reader doesn't
+    # assume higher (or lower) is better, the same ambiguity the F0 chart caption
+    # resolves for pitch dynamism.
+    metric_note = notice(
+        "<b>Which way is &ldquo;good&rdquo;? Neither — these describe the voice, "
+        "they don't grade it.</b> <b>F0 range</b>: wider = more pitch variety. "
+        "<b>nPVI</b> (rhythm): higher = more stress-timed / uneven syllable "
+        "durations (English-like), lower = more syllable-timed / even (Spanish-, "
+        "Japanese-like) — it tracks the language, not quality. <b>Pause ratio</b>: "
+        "share of silence; healthy values sit in a mid band — near-0 means no "
+        "breathing room, very high means over-chopped. <b>WPM</b>: speaking rate; "
+        "faster isn't better, it just needs to suit the language and content. "
+        "Judge each against its own language's norm, not across languages.",
+        "muted")
+    return views(note + chart + chart_caption,
+                 note + table(display, cols) + metric_note)
 
 
 def render_signal(rows):
@@ -2612,6 +2768,21 @@ def _verdict_label(v) -> str:
     return _VERDICT_LABEL.get(v, str(v).replace("_", " "))
 
 
+def _verdict_note(verdict, explanation: str) -> str:
+    """One coloured line under a serving-feature card that spells out what THIS
+    test's verdict means, in plain language, for the numbers actually shown.
+
+    The whole point of these tests is the honor layer — the client can set a
+    flag and the call can succeed while the gateway silently drops it — so the
+    reader needs ``honored`` / ``partial`` / ``ignored`` defined *in context*,
+    not as abstract words. ``explanation`` is the test-specific reading of the
+    row and may contain inline HTML (``<code>``); callers must ``esc()`` any
+    data they interpolate. The line is tinted to match the verdict tile."""
+    kind = _VERDICT_KIND.get(verdict, "muted")
+    label = _verdict_label(verdict)
+    return notice(f'<b>Verdict &ldquo;{esc(label)}&rdquo; here means:</b> {explanation}', kind)
+
+
 def render_word_timestamps(rows):
     if not rows:
         return notice("No data on disk for this test in the selected run.")
@@ -2625,26 +2796,53 @@ def render_word_timestamps(rows):
              + card(pct(r.get("covering_pct")) if r.get("covering_pct") not in (None, "", "None") else "—",
                     "clips with covering span", "")
              + "</div>")
-    return cards
+    v = r.get("verdict")
+    nz = pct(r.get("nonzero_pct")) if r.get("nonzero_pct") not in (None, "", "None") else "—"
+    cov = pct(r.get("covering_pct")) if r.get("covering_pct") not in (None, "", "None") else "—"
+    if v == "honored":
+        exp = ("every clip came back with non-zero, monotonically increasing per-word "
+               "start/end times that span the audio — word-level timing is fully emitted.")
+    elif v == "partial":
+        exp = (f"per-word offsets came back non-zero on <b>{esc(nz)}</b> of clips, but only "
+               f"<b>{esc(cov)}</b> had a span that actually covered the clip. Timings are "
+               "returned, yet they don't bracket the whole utterance, so the flag is only "
+               "partly honored.")
+    elif v == "ignored":
+        exp = ("every returned offset was zero — <code>enable_word_time_offsets</code> is "
+               "accepted but no real word timing is emitted.")
+    else:
+        exp = ("not enough clips carried word-timing data to decide whether the flag is "
+               "honored.")
+    return cards + _verdict_note(v, exp)
 
 
 def render_nbest(rows):
     if not rows:
         return notice("No data on disk for this test in the selected run.")
     r = rows[0]
+    max_ret = r.get("max_returned", r.get("max_alternatives_returned", "—"))
     cards = ('<div class="cards">'
              + card(_verdict_label(r.get("verdict")), "verdict",
                     _VERDICT_KIND.get(r.get("verdict"), ""))
              + card(esc(r.get("n_clips", "—")), "clips", "")
-             + card(esc(r.get("max_alternatives_returned", "—")), "max alternatives returned", "")
+             + card(esc(max_ret), "max alternatives returned", "")
              + card(esc(r.get("requested", "—")), "alternatives requested", "")
              + "</div>")
-    note = ""
-    if str(r.get("max_alternatives_returned")) in ("1", "0"):
-        note = notice("The gateway returned a single alternative for every clip — "
-                      "<code>max_alternatives</code> is accepted by the client but not "
-                      "honored by this deployment.", "warn")
-    return cards + note
+    v = r.get("verdict")
+    req = esc(r.get("requested", "—"))
+    if v == "honored":
+        exp = (f"up to <b>{esc(max_ret)}</b> hypotheses came back when <b>{req}</b> were "
+               "requested, and the lower-ranked ones differed from the top — n-best is honored.")
+    elif v == "ignored":
+        exp = (f"every clip collapsed to a single hypothesis even though <b>{req}</b> were "
+               "requested — <code>max_alternatives</code> is accepted by the client but "
+               "dropped by this deployment.")
+    elif v == "partial":
+        exp = ("more than one alternative came back on some clips but not consistently, so "
+               "n-best is only partly honored.")
+    else:
+        exp = "not enough clips returned alternatives to decide whether n-best is honored."
+    return cards + _verdict_note(v, exp)
 
 
 def render_word_boosting(rows):
@@ -2659,7 +2857,23 @@ def render_word_boosting(rows):
                     "hits baseline → boosted", "")
              + card(esc(r.get("gained", "—")), "phrases gained", "")
              + "</div>")
-    return cards
+    v = r.get("verdict")
+    base = esc(r.get("baseline_hits", "—"))
+    boost = esc(r.get("boosted_hits", "—"))
+    gained = esc(r.get("gained", "—"))
+    if v == "honored":
+        exp = (f"with the boost phrases supplied, the decoder recognised <b>{gained}</b> more "
+               f"target phrase(s) than the unboosted baseline (<b>{base}&rarr;{boost}</b>), so "
+               "<code>speech_contexts</code> measurably biased recognition toward them.")
+    elif v == "ignored":
+        exp = ("boosted and baseline transcripts were identical — the boost phrases had no "
+               "measurable effect, so <code>speech_contexts</code> is dropped by the gateway.")
+    elif v in ("partial", "mixed"):
+        exp = ("boosting recovered some target phrases but changed or lost others, so the "
+               "effect is mixed rather than a clean win.")
+    else:
+        exp = "not enough boost cases produced a measurable delta to decide."
+    return cards + _verdict_note(v, exp)
 
 
 def render_profanity(rows):
@@ -2673,12 +2887,23 @@ def render_profanity(rows):
              + card(esc(r.get("words_recognized_plain", "—")), "target words heard (plain)", "")
              + card(esc(r.get("words_masked_when_filtered", "—")), "masked when filtered", "")
              + "</div>")
-    note = ""
-    if r.get("verdict") == "inconclusive" and str(r.get("words_recognized_plain")) == "0":
-        note = notice("The model never surfaced the target words even unfiltered, so "
-                      "masking behavior could not be probed — recorded as inconclusive, "
-                      "not a pass or fail.", "warn")
-    return cards + note
+    v = r.get("verdict")
+    plain = esc(r.get("words_recognized_plain", "—"))
+    masked = esc(r.get("words_masked_when_filtered", "—"))
+    if v == "honored":
+        exp = (f"all <b>{plain}</b> target word(s) were transcribed in the clear with the "
+               f"filter off and masked (<b>{masked}</b>) with it on, so "
+               "<code>profanity_filter</code> changed the output exactly as intended.")
+    elif v == "inconclusive":
+        exp = ("the model never surfaced the target words even unfiltered, so there was "
+               "nothing to mask — the masking path could not be exercised. Recorded as "
+               "inconclusive, neither pass nor fail.")
+    elif v == "ignored":
+        exp = ("the target words stayed unmasked even with the filter on, so "
+               "<code>profanity_filter</code> had no effect.")
+    else:
+        exp = "not enough target words were recognised to decide whether masking works."
+    return cards + _verdict_note(v, exp)
 
 
 def render_diarization(rows):
@@ -2692,12 +2917,29 @@ def render_diarization(rows):
              + card(esc(r.get("n_words_tagged", "—")), "words tagged", "")
              + card(esc(r.get("construction", "—")), "two-speaker construction", "")
              + "</div>")
+    v = r.get("verdict")
+    distinct = esc(r.get("distinct_speaker_tags", "—"))
+    tagged = esc(r.get("n_words_tagged", "—"))
+    if v == "honored":
+        exp = (f"<b>{distinct}</b> distinct speaker tags came back across the two-speaker "
+               "clip, so the gateway actually separated the speakers.")
+    elif v == "partial":
+        exp = (f"every word came back carrying a speaker tag (<b>{tagged}</b> words), but only "
+               f"<b>{distinct}</b> distinct speaker was ever assigned across a known "
+               "two-speaker clip — tags are emitted, yet the speakers are not actually "
+               "told apart, so diarization is only partly honored.")
+    elif v == "ignored":
+        exp = ("no speaker tags came back at all — <code>diarization</code> is accepted by "
+               "the client but not performed.")
+    else:
+        exp = "the two-speaker clip could not be constructed cleanly enough to decide."
+    vnote = _verdict_note(v, exp)
     note = notice(
         "Two-speaker clip is self-constructed. The <b>construction</b> field records "
         "how speaker B was made — a second Magpie persona (<code>two_voices</code>), a "
         "pitch-shifted copy of speaker A (<code>pitch_shift</code>), or the same voice "
         "(<code>same_voice</code>) — so the verdict is never fabricated.", "muted")
-    return cards + note
+    return cards + vnote + note
 
 
 def render_ssml_effect(rows):
@@ -2713,10 +2955,31 @@ def render_ssml_effect(rows):
              + card(esc(r.get("ignored", "—")), "accepted, no effect", "")
              + card(esc(r.get("rejected", "—")), "rejected (unsupported)", "fail")
              + "</div>")
+    v = r.get("verdict")
+    n = esc(r.get("n_tags", "—"))
+    hon = esc(r.get("honored", "—"))
+    ign = esc(r.get("ignored", "—"))
+    rej = esc(r.get("rejected", "—"))
+    if v == "honored":
+        exp = (f"the measured acoustic delta matched the tag's intent for all <b>{n}</b> SSML "
+               "tags tested — the gateway renders SSML, not just accepts it.")
+    elif v == "ignored":
+        exp = (f"of <b>{n}</b> tags, <b>{ign}</b> produced no measurable acoustic change and "
+               f"<b>{rej}</b> were rejected — SSML markup is accepted but largely not acted "
+               "on by this deployment.")
+    elif v in ("partial", "mixed"):
+        exp = (f"<b>{hon}</b> of <b>{n}</b> tags changed the audio as intended while the rest "
+               "had no measurable effect, so SSML support is partial.")
+    elif v == "literal":
+        exp = ("the SSML was spoken aloud verbatim instead of being interpreted — the markup "
+               "reached the voice as literal text.")
+    else:
+        exp = "no SSML tag produced a measurable delta to decide on."
+    vnote = _verdict_note(v, exp)
     per = ""
     if r.get("per_tag"):
         per = notice(f"Per tag: {esc(r.get('per_tag'))}", "muted")
-    return cards + per
+    return cards + vnote + per
 
 
 
@@ -2786,6 +3049,8 @@ def render_acceptance(matrix: list[dict]) -> str:
         return {"pass": "", "fail": "background:rgba(208,59,59,.08)",
                 "warn": "background:rgba(236,131,90,.10)"}.get(k, "")
 
+    card_tiers = _load_card_tiers()
+
     def prep(rows):
         out = []
         for r in rows:
@@ -2793,28 +3058,33 @@ def render_acceptance(matrix: list[dict]) -> str:
             rr["label"] = esc(r.get("label"))
             rr["key"] = esc(r.get("key"))
             rr["joule_h"] = JOULE_LABEL.get(r.get("joule"), "—")
-            rr["quality"] = esc(r.get("quality"))
+            # Authoritative tier from the registry, falling back to whatever the
+            # run CSV recorded only if the key is unknown there.
+            rr["quality"] = esc(card_tiers.get(r.get("key")) or r.get("quality") or "—")
             rr["status_b"] = badge(r.get("status", "?"),
                                    STATUS_KIND.get(r.get("status"), "muted"))
             metric = (r.get("metric") or "").upper()
             sv = r.get("sample_primary")
             rr["sample"] = f"{metric} {fnum(sv, 3)}" if sv not in (None, "", "None") else "—"
             rr["sample_ref"] = esc((r.get("sample_ref") or "")[:70])
-            cfg = r.get("fleurs") or ""
-            rr["fleurs_link"] = (
-                '<a href="https://huggingface.co/datasets/google/fleurs/viewer/'
-                f'{esc(cfg)}/test" target="_blank" rel="noopener">{esc(cfg)}</a>'
-                if cfg else "—")
             out.append(rr)
         return out
 
     cols = [("label", "Language"), ("key", "Key"), ("joule_h", "Joule"),
-            ("quality", "Model tier"), ("fleurs_link", "FLEURS clips"),
-            ("status_b", "Status"),
+            ("quality", "Model tier"), ("status_b", "Status"),
             ("sample", "Sample WER/CER"), ("sample_ref", "Reference sample")]
 
+    tier_legend = (
+        '<p class="notice muted"><b>Model tier</b> is NVIDIA\'s model-card '
+        'rating for each language: <b>transcription-ready</b> (highest accuracy, '
+        'usable out of the box), <b>broad-coverage</b> (production ASR across '
+        'additional locales) and <b>adaptation-ready</b> (recognised by the '
+        'tokenizer but needs in-domain fine-tuning). It states what the card '
+        'claims; Status and Sample WER/CER state what this endpoint actually '
+        'returned.</p>')
+
     blanks = ", ".join(f'{esc(r["label"])} ({esc(r["key"])})' for r in empty)
-    blocks = [cards, sum_chart, gap]
+    blocks = [cards, sum_chart, gap, tier_legend]
     blocks.append(f"<h4>Joule — GA ({len(ga)})</h4>")
     blocks.append(table(prep(ga), cols, highlight=row_style))
     blocks.append(f"<h4>Joule — Preview ({len(prev)})</h4>")
@@ -3656,25 +3926,35 @@ function resolve(v){{
   if(v&&typeof v==='object'){{const o={{}};for(const k in v)o[k]=resolve(v[k]);return o;}}
   return v;
 }}
-// Value labels for single-series horizontal bars: a true 0 (e.g. a perfect 0%
-// WER) renders a zero-length bar that looks empty — the label makes the number
-// explicit. Anchored past the bar end, or inside it (white) when it would overflow.
+// Value labels for single-series bars: a true 0 (e.g. a perfect 0% WER) renders
+// a zero-length bar that looks empty — the label makes the number explicit.
+// Horizontal bars are always labelled (anchored past the bar end, or inside it
+// in white on overflow); vertical bars are labelled only when the chart opts in
+// via options._valueLabels (drawn above the bar top, or inside on overflow).
 const barValueLabels={{
   id:'barvaluelabels',
   afterDatasetsDraw(chart){{
     if(chart.options._dumbbell) return;
     if(chart.config.type!=='bar') return;
-    if((chart.options.indexAxis||'x')!=='y') return;
     if(chart.data.datasets.length!==1) return;
+    const horiz=(chart.options.indexAxis||'x')==='y';
+    if(!horiz && !chart.options._valueLabels) return;
     const meta=chart.getDatasetMeta(0);const ds=chart.data.datasets[0];
     const {{ctx,chartArea}}=chart;ctx.save();
-    ctx.font="600 12px "+Chart.defaults.font.family;ctx.textBaseline='middle';
+    ctx.font="600 12px "+Chart.defaults.font.family;
     const ink=cssVar('--ink2')||'#52514e';
     meta.data.forEach((el,i)=>{{
       const v=ds.data[i];if(v==null||typeof v!=='number'&&isNaN(parseFloat(v)))return;
       const txt=Number(v).toFixed(1);const w=ctx.measureText(txt).width;
-      if(el.x+6+w<=chartArea.right){{ctx.fillStyle=ink;ctx.textAlign='left';ctx.fillText(txt,el.x+6,el.y);}}
-      else{{ctx.fillStyle='#ffffff';ctx.textAlign='right';ctx.fillText(txt,el.x-6,el.y);}}
+      if(horiz){{
+        ctx.textBaseline='middle';
+        if(el.x+6+w<=chartArea.right){{ctx.fillStyle=ink;ctx.textAlign='left';ctx.fillText(txt,el.x+6,el.y);}}
+        else{{ctx.fillStyle='#ffffff';ctx.textAlign='right';ctx.fillText(txt,el.x-6,el.y);}}
+      }}else{{
+        ctx.textAlign='center';
+        if(el.y-6>=chartArea.top+12){{ctx.textBaseline='bottom';ctx.fillStyle=ink;ctx.fillText(txt,el.x,el.y-5);}}
+        else{{ctx.textBaseline='top';ctx.fillStyle='#ffffff';ctx.fillText(txt,el.x,el.y+5);}}
+      }}
     }});
     ctx.restore();
   }}

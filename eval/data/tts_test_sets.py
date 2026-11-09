@@ -57,19 +57,16 @@ def get_intelligibility_sentences() -> dict[str, list[str]]:
             "The population of the city is approximately two point three million people.",
             "Multiply three hundred and forty-two by seventeen to get five thousand eight hundred and fourteen.",
         ] * 5,
-        "numbers_edge": [
-            # Normaliser-limited surface forms: phone numbers, coords,
-            # version numbers, dates, alphanumeric IDs, clock format. These
-            # are intentionally hard for jiwer-comparison even after the
-            # Whisper EnglishTextNormalizer; surviving WER here is measurement
-            # noise, not TTS intelligibility loss.
-            "Call us at one eight hundred five five five zero one two three.",
-            "The coordinates are forty point seven one degrees north, seventy-four point zero one degrees west.",
-            "Version three point fourteen one five nine two of the software is now available.",
-            "The meeting is scheduled for the fifteenth of March twenty twenty-five.",
-            "Your confirmation number is A B C one two three four five six seven.",
-            "The flight departs at six forty-five AM and arrives at ten fifteen PM.",
-        ] * 5,
+        # `numbers_edge` (phone numbers, coords, version/date strings,
+        # alphanumeric IDs, clock times) was REMOVED: round-trip WER cannot
+        # score bare digit strings. The same synthesized clip transcribed back
+        # 3+ different ways (Whisper ASR is non-deterministic on digits) and the
+        # Whisper EnglishTextNormalizer canonicalizes spelled-out vs digit forms
+        # inconsistently ("one eight hundred..."→"1805550123" but "1-800-555-0123"
+        # →"one 800 555 123"), so WER measured the scorer, not the voice. The
+        # TTS is highly intelligible on prose and well-formed numbers
+        # (numbers_basic = 0%); edge digit-string intelligibility is simply not
+        # measurable with round-trip ASR.
         "conversational": [
             "Hey, can you remind me to call Sarah at five o'clock this afternoon?",
             "I'd like to book a table for four people this Saturday evening.",

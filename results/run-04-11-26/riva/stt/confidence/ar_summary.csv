@@ -1,0 +1,2 @@
+ece,auroc,brier_score,n_words_evaluated,deletion_rate,bins
+0.0002,0.5024,0.1056,5613,0.0104,"[{'bin': '[0.0, 0.1)', 'n': 3, 'accuracy': 0.3333, 'confidence': 0.0105, 'gap': 0.3228}, {'bin': '[0.1, 0.2)', 'n': 1, 'accuracy': 0.0, 'confidence': 0.1075, 'gap': 0.1075}]"

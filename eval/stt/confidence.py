@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from pathlib import Path
 
 import jiwer
@@ -21,12 +22,49 @@ logger = logging.getLogger("eval.stt.confidence")
 # Per-language FLEURS clip budget for opt-in Tier-B calibration spot-checks.
 PER_LANG_CONF_LIMIT = 300
 
+# Languages written without spaces between words (scriptio continua). Per-word
+# confidence calibration aligns words split on whitespace, which is meaningless
+# for these scripts — the model emits per-character tokens that can never line
+# up with a phrase-spaced reference, so every "word" scores wrong and the
+# resulting ECE/AUROC/Brier are artefacts, not calibration. We record a
+# graceful status for these instead of a fabricated number.
+NO_WORD_BOUNDARY_LANGS = {"ja", "zh", "cmn", "yue", "wuu", "th", "lo", "my", "km"}
 
-def _compute_word_correctness(reference: str, hypothesis: str) -> list[tuple[str, int]]:
+# Strip everything that isn't a word char or whitespace (punctuation, quotes,
+# etc.). Applied per-token so the word count is preserved exactly.
+_PUNCT_RE = re.compile(r"[^\w\s]", re.UNICODE)
+
+
+def _norm_tokens(text: str) -> list[str]:
+    """Lowercase + depunctuate each whitespace token, preserving token count.
+
+    Confidence calibration pairs each *hypothesis* word with its per-word
+    confidence from the model, so the correctness label list must stay aligned
+    1:1 with ``hyp.split()``. We therefore normalize token-by-token (never
+    collapse or split tokens): a token that reduces to empty keeps its
+    lowercased raw form as a placeholder so the position — and the count — is
+    held. This mirrors the lowercase+strip-punctuation that the WER tests apply
+    via ``NORMALIZE_FOR_WER`` so "correct" means the same thing here as there,
+    without which ALL-CAPS/punctuated references score as ~all-wrong.
+    """
+    out = []
+    for tok in text.split():
+        norm = _PUNCT_RE.sub("", tok.lower()).strip()
+        out.append(norm if norm else tok.lower())
+    return out
+
+
+def _compute_word_correctness(reference: str, hypothesis: str) -> list[int]:
     """Return per-hypothesis-word correctness labels (1=correct, 0=error).
     Insertions are included with label=0. Deletions are excluded (no hyp token).
+
+    Both sides are normalized (lowercase + punctuation stripped) before
+    alignment so case/punctuation differences between the reference corpus and
+    the model's cased, punctuated output are not counted as word errors.
     """
-    output = jiwer.process_words(reference, hypothesis)
+    ref_norm = " ".join(_norm_tokens(reference))
+    hyp_norm = " ".join(_norm_tokens(hypothesis))
+    output = jiwer.process_words(ref_norm, hyp_norm)
     labels = []
     for chunk in output.alignments[0]:
         if chunk.type == "equal":
@@ -214,6 +252,12 @@ def _run_language_conf(lang: dict, config: Config, stt_client: STTClient, result
     key = lang["key"]
     jsonl_path = results_dir / f"{key}.jsonl"
     logger.info("--- 1.10 spot-check language=%s (FLEURS %s) ---", key, lang["fleurs"])
+
+    if key in NO_WORD_BOUNDARY_LANGS:
+        logger.warning(
+            "Language %s has no whitespace word boundaries; per-word confidence "
+            "calibration is not meaningful — recording no_word_boundaries", key)
+        return {"status": "no_word_boundaries"}
 
     try:
         with fleurs_load(lang, limit=PER_LANG_CONF_LIMIT) as examples:
